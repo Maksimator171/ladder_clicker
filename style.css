@@ -1,0 +1,577 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
+
+body {
+    background-color: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 720px;
+    max-height: 1280px;
+    aspect-ratio: 9/16;
+    background: #222;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#ui-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 15px;
+}
+
+/* Верхняя панель */
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    pointer-events: auto;
+}
+
+#nuts-display {
+    color: #f1c40f;
+    font-weight: bold;
+    font-size: 0.95rem;
+    text-shadow: 1px 1px 2px #000;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 3px 12px;
+    border-radius: 10px;
+}
+
+#height-display {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 2px 3px 0 #000, -1px -1px 0 #000;
+    line-height: 1;
+}
+
+#location-name {
+    font-size: 1rem;
+    color: #ffd54f;
+    font-weight: bold;
+    text-shadow: 1px 1px 0 #000;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.box-progress-container {
+    position: relative;
+    width: 180px;
+    height: 22px;
+    background: #2c3e50;
+    border: 2px solid #34495e;
+    border-radius: 11px;
+    overflow: hidden;
+}
+
+#box-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #9b59b6, #8e44ad);
+    transition: width 0.15s linear;
+}
+
+#box-progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px #000;
+}
+
+/* Боковые слоты */
+.slots {
+    position: absolute;
+    top: 40%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: auto;
+}
+
+.slots.left { left: 15px; }
+.slots.right { right: 15px; }
+
+.slot {
+    width: 52px;
+    height: 52px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.3rem;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+    cursor: pointer;
+    transition: transform 0.1s;
+    line-height: 1;
+}
+
+.slot span {
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.slot:active {
+    transform: scale(0.92);
+}
+
+/* Нижняя панель */
+.bottom-panel {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    pointer-events: auto;
+    margin-bottom: 10px;
+    z-index: 20;
+}
+
+.nav-btn {
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+}
+
+.nav-btn:active {
+    transform: translateY(3px);
+    box-shadow: none;
+}
+
+#btn-open-cases { background: #9b59b6; }
+#btn-open-shop { background: #f1c40f; color: #222; text-shadow: none; }
+#btn-open-inventory { background: #e67e22; }
+
+/* МАГАЗИН */
+#shop-modal {
+    position: absolute;
+    bottom: 75px;
+    left: 12px;
+    width: 240px;
+    max-width: 44vw;
+    background: rgba(18, 25, 35, 0.94);
+    border: 2px solid #f39c12;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    z-index: 80;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    max-height: 52vh;
+    overflow-y: auto;
+}
+
+#shop-modal h2 {
+    font-size: 13px;
+    text-align: center;
+    color: #f1c40f;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+}
+
+.shop-item {
+    background: #2c3e50;
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+}
+
+.item-info h3 { font-size: 11px; color: #f1c40f; margin: 0; }
+.item-info p { font-size: 10px; color: #bdc3c7; margin: 0; }
+
+.buy-btn {
+    background: #2ecc71;
+    border: none;
+    border-bottom: 2px solid #27ae60;
+    padding: 5px 6px;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.buy-btn:active { transform: translateY(2px); border-bottom: 0; }
+.buy-btn.disabled { background: #566573; border-bottom: 2px solid #414b55; cursor: not-allowed; }
+
+.close-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* МОДАЛЬНЫЕ ОКНА (Кейсы и Инвентарь) */
+.modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.75) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+    backdrop-filter: blur(4px);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Карточка окна с фиксированной высотой */
+.modal-card {
+    position: relative;
+    width: 92%;
+    max-width: 440px;
+    height: 520px; /* Фиксированная высота предотвращает прыжки вкладок */
+    max-height: 86vh;
+    background: #1e272e;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+    border: 1px solid #34495e;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto !important;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #ecf0f1;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+.modal-close-btn:hover {
+    color: #e74c3c;
+}
+
+.modal-currency-bar {
+    display: flex;
+    justify-content: space-around;
+    background: #111;
+    padding: 8px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+/* Вкладки инвентаря */
+.inventory-tabs {
+    display: flex;
+    gap: 4px;
+    background: #111;
+    padding: 4px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.inv-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-weight: bold;
+    font-size: 11px;
+    padding: 8px 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.inv-tab.active {
+    background: #2c3e50;
+    color: #f1c40f;
+}
+
+/* Скролл списка предметов и кейсов */
+.modal-scroll-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1; /* Занимает оставшееся пространство карточки */
+    overflow-y: auto !important;
+    padding-right: 4px;
+    scrollbar-gutter: stable; /* Резервирует ширину под скроллбар */
+}
+
+.modal-scroll-list::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-scroll-list::-webkit-scrollbar-thumb {
+    background: #4b6584;
+    border-radius: 3px;
+}
+.modal-scroll-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Карточки предметов инвентаря */
+.inv-item-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #2c3e50;
+    border-radius: 8px;
+    padding: 8px 12px;
+    border: 2px solid #444;
+    flex-shrink: 0;
+}
+
+.inv-item-card.equipped {
+    border-color: #f1c40f;
+    background: #1b2a38;
+}
+
+.inv-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.inv-item-preview {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inv-item-preview img {
+    max-width: 32px;
+    max-height: 34px;
+    object-fit: contain;
+}
+
+.inv-item-meta h4 {
+    margin: 0;
+    font-size: 13px;
+}
+
+.inv-item-meta p {
+    margin: 2px 0 0 0;
+    font-size: 11px;
+    color: #bdc3c7;
+}
+
+.btn-equip {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    font-weight: bold;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.btn-equip.active {
+    background: #f1c40f;
+    color: #000;
+    cursor: default;
+}
+
+.btn-equip.available {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-equip.locked {
+    background: #555;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* Полноэкранное окно рулетки кейса поверх всех окон */
+#gachaModal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.88) !important;
+    z-index: 30000 !important;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    backdrop-filter: blur(6px);
+    pointer-events: auto !important;
+}
+
+/* Переливающаяся пульсация для Стартер-пака */
+@keyframes starterGlow {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 10px rgba(241, 196, 15, 0.6), 0 0 20px rgba(231, 76, 60, 0.4);
+        border-color: #f1c40f;
+    }
+    50% {
+        transform: scale(1.06);
+        box-shadow: 0 0 18px rgba(241, 196, 15, 0.95), 0 0 30px rgba(231, 76, 60, 0.8);
+        border-color: #ffffff;
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 10px rgba(241, 196, 15, 0.6), 0 0 20px rgba(231, 76, 60, 0.4);
+        border-color: #f1c40f;
+    }
+}
+
+.starter-glow-btn {
+    animation: starterGlow 1.8s infinite ease-in-out !important;
+}
+
+@keyframes floatUpCase {
+    0% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.8);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(0) scale(1.1);
+    }
+    70% {
+        opacity: 1;
+        transform: translateY(-16px) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-28px) scale(0.9);
+    }
+}
+
+.case-floating-popup {
+    animation: floatUpCase 1.4s ease-out forwards;
+    position: absolute;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: #f1c40f;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(241,196,15,0.7);
+    pointer-events: none;
+}
+
+/* Мягкое свечение кнопки стрика при готовой награде */
+@keyframes streakGlowAnim {
+    0% { box-shadow: 0 0 8px rgba(155, 89, 182, 0.4); border-color: #9b59b6; }
+    50% { box-shadow: 0 0 18px rgba(241, 196, 15, 0.9), 0 0 25px rgba(155, 89, 182, 0.7); border-color: #f1c40f; }
+    100% { box-shadow: 0 0 8px rgba(155, 89, 182, 0.4); border-color: #9b59b6; }
+}
+.streak-ready-pulse {
+    animation: streakGlowAnim 1.6s infinite ease-in-out !important;
+}
+
+/* Круглый значок активного баффа с эффектом часовой стрелки */
+.active-buff-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 25, 35, 0.9);
+    border: 2px solid #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+/* Тёмная шторка, движущаяся по часовой стрелке */
+.buff-clock-wipe {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.buff-badge-emoji {
+    font-size: 16px;
+    z-index: 2;
+    line-height: 1;
+}
+
+.buff-badge-time {
+    font-size: 9px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 1px 3px #000;
+    z-index: 2;
+    margin-top: 2px;
+}
