@@ -10,7 +10,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    margin: 0;              /* Убирает скрытый системный отступ браузера в 8px */
+    height: 100vh;          /* Базовый размер для старых браузеров */
+    height: 100dvh;         /* Точный размер с учётом мобильной адресной строки */
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     user-select: none;
@@ -64,11 +66,18 @@ canvas {
 }
 
 #height-display {
-    font-size: 2.5rem;
-    font-weight: 900;
-    color: #fff;
-    text-shadow: 2px 3px 0 #000, -1px -1px 0 #000;
-    line-height: 1;
+    /* Базовое состояние с аппаратным ускорением */
+    display: inline-block;
+    transform-origin: center center;
+    transition: transform 0.09s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.08s ease-out;
+    will-change: transform;
+}
+
+/* Класс резкого удара при тапе */
+#height-display.punch {
+    transform: scale(1.12);
+    color: #fff9d2 !important; /* Яркая золотисто-белая вспышка */
+    text-shadow: 0 0 12px rgba(241, 196, 15, 0.8);
 }
 
 #location-name {
@@ -574,4 +583,21 @@ canvas {
     text-shadow: 0 1px 3px #000;
     z-index: 2;
     margin-top: 2px;
+}
+
+#luck-talismans-list, #cust-items-list {
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    user-select: none;
+}
+
+canvas {
+    touch-action: none !important;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* Убирает вспышку фокуса на тачскринах */
 }

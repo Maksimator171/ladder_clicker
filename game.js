@@ -3,9 +3,21 @@
 let settingsState = {
     musicVol: 0.3,
     tapVol: 0.8,
+    speakerVol: 0.8, // громкость колонки
+    newtonVol: 0.8,  // громкость шаров
     sfxVol: 0.9,
     vibrate: true
 };
+
+let lastPlaneSoundTime = 0; // Таймер кулдауна звука самолёта
+let ufoGlowCanvas = null; // Кэш световой маски НЛО
+let lastThunderTime = 0; // Кулдаун грома для грозового фронта
+
+let bananaTapCounter = 0;
+
+let cyberExtraAccessory = { type: null, id: null }; // 1 выбранный аксессуар для Киберпанка
+
+let mimicSlots = ['wood', 'banana']; // 2 выбранные способности для Мимика
 
 let quantumGlitch = 0; // Таймер квантового глитча (в кадрах)
 
@@ -35,7 +47,7 @@ function showThankYouModal(title, desc) {
     if (descEl) descEl.innerText = desc;
 
     modal.classList.remove('hidden');
-    AudioEngine.play('jacpot', 1.0);
+    AudioEngine.play('donate_sound', 1.0);
 
     if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
 }
@@ -82,7 +94,6 @@ if (btnBuyStarter) {
             ownedSpeakerSkins.push('cyber');
         }
 
-        AudioEngine.play('jacpot', 1.0);
         particles.push({ x: canvas.width/2, y: canvas.height * 0.4, text: '👑 НАБОР НОВИЧКА ПОЛУЧЕН!', color: '#f1c40f', alpha: 2.5, speed: 2 });
 
         uiNuts.innerText = `🔩 ${nuts}`;
@@ -179,7 +190,11 @@ function watchRewardedAd(placementName, onSuccess) {
         // 2. Засчитываем просмотр в стрик (максимум 10)
         if (adState.streakCount < 10) {
             adState.streakCount++;
-            AudioEngine.play('win', 0.7);
+            
+            // Звук победы играет для наград, но НЕ при реролле и НЕ при рубеже (у рубежа звучит pickupCoin5)!
+            if (placementName !== 'case_reroll' && placementName !== 'milestone_x2') {
+                AudioEngine.play('win', 0.7);
+            }
             
             // Обновляем текст кнопки на экране [🎬 3/10]
             const streakBtnText = document.getElementById('ad-streak-btn-text');
@@ -241,10 +256,20 @@ function activateTurboBoost(customSeconds = null) {
     });
 }
 
+// === ПЕРЕМЕННЫЕ ДЛЯ ЭНДГЕЙМ-ЛЕСТНИЦ ===
+let cosmicMomentum = 0; // Инерция Млечного Пути (м/с)
+let blackHoleBonus = 0.0; // От 0.0 до 10.0 (+1000%)
+let wasBlackHole = false; // Флаг для отслеживания снятия Чёрной дыры
+
+function getGlobalMultiplier() {
+    // Возвращает множитель. 0% = 1.0, +1000% = 11.0
+    return hasMech('endless') ? (1.0 + blackHoleBonus) : 1.0;
+}
+
 // База 6 рубежей с иллюстрациями и текстами
 const HEIGHT_MILESTONES = [
     { 
-        height: 100, reward: 5, name: 'Крыши', icon: '🏙️', file: 'assets/roofs_100.webp',
+        height: 250, reward: 5, name: 'Крыши', icon: '🏙️', file: 'assets/roofs_100.webp',
         desc: 'Выше только птицы и цены на аренду. Первая сотня за спиной!' 
     },
     { 
@@ -295,7 +320,7 @@ function activateFrenzyMode(seconds = 30) {
     const mult = hasMech('billboard') ? 1.5 : 1.0;
     adState.frenzyTimer = seconds * 1000 * mult;
 
-    AudioEngine.play('jacpot', 1.0);
+    AudioEngine.play('whoosh_air', 0.8);
     particles.push({
         x: canvas.width / 2,
         y: canvas.height * 0.35,
@@ -457,13 +482,14 @@ function getUpgradeCost(type, level) {
         price = Math.floor(lastBase * Math.pow(cfg.growthRate, extraLevels));
     }
 
-    // Учёт скидки экипированной лестницы (tape -10%, goth -20%)
-    const currentSkin = LADDER_SKINS[currentSkinId] || {};
-    const discount = (currentSkin.buffs && currentSkin.buffs.discount) ? currentSkin.buffs.discount : 0;
+    // ИСПРАВЛЕНО: только одна переменная discount
+    const discount = getActiveLadderBuffs().discount || 0;
     return Math.max(1, Math.floor(price * (1 - discount)));
 }
 
 //const flameY = xx;
+
+let visualHouseHeight = 0; // Плавная высота камеры для мягкого скролла домов
 let currentHeight = 0;
 let clickLevel = 0;     // <-- ДОБАВИЛИ ЭТУ СТРОКУ
 let clickPower = 1;
@@ -491,6 +517,25 @@ let ownedSpeakerSkins = ['old'];
 let ownedNewtonSkins = ['steel'];
 let ownedTalismans = []; //строка 123
 
+// === КОСМИЧЕСКИЙ МУСОР ===
+const cosmicDebrisImg = new Image();
+cosmicDebrisImg.src = 'assets/cosmic_debris.webp'; // Проверь правильность пути и расширения файла
+
+// === АРТ ГОРЫ (300м - 10000м) ===
+const mountainImg = new Image();
+mountainImg.src = 'assets/mountain.webp';
+
+// === АРТ ЗЕМЛИ (8000м - 150000м) ===
+const planetEarthImg = new Image();
+planetEarthImg.src = 'assets/planet_earth.webp';
+
+// === АРТЫ ТЕЛЕВЫШКИ (250м - 1000м) ===
+const towerBodyImg = new Image();
+towerBodyImg.src = 'assets/tower_body.webp';
+
+const towerHeadImg = new Image();
+towerHeadImg.src = 'assets/tower_head.webp';
+
 // Спрайты в памяти
 const speakerSprite = new Image();
 
@@ -504,10 +549,8 @@ let activePlayBoxTimer = 0;   // Накопленное время (мс)
 let isTimedBoxReady = false;  // Флаг: готов ли ящик (кап = 1 шт.)
 const btnClaimTimedBox = document.getElementById('btn-claim-timed-box');
 const timedBoxText = document.getElementById('timed-box-text');
-let totalClicks = 0;        // Общий счетчик для Банановой, Золотой, Мраморной
-let currentCps = 0;         // Текущие клики в секунду (для Когтеточки)
-let clicksThisSec = 0;      
-let lastCpsTime = Date.now();
+let totalClicks = 0;
+let clickTimestamps = []; // Точный массив временных меток кликов
 let newYearCounter = 0;     // Счетчик Новогодней
 let newYearTarget = Math.floor(150 + Math.random() * 100);
 let ufoBonusTimer = 0;      // Таймер НЛО
@@ -515,23 +558,49 @@ let retroCoin = { active: false, x: 0, y: 0, size: 45 }; // Монетка Ре�
 let neonRerollUsed = false; // Флаг реролла для Неоновой
 let isPointerDown = false;  // Для свайпов Ледяной
 
+// === АССЕТЫ ПОДАРКА НЛО ===
+const ufoGiftImg = new Image();
+ufoGiftImg.src = 'assets/ufo_gift.webp';
+
+let ufoGift = {
+    active: false,
+    x: 0, y: 0,
+    startX: 0, startY: 0,
+    targetX: 0, targetY: 0,
+    progress: 0,
+    rewardType: 0 // 0: гайки, 1: деревянный ящик, 2: железный сейф, 3: золото
+};
+
 // Проверка наличия механики у текущей лестницы (включая АБСОЛЮТ)
 function hasMech(mech) {
-    if (currentSkinId === 'absolute' && mech !== 'mimic' && mech !== 'cyber') return true;
-    const skin = LADDER_SKINS[currentSkinId];
+    const effId = currentEffectId || currentSkinId;
+    if (effId === 'absolute' && mech !== 'mimic') return true;
+
+    // МИМИК: проверяем наличие механики в обоих слотах
+    if (effId === 'mimic') {
+        if (mech === 'mimic') return true;
+        return mimicSlots.some(slotId => {
+            const s = LADDER_SKINS[slotId];
+            return s && s.mechanics && s.mechanics.includes(mech);
+        });
+    }
+
+    const skin = LADDER_SKINS[effId];
     return skin && skin.mechanics && skin.mechanics.includes(mech);
 }
 
 // Подсчет всей текущей удачи игрока (Лестница + Талисман)
 function getTotalLuck() {
-    const skin = LADDER_SKINS[currentSkinId] || { buffs: {} };
-    let luck = skin.buffs.luck || 0;
+    const ladderBuffs = getActiveLadderBuffs();
+    let luck = ladderBuffs.luck || 0;
     if (currentTalisman && TALISMANS[currentTalisman]) {
         luck += TALISMANS[currentTalisman].luck;
     }
-    // Бонус от рекламы
+    // Бонус удачи от доп. брелока Киберпанка
+    if (hasMech('cyber') && cyberExtraAccessory.type === 'talismans' && cyberExtraAccessory.id && TALISMANS[cyberExtraAccessory.id]) {
+        luck += TALISMANS[cyberExtraAccessory.id].luck;
+    }
     if (adState.fortuneTimer > 0) luck += 15;
-
     return luck;
 }
 
@@ -539,8 +608,9 @@ function getTotalLuck() {
 function addNuts(amount) {
     if (amount <= 0) return;
 
-    // Кибер-спикер: +25% ко всем получаемым гайкам
-    if (currentSpeakerSkin === 'cyber') {
+    // Кибер-спикер: +25% ко всем получаемым гайкам (проверка оригинала или слота Киберпанка)
+    const hasCyberSpeaker = currentSpeakerSkin === 'cyber' || (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id === 'cyber');
+    if (hasCyberSpeaker) {
         amount = Math.round(amount * 1.25);
     }
 
@@ -554,9 +624,9 @@ function addNuts(amount) {
         nuts += amount;
     }
     uiNuts.innerText = `🔩 ${nuts}`;
-    // Внутри addNuts() после uiNuts.innerText = ...
-const topGoldDisplay = document.getElementById('gold-display');
-if (topGoldDisplay) topGoldDisplay.innerText = `🟡 ${goldenNuts}`;
+    
+    const topGoldDisplay = document.getElementById('gold-display');
+    if (topGoldDisplay) topGoldDisplay.innerText = `🟡 ${goldenNuts}`;
 }
 
 // Программный генератор идеального хромированного шара Ньютона
@@ -712,13 +782,15 @@ const AudioEngine = {
         new_year: 'new_year_tap',
 
         // Epic
-        add_stair: 'add_stair_sound',
+        add_stair: 'add_click',
         bone: 'bone_tap',
+        crystal: 'crystal_click',
         cyber: 'cyber_tap',
         golden: 'gold_tap',
         goth: 'garguli_tup',
         ice: 'ice_tap',
         vine: 'vine_tap',
+        calendar_stair: 'base_tup',
 
         // Legendary
         marble: 'marble_tap',
@@ -730,6 +802,8 @@ const AudioEngine = {
         cosmo: 'cosmo_tap',
         storm: 'storm_tap',
         strato: 'wind_tap',
+        milkyway: 'milky_way_sound',
+        endless: 'endless_tap',
         absolute: 'absolut_tap',
 
         default: 'base_tup'
@@ -737,19 +811,27 @@ const AudioEngine = {
 
 activeSounds: [],
 
-    play: function(soundName, vol = 1.0) {
+
+
+    // Добавили флаг isTap (по умолчанию false)
+play: function(soundName, vol = 1.0, channel = 'sfx') {
         try {
-            // Если такой же звук уже звучит (особенно длинный джекпот/фанфары) — глушим его
             if (this.sounds[soundName]) {
                 this.sounds[soundName].pause();
                 this.sounds[soundName].currentTime = 0;
             }
 
             const audio = new Audio(`assets/sounds/${soundName}.ogg`);
-            const sfxMultiplier = (typeof settingsState !== 'undefined' && settingsState.sfxVol !== undefined) ? settingsState.sfxVol : 1.0;
-            audio.volume = Math.max(0, Math.min(1, vol * sfxMultiplier));
             
-            // Запоминаем текущий играющий звук
+            // Выбираем множитель строго под свой звуковой канал
+            let multiplier = 1.0;
+            if (channel === 'tap') multiplier = settingsState.tapVol !== undefined ? settingsState.tapVol : 1.0;
+            else if (channel === 'speaker') multiplier = settingsState.speakerVol !== undefined ? settingsState.speakerVol : 1.0;
+            else if (channel === 'newton') multiplier = settingsState.newtonVol !== undefined ? settingsState.newtonVol : 1.0;
+            else multiplier = settingsState.sfxVol !== undefined ? settingsState.sfxVol : 1.0; // обычные sfx
+
+            audio.volume = Math.max(0, Math.min(1, vol * multiplier));
+            
             this.sounds[soundName] = audio;
             audio.onended = () => {
                 if (this.sounds[soundName] === audio) {
@@ -771,18 +853,21 @@ activeSounds: [],
         }
     },
 
-    // Воспроизведение звука тапа (с рандомом для Мимика)
-    playTap: function(skinId) {
+    // Воспроизведение звука тапа
+   playTap: function(skinId) {
+        let soundName = this.ladderSounds.default;
+        let vol = 1.0;
+
         if (skinId === 'mimic') {
             const allSounds = Object.values(this.ladderSounds).filter(s => s !== 'base_tup');
-            const randomSound = allSounds[Math.floor(Math.random() * allSounds.length)];
-            this.play(randomSound, 0.85);
-            return;
+            soundName = allSounds[Math.floor(Math.random() * allSounds.length)];
+            vol = 0.85;
+        } else {
+            soundName = this.ladderSounds[skinId] || this.ladderSounds.default;
         }
 
-        const soundName = this.ladderSounds[skinId] || this.ladderSounds.default;
-        this.play(soundName, 1.0 * settingsState.tapVol);
-        //this.play(soundName, 0.8);
+        // Передаем канал 'tap'
+        this.play(soundName, vol, 'tap');
     },
 
     // Фоновая музыка и переходы по высотам
@@ -865,13 +950,14 @@ const CASES_DB = {
             { type: 'skin', id: 'scratch',  weight: 84 },
             { type: 'skin', id: 'new_year', weight: 84 },
 
-            // Epic лестницы (суммарно 10% = 100 базового веса / 6 скинов ≈ по 17)
-            { type: 'skin', id: 'bone',   weight: 17 },
-            { type: 'skin', id: 'cyber',  weight: 17 },
-            { type: 'skin', id: 'golden', weight: 17 },
-            { type: 'skin', id: 'goth',   weight: 16 },
-            { type: 'skin', id: 'ice',    weight: 16 },
-            { type: 'skin', id: 'vine',   weight: 17 }
+            // Epic лестницы
+            { type: 'skin', id: 'bone',    weight: 15 },
+            { type: 'skin', id: 'crystal', weight: 15 }, // <-- ДОБАВИЛИ
+            { type: 'skin', id: 'cyber',   weight: 15 },
+            { type: 'skin', id: 'golden',  weight: 15 },
+            { type: 'skin', id: 'goth',    weight: 14 },
+            { type: 'skin', id: 'ice',     weight: 14 },
+            { type: 'skin', id: 'vine',    weight: 15 }
         ]
     },
     // 5. Покупка за Золотые гайки (высокие шансы на эпик и легендарки)
@@ -882,9 +968,10 @@ const CASES_DB = {
         price: 250,
         priceType: 'goldenNuts',
         loot: [
-            { type: 'skin', id: 'bone',     weight: 20 },
-            { type: 'skin', id: 'cyber',    weight: 20 },
-            { type: 'skin', id: 'golden',   weight: 18 },
+            { type: 'skin', id: 'bone',     weight: 18 },
+            { type: 'skin', id: 'crystal',  weight: 18 }, // <-- ДОБАВИЛИ
+            { type: 'skin', id: 'cyber',    weight: 18 },
+            { type: 'skin', id: 'golden',   weight: 16 },
             { type: 'skin', id: 'goth',     weight: 14 },
             { type: 'skin', id: 'ice',      weight: 12 },
             { type: 'skin', id: 'marble',   weight: 6 },
@@ -895,6 +982,12 @@ const CASES_DB = {
     }
 };
 
+
+
+let retroChallengeMs = 0;
+const RETRO_CHALLENGE_GOAL = 20 * 60 * 1000; // 20 минут
+let retroCoinSpawnTimer = 0;
+let nextCoinDelay = 45000; // Первый вылет через 45 секунд
 // Инвентарь кейсов у игрока
 // Расширенный инвентарь кейсов
 let userCases = {
@@ -927,6 +1020,7 @@ const LADDER_SKINS = {
     // === ЭПИЧЕСКИЕ (Epic) ===
     add_stair: {rarity: 'epic', name: 'Билборд', file: 'assets/add_stair.webp', color: '#00d2d3', buffs: {}, mechanics: ['billboard']},
     bone:     { rarity: 'epic', name: 'Костяная', file: 'assets/bone_stair.webp', color: '#ecf0f1', buffs: {}, mechanics: ['bone'] },
+    crystal:  { rarity: 'epic', name: 'Кристальная', file: 'assets/crystal_stair.webp', color: '#00ffff', buffs: {}, mechanics: ['crystal'] }, // <-- ДОБАВИЛИ
     cyber:    { rarity: 'epic', name: 'Киберпанк', file: 'assets/cyper_pank.webp', color: '#00ffff', buffs: {}, mechanics: ['cyber'] },
     golden:   { rarity: 'epic', name: 'Золотая', file: 'assets/golden_stair.webp', color: '#f1c40f', buffs: {}, mechanics: ['golden'] },
     goth:     { rarity: 'epic', name: 'Готическая', file: 'assets/goth_stair.webp', color: '#2c3e50', buffs: { discount: 0.20 }, mechanics: ['goth'] },
@@ -945,16 +1039,161 @@ const LADDER_SKINS = {
     storm:    { rarity: 'special', name: 'Грозовой фронт', file: 'assets/storm_front_stair.webp', color: '#7f8fa6', buffs: { clickAdd: 20 }, mechanics: ['storm'] },
     strato:   { rarity: 'special', name: 'Стратосфера', file: 'assets/stratosphere_stair.webp', color: '#0097e6', buffs: {}, mechanics: ['strato'] },
     cosmo:    { rarity: 'special', name: 'Космос', file: 'assets/cosmo_stair.webp', color: '#192a56', buffs: {}, mechanics: ['cosmo'] },
-    absolute: { rarity: 'special', name: 'АБСОЛЮТ', file: 'assets/absolute_stair.webp', color: '#ffffff', buffs: {}, mechanics: ['absolute'] }
+    milkyway: { rarity: 'special', name: 'Млечный Путь', file: 'assets/milkyway_stair.webp', color: '#9b59b6', buffs: {}, mechanics: ['milkyway'] }, // <-- ДОБАВИТЬ ЭТО
+    endless:  { rarity: 'special', name: 'Сингулярность', file: 'assets/endless_loc_stair.webp', color: '#000000', buffs: {}, mechanics: ['endless'] }, // <-- ДОБАВИТЬ ЭТО
+    absolute: {         rarity: 'special',         name: 'АБСОЛЮТ',         file: 'assets/absolute_stair.webp',         color: '#ffffff',         buffs: { 
+            click: 7,              // Огненная (+7)
+            clickAdd: 20,          // Грозовой фронт (+20)
+            luck: 22,              // Пивная (5) + Книжная (7) + Календарь (10)
+            caseLimitMinus: 60,    // Огненная (-10) + Квантовая (-50)
+            discount: 0.20,        // Готическая (-20% на весь магазин)
+            speakerAdd: 20,        // Кактус (+20 к колонке)
+            newtonAdd: 25,         // Пожарная (+15) + Кактус (+10) к шарам
+            newtonMult: 1.5        // Цементная (+50% урон шаров)
+        }, 
+        mechanics: ['absolute'] 
+    }
 };
+
+// Отрисовка огромной горы слева (250м - 9500м)
+function drawMountain() {
+    if (visualHouseHeight < 550 || visualHouseHeight > 11500) return;
+    if (!mountainImg.complete || !mountainImg.naturalWidth) return;
+
+    // 1. ОЧЕНЬ ПЛАВНОЕ ПОЯВЛЕНИЕ (длится 1250 метров: с 250м до 1500м)
+let alpha = 1.0;
+if (visualHouseHeight < 4000) {
+    const p = Math.max(0, (visualHouseHeight - 550) / 3500);
+    alpha = Math.pow(p, 2.5);
+}
+    
+    // 2. ТИТАНИЧЕСКИЙ РАЗМЕР (Масштабируем так, чтобы гора занимала 85% высоты экрана)
+    const scale = Math.max(
+    (canvas.width * 0.90) / mountainImg.naturalWidth,
+    (canvas.height * 0.65) / mountainImg.naturalHeight
+);
+    const destW = mountainImg.naturalWidth * scale;
+    const destH = mountainImg.naturalHeight * scale;
+    
+    // Сдвигаем влево, чтобы гора нависала сбоку
+    const mountainX = -destW * 0.25; 
+
+    // 3. ДОЛГИЙ УХОД ВНИЗ (Начинает опускаться только после 1500м и скрывается к 9500м)
+    // Замени блок drawY на этот:
+let drawY = canvas.height - destH * 0.85;
+
+if (visualHouseHeight > 4500) {
+    const progress = Math.min(1, (visualHouseHeight - 4500) / 6500);
+    drawY += progress * (destH * 0.90);
+}
+
+    if (drawY > canvas.height + 50) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(mountainImg, mountainX, drawY, destW, destH);
+    ctx.restore();
+}
+
+// Отрисовка планеты Земля (15 000м - 150 000м: подъем горизонта и отдаление шара)
+function drawEarthAtmosphere() {
+    if (visualHouseHeight < 15000 || visualHouseHeight > 160000) return;
+    if (!planetEarthImg.complete || !planetEarthImg.naturalWidth) return;
+
+    // 1. ПРОЗРАЧНОСТЬ (мягкий вход на 15k-22k и растворение в бездне на 115k-145k)
+    let alpha = 1.0;
+    if (visualHouseHeight < 22000) {
+        alpha = Math.max(0, (visualHouseHeight - 15000) / 7000);
+    } else if (visualHouseHeight > 115000) {
+        alpha = Math.max(0, 1.0 - (visualHouseHeight - 115000) / 30000);
+    }
+    alpha = Math.max(0, Math.min(1, alpha));
+    if (alpha <= 0) return;
+
+    // 2. ДИНАМИЧЕСКИЙ МАСШТАБ (ЭФФЕКТ ОТДАЛЕНИЯ)
+    let widthRatio = 1.35; // До 45 000м — огромный нависающий горизонт
+    let drawY = canvas.height;
+
+    if (visualHouseHeight <= 45000) {
+        // ФАЗА 1: Подъем горизонта из-под пола (15 000м - 45 000м)
+        const riseProgress = (visualHouseHeight - 15000) / 30000;
+        // Мягкий нелинейный выход на орбиту
+        const easeRise = Math.sin(riseProgress * (Math.PI / 2));
+        
+        const scale = (canvas.width * widthRatio) / planetEarthImg.naturalWidth;
+        const destH = planetEarthImg.naturalHeight * scale;
+
+        // Планета плавно поднимается до пиковой высоты
+        drawY = canvas.height - (destH * 0.38 * easeRise);
+    } else {
+        // ФАЗА 2: ОТДАЛЕНИЕ В ГЛУБОКИЙ КОСМОС (45 000м - 145 000м)
+        // recedeProgress идет от 0 (на 45k) до 1 (к 130k)
+        const recedeProgress = Math.min(1, (visualHouseHeight - 45000) / 85000);
+
+        // Планета уменьшается со 135% экрана до 42% (превращается в аккуратный шар)
+        widthRatio = 1.35 - (recedeProgress * 0.93);
+
+        const scale = (canvas.width * widthRatio) / planetEarthImg.naturalWidth;
+        const destH = planetEarthImg.naturalHeight * scale;
+
+        // По мере уменьшения шар плавно оседает в нижнюю треть экрана
+        const startTopY = canvas.height - (planetEarthImg.naturalHeight * ((canvas.width * 1.35) / planetEarthImg.naturalWidth) * 0.38);
+        const endTopY = canvas.height - destH * 0.75; // шар красиво виден над нижним интерфейсом
+
+        drawY = startTopY + (endTopY - startTopY) * Math.pow(recedeProgress, 0.85);
+    }
+
+    // Итоговые габариты с учетом текущего масштаба
+    const destW = canvas.width * widthRatio;
+    const scale = destW / planetEarthImg.naturalWidth;
+    const destH = planetEarthImg.naturalHeight * scale;
+    const destX = (canvas.width - destW) / 2; // Строго по центру
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // 3. АДАПТИВНОЕ СВЕЧЕНИЕ АТМОСФЕРЫ (сжимается синхронно с планетой)
+    const cx = destX + destW / 2;
+    const cy = drawY + destH / 2;
+    const radius = destW / 2;
+    const glowThickness = 35 * (widthRatio / 1.35); // толщина ореола тоже уменьшается вдалеке
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + glowThickness, 0, Math.PI * 2);
+    const haloGrad = ctx.createRadialGradient(cx, cy, radius * 0.94, cx, cy, radius + glowThickness);
+    haloGrad.addColorStop(0, 'rgba(64, 164, 255, 0.85)');
+    haloGrad.addColorStop(1, 'rgba(64, 164, 255, 0)');
+    ctx.fillStyle = haloGrad;
+    ctx.fill();
+
+    // 4. ОТРИСОВКА САМОЙ ПЛАНЕТЫ
+    ctx.drawImage(planetEarthImg, destX, drawY, destW, destH);
+
+    ctx.restore();
+}
 
 let ownedSkins = ['wood']; // Инвентарь скинов (деревянная открыта со старта)
 let currentSkinId = 'wood'; // Текущая активная лестница
+let currentEffectId = 'wood'; // Текущий активный эффект/пассивка
+let activeSkinTab = 'visual';    // 'visual' (внешний вид) или 'effect' (эффект)
 
 let lightningFlash = 0;
 
 let newtonAnimProgress = 0; // 0 - покой, от 0 до 1 - цикл удара
 let newtonLeftHitFired = false; // Флаг удара левого шара
+
+const bgFirstLocImg = new Image();
+bgFirstLocImg.src = 'assets/bg_first_loc1.webp';
+
+// === АРТЫ ПЕРВОЙ ЛОКАЦИИ (ХРУЩЕВКА) ===
+const houseDownImg = new Image();
+houseDownImg.src = 'assets/houses_down.webp';
+
+const houseMidImg = new Image();
+houseMidImg.src = 'assets/houses_midle.webp';
+
+const houseRoofImg = new Image();
+houseRoofImg.src = 'assets/roof.webp';
 
 const balloonImg = new Image();
 balloonImg.src = 'assets/balloon.webp';
@@ -988,6 +1227,12 @@ const obeliskImg = new Image(); obeliskImg.src = 'assets/obelisk.webp';
 const cosmoTrackImg = new Image(); cosmoTrackImg.src = 'assets/cosmo_track.webp';
 const shutleImg = new Image(); shutleImg.src = 'assets/shutle.webp';
 const asteroidCreatureImg = new Image(); asteroidCreatureImg.src = 'assets/asteroid_creature.webp';
+// Космические задние фоны (Млечный Путь и Бескрайний простор)
+const nebulaImg = new Image();
+nebulaImg.src = 'assets/nebula.webp';
+
+const blackHoleImg = new Image();
+blackHoleImg.src = 'assets/black_hole.webp';
 
 // Анимации космических змей (по 6 кадров)
 const cr1Frames = []; // creature1 (голова налево)
@@ -1061,14 +1306,15 @@ const modalCasesCount = document.getElementById('modal-cases-count');
 const btnOpenBox = document.getElementById('btn-open-box');
 const gachaResult = document.getElementById('gacha-result');
 
-// База локаций и цветов фона (включая 1М и 10М)
+// База локаций и цветов фона
 const LOCATIONS = [
-    { h: 0,        name: "Хрущевка",          top: [93, 64, 55],   bot: [141, 110, 99] }, 
-    { h: 100,      name: "Крыши",              top: [79, 195, 247], bot: [179, 229, 252] }, 
+    { h: 0,        name: "Хрущевка",          top: [1, 140, 197],  bot: [38, 166, 219] }, 
+    { h: 250,      name: "Крыши",              top: [1, 140, 197],  bot: [38, 166, 219] }, 
+    { h: 550,      name: "Крыши",              top: [1, 140, 197],  bot: [50, 175, 225] }, 
     { h: 1000,     name: "Грозовой Фронт",     top: [55, 71, 79],   bot: [120, 144, 156] }, 
     { h: 10000,    name: "Стратосфера",        top: [26, 35, 126],  bot: [63, 81, 181] }, 
-    { h: 100000,   name: "Открытый Космос",    top: [0, 0, 0],      bot: [15, 5, 25] },
-    { h: 1000000,  name: "Млечный Путь",       top: [18, 5, 38],    bot: [48, 16, 78] },
+    { h: 100000,   name: "Открытый Космос",    top: [0, 0, 0],      bot: [15, 5, 25] }, 
+    { h: 1000000,  name: "Млечный Путь",       top: [18, 5, 38],    bot: [48, 16, 78] }, 
     { h: 10000000, name: "Бескрайний простор", top: [2, 1, 8],      bot: [8, 12, 28] }
 ];
 
@@ -1118,15 +1364,31 @@ function spawnBGObject() {
     // --- 0. БЕСКРАЙНИЙ ПРОСТОР (>= 10 000 000 м) ---
     if (currentHeight >= 10000000) {
         const roll = Math.random();
-        if (roll < 0.05 && !bgObjects.some(o => o.type === 'cube')) {
+
+        // Проверяем наличие любого крупного монумента на экране
+        const activeMonolith = bgObjects.find(o => o.type === 'cube' || o.type === 'guard');
+        const hasNearMonolith = bgObjects.some(o => (o.type === 'cube' || o.type === 'guard') && o.y < 350);
+
+        // 1. КУБ (не спавнится, если рядом Страж или другой Куб)
+        if (roll < 0.05 && !bgObjects.some(o => o.type === 'cube') && !hasNearMonolith) {
             type = 'cube';
-            x = canvas.width / 2 + (Math.random() - 0.5) * 120; // По центру со смещением
-            y = -150; // Появляется сверху
-            vx = 0; // Не летит вбок
-        } else if (roll < 0.1 && !bgObjects.some(o => o.type === 'guard')) {
+            // Если на экране уже есть Страж, встаем строго на противоположную сторону
+            const isLeft = activeMonolith ? (activeMonolith.x > canvas.width / 2) : (Math.random() > 0.5);
+            x = isLeft 
+                ? canvas.width * (0.12 + Math.random() * 0.08) 
+                : canvas.width * (0.80 + Math.random() * 0.08);
+            y = -180;
+            vx = 0;
+        } 
+        // 2. СТРАЖ (не спавнится в Кубе)
+        else if (roll < 0.1 && !bgObjects.some(o => o.type === 'guard') && !hasNearMonolith) {
             type = 'guard';
-            x = canvas.width / 2 + (Math.random() - 0.5) * 120;
-            y = -150;
+            // Если на экране уже есть Куб, встаем строго на противоположную сторону
+            const isLeft = activeMonolith ? (activeMonolith.x > canvas.width / 2) : (Math.random() > 0.5);
+            x = isLeft 
+                ? canvas.width * (0.14 + Math.random() * 0.08) 
+                : canvas.width * (0.78 + Math.random() * 0.08);
+            y = -180;
             vx = 0;
         } else if (roll < 0.25 && !bgObjects.some(o => o.type === 'cr2')) {
             type = 'cr2';
@@ -1233,13 +1495,21 @@ function spawnBGObject() {
     // --- 3. ГРОЗОВОЙ ФРОНТ (1 000 - 10 000 м) ---
     else if (currentHeight >= 1000) {
         if (Math.random() < 0.2) {
-            type = 'airplane'; vx = (fromLeft ? 1 : -1) * (70 + Math.random() * 30);
+            type = 'airplane'; 
+            vx = (fromLeft ? 1 : -1) * (70 + Math.random() * 30);
+
+            // Звук играет не чаще чем раз в 18 секунд и с 50% шансом
+            const now = Date.now();
+            if (now - lastPlaneSoundTime > 14000 && Math.random() < 0.8) {
+                lastPlaneSoundTime = now;
+                AudioEngine.play('airplane', 0.45); // 0.45 — комфортная фоновая громкость
+            }
         } else {
             type = 'cloud'; size = 35 + Math.random() * 30; color = `rgba(85, 95, 105, ${speedMult * 0.5})`; vx *= 0.5;
         }
-    } 
+    }
     // --- 4. КРЫШИ / НЕБО (100 - 1 000 м) ---
-    else if (currentHeight >= 100) {
+    else if (currentHeight >= 200) {
         if (Math.random() < 0.35) {
             type = 'seagull'; vx = (fromLeft ? 1 : -1) * (45 + Math.random() * 25);
         } else {
@@ -1256,9 +1526,16 @@ function drawBGObjects() {
     lastBgTime = now;
     bgSpawnTimer += dt * 1000;
 
-    if (currentHeight >= 1000 && currentHeight < 10000 && Math.random() < 0.004) {
-        lightningFlash = 0.8;
+    // Стало (вспышка + раскат грома с кулдауном):
+if (currentHeight >= 1000 && currentHeight < 10000 && Math.random() < 0.004) {
+    lightningFlash = 0.8;
+
+    const now = Date.now();
+    if (now - lastThunderTime > 5500) {
+        lastThunderTime = now;
+        AudioEngine.play('balfron_thunder', 0.75); // 0.75 — комфортная громкость SFX
     }
+}
     if (lightningFlash > 0) {
         ctx.fillStyle = `rgba(255, 255, 255, ${lightningFlash})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1276,9 +1553,11 @@ function drawBGObjects() {
         // Горизонтальный дрейф
         obj.x += obj.vx * dt;
 
-        // 1. Физика скролла стоячих объектов (пролетаем мимо них при кликах)
+        // 1. Физика скролла стоячих объектов (строго неподвижны, пока игрок не поднимается)
         if (obj.type === 'obelisk' || obj.type === 'cube' || obj.type === 'guard') {
-            obj.y += ladderSpeed * 15 * dt; // Полноценная скорость скролла мира!
+            if (ladderSpeed > 0) {
+                obj.y += ladderSpeed * 8 * dt; // Двигаются вниз ТОЛЬКО при подъеме игрока
+            }
         } else {
             const speedFactor = obj.type === 'star' ? 1.5 : 18;
             obj.y += ladderSpeed * obj.speedMult * speedFactor * dt;
@@ -1300,80 +1579,148 @@ function drawBGObjects() {
             }
             ctx.restore();
         }
-        // 2. Куб (Точные пропорции: каркас 1250x1452, ядро 1359x1321)
+        // 2. Куб (Тессеракт: квантовое расслоение, RGB-сдвиг и медленное парение)
         else if (obj.type === 'cube') {
             obj.animTimer += dt;
+            const t = obj.animTimer;
             ctx.save();
-            ctx.translate(obj.x, obj.y + Math.sin(obj.animTimer * 1.5) * 12);
             
-            // Базовый размер внешнего каркаса
+            // Очень медленное, глубокое парение на месте (частота 0.3 вместо 0.75)
+            ctx.translate(obj.x, obj.y + Math.sin(t * 0.3) * 2.5);
+            
             const cw = 130;
-            const ch = cw * (1452 / 1250); // ~151px
+            const ch = cw * (1452 / 1250);
 
-            // 1. Задняя стенка
+            // КВАНТОВЫЙ ГЛИТЧ И РАССЛОЕНИЕ:
+            const isGlitchTwitch = Math.random() < 0.06;
+            const splitDist = isGlitchTwitch ? (4 + Math.random() * 4) : (1.6 + Math.sin(t * 1.5) * 0.6);
+            const glitchShiftY = isGlitchTwitch ? (Math.random() - 0.5) * 3 : 0;
+
+            const drawFrameGhost = (shiftX, shiftY, shadowHex, alphaVal) => {
+                ctx.save();
+                ctx.globalAlpha = alphaVal;
+                ctx.shadowColor = shadowHex;
+                ctx.shadowOffsetX = shiftX;
+                ctx.shadowOffsetY = shiftY;
+                ctx.shadowBlur = isGlitchTwitch ? 8 : 3;
+
+                if (cubeBackImg.complete && cubeBackImg.naturalWidth !== 0) {
+                    ctx.drawImage(cubeBackImg, -cw / 2, -ch / 2, cw, ch);
+                }
+                if (cubeFrontImg.complete && cubeFrontImg.naturalWidth !== 0) {
+                    ctx.drawImage(cubeFrontImg, -cw / 2, -ch / 2, cw, ch);
+                }
+                ctx.restore();
+            };
+
+            // 1. Квантовое расслоение (Красный/Маджента канал влево)
+            drawFrameGhost(-splitDist, glitchShiftY, 'rgba(255, 0, 95, 0.75)', 0.65);
+
+            // 2. Квантовое расслоение (Циан канал вправо)
+            drawFrameGhost(splitDist, -glitchShiftY, 'rgba(0, 240, 255, 0.75)', 0.65);
+
+            // 3. Основной физический каркас (задник)
             if (cubeBackImg.complete && cubeBackImg.naturalWidth !== 0) {
                 ctx.drawImage(cubeBackImg, -cw / 2, -ch / 2, cw, ch);
             }
             
-            // 2. Ядро (пульсация, свечение и точные пропорции 1359x1321)
-            const coreScale = 0.38 + Math.sin(obj.animTimer * 4) * 0.04;
+            // 4. ЭНЕРГОЯДРО С АДДИТИВНЫМ ФОНОМ
+            const pulse = Math.sin(t * 1.8);
+            const coreScale = 0.46 + pulse * 0.04; 
             const lw = cw * coreScale;
             const lh = lw * (1321 / 1359);
             
             ctx.save();
-            ctx.globalAlpha = 0.8 + Math.sin(obj.animTimer * 5) * 0.2;
-            ctx.shadowColor = `hsl(${Math.floor(obj.animTimer * 60 % 360)}, 100%, 65%)`;
-            ctx.shadowBlur = 14;
+            const flareR = lw * 0.85;
+            const flareGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, flareR);
+            flareGrad.addColorStop(0, 'rgba(0, 240, 255, 0.8)');
+            flareGrad.addColorStop(0.45, 'rgba(243, 156, 18, 0.35)');
+            flareGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = flareGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, flareR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Вращение ядра
+            ctx.rotate(t * 0.6);
+
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 20 + pulse * 8;
+            ctx.globalAlpha = 0.9 + pulse * 0.1;
+
             if (cubeLighterImg.complete && cubeLighterImg.naturalWidth !== 0) {
                 ctx.drawImage(cubeLighterImg, -lw / 2, -lh / 2, lw, lh);
             }
             ctx.restore();
             
-            // 3. Передние ребра
+            // 5. Передние ребра куба
             if (cubeFrontImg.complete && cubeFrontImg.naturalWidth !== 0) {
                 ctx.drawImage(cubeFrontImg, -cw / 2, -ch / 2, cw, ch);
             }
             
             ctx.restore();
         }
-        // 3. Страж (Ядро 336x333, верхние 434x521, нижние 374x350)
+        // 3. Страж (Асинхронные живые пластины на магнитной левитации)
         else if (obj.type === 'guard') {
             obj.animTimer += dt;
+            const t = obj.animTimer;
             ctx.save();
-            ctx.translate(obj.x, obj.y + Math.sin(obj.animTimer * 2) * 8);
+
+            // Очень медленное, величественное парение
+            ctx.translate(obj.x, obj.y + Math.sin(t * 0.35) * 2.5);
             
-            // Ядро (336x333)
+            // Ядро (50x49.5px, радиус ~25px)
             const gw = 50;
             const gh = gw * (333 / 336);
+
+            // 1. МЯГКОЕ НЕОНОВОЕ СВЕЧЕНИЕ ЯДРА
             ctx.save();
+            const glowPulse = 0.85 + Math.sin(t * 2.0) * 0.15;
+            const glowR = gw * 0.95 * glowPulse;
+            const coreGlow = ctx.createRadialGradient(0, 0, gw * 0.15, 0, 0, glowR);
+            coreGlow.addColorStop(0, 'rgba(0, 245, 255, 0.40)');     // Мягкий циан в центре
+            coreGlow.addColorStop(0.45, 'rgba(0, 180, 255, 0.18)');  // Рассеянный полутон
+            coreGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');            // Уход в прозрачность
+            
+            ctx.fillStyle = coreGlow;
+            ctx.beginPath();
+            ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Само ядро
             ctx.shadowColor = '#00ffff';
-            ctx.shadowBlur = 12 + Math.sin(obj.animTimer * 4) * 6;
+            ctx.shadowBlur = 8 + Math.sin(t * 1.5) * 4;
             if (guardCoreImg.complete && guardCoreImg.naturalWidth !== 0) {
                 ctx.drawImage(guardCoreImg, -gw / 2, -gh / 2, gw, gh);
             }
             ctx.restore();
             
-            // Пластины: диагональный вылет
-            const pDist = 30 + Math.sin(obj.animTimer * 3) * 8;
-            
+            // ХАОТИЧНЫЕ ДИСТАНЦИИ ПЛАСТИН:
+            const distLU = 35 + Math.sin(t * 1.7 + 0.5) * 4.5 + Math.cos(t * 0.8) * 1.5;
+            const distRU = 34 + Math.sin(t * 1.2 + 2.3) * 4.0 + Math.sin(t * 2.1) * 1.8;
+            const distLD = 36 + Math.sin(t * 2.0 + 4.1) * 5.0 + Math.cos(t * 1.3) * 1.6;
+            const distRD = 35 + Math.sin(t * 1.4 + 5.8) * 4.2 + Math.sin(t * 0.9) * 2.0;
+
             // Верхние пластины (434x521)
             const upW = 38;
-            const upH = upW * (521 / 434); // ~45.6px
+            const upH = upW * (521 / 434);
             if (guardLUImg.complete && guardLUImg.naturalWidth !== 0) {
-                ctx.drawImage(guardLUImg, -pDist - upW / 2, -pDist - upH / 2, upW, upH);
+                ctx.drawImage(guardLUImg, -distLU - upW / 2, -distLU - upH / 2, upW, upH);
             }
             if (guardRUImg.complete && guardRUImg.naturalWidth !== 0) {
-                ctx.drawImage(guardRUImg, pDist - upW / 2, -pDist - upH / 2, upW, upH);
+                ctx.drawImage(guardRUImg, distRU - upW / 2, -distRU - upH / 2, upW, upH);
             }
             
-            // Левая нижняя (374x350) и Правая нижняя (373x350)
+            // Нижние пластины (374x350)
             const dnW = 36;
-            const dnH = dnW * (350 / 374); // ~33.7px
+            const dnH = dnW * (350 / 374);
             if (guardLDImg.complete && guardLDImg.naturalWidth !== 0) {
-                ctx.drawImage(guardLDImg, -pDist - dnW / 2, pDist - dnH / 2, dnW, dnH);
+                ctx.drawImage(guardLDImg, -distLD - dnW / 2, distLD - dnH / 2, dnW, dnH);
             }
             if (guardRDImg.complete && guardRDImg.naturalWidth !== 0) {
-                ctx.drawImage(guardRDImg, pDist - dnW / 2, pDist - dnH / 2, dnW, dnH);
+                ctx.drawImage(guardRDImg, distRD - dnW / 2, distRD - dnH / 2, dnW, dnH);
             }
             
             ctx.restore();
@@ -1562,18 +1909,35 @@ function drawBGObjects() {
             ctx.fill();
         } 
         else if (obj.type === 'solo_rocket') {
-            obj.x += obj.vx * dt; obj.y += obj.vy * dt;
-            ctx.save(); ctx.translate(obj.x, obj.y); ctx.rotate(-0.1);
+            obj.x += obj.vx * dt; 
+            obj.y += obj.vy * dt;
+
+            // Угол наклона строго по направлению движения:
+            const rocketAngle = Math.atan2(obj.vx, -obj.vy);
+
+            ctx.save(); 
+            ctx.translate(obj.x, obj.y); 
+            ctx.rotate(rocketAngle); // Поворачиваем ракету вместе с факелом
+
             if (rocketImg.complete) ctx.drawImage(rocketImg, -75, -50, 150, 100);
             
-            const flameY = 25; const flameH = 20 + Math.random() * 12;
+            const flameY = 25; 
+            const flameH = 20 + Math.random() * 12;
             const flameGrad = ctx.createLinearGradient(0, flameY, 0, flameY + flameH);
-            flameGrad.addColorStop(0, '#ffffff'); flameGrad.addColorStop(0.2, '#f1c40f');
-            flameGrad.addColorStop(0.5, '#e67e22'); flameGrad.addColorStop(1, 'rgba(231, 76, 60, 0)');
-            ctx.fillStyle = flameGrad; ctx.beginPath(); ctx.moveTo(-8, flameY); ctx.lineTo(8, flameY); ctx.lineTo(0, flameY + flameH); ctx.fill();
+            flameGrad.addColorStop(0, '#ffffff'); 
+            flameGrad.addColorStop(0.2, '#f1c40f');
+            flameGrad.addColorStop(0.5, '#e67e22'); 
+            flameGrad.addColorStop(1, 'rgba(231, 76, 60, 0)');
+            ctx.fillStyle = flameGrad; 
+            ctx.beginPath(); 
+            ctx.moveTo(-8, flameY); 
+            ctx.lineTo(8, flameY); 
+            ctx.lineTo(0, flameY + flameH); 
+            ctx.fill();
+
             ctx.restore();
             if (obj.y < -150) obj.x = -999;
-        } 
+        }
         else if (obj.type === 'solo_meteor') {
             obj.x += obj.vx * dt; obj.y += obj.vy * dt;
             obj.y += ladderSpeed * obj.speedMult * 18 * dt;
@@ -1591,43 +1955,128 @@ function drawBGObjects() {
             obj.t += dt * 0.12;
             if (obj.t < 0.5 && !obj.exploded) {
                 const p = obj.t / 0.5;
-                ctx.save(); ctx.translate(obj.startX_r + (obj.targetX - obj.startX_r) * p, obj.startY_r + (obj.targetY - obj.startY_r) * p); ctx.rotate(-0.1);
+                const curRocketX = obj.startX_r + (obj.targetX - obj.startX_r) * p;
+                const curRocketY = obj.startY_r + (obj.targetY - obj.startY_r) * p;
+
+                // Наклон точно по вектору полёта к цели (метеориту):
+                const rocketAngle = Math.atan2(obj.targetX - obj.startX_r, -(obj.targetY - obj.startY_r));
+
+                ctx.save(); 
+                ctx.translate(curRocketX, curRocketY); 
+                ctx.rotate(rocketAngle);
+
                 if (rocketImg.complete) ctx.drawImage(rocketImg, -75, -50, 150, 100);
                 const fg = ctx.createLinearGradient(0, 25, 0, 25 + 18 + Math.random() * 10);
-                fg.addColorStop(0, '#fff'); fg.addColorStop(0.2, '#f1c40f'); fg.addColorStop(1, 'rgba(231,76,60,0)');
-                ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(-8, 25); ctx.lineTo(8, 25); ctx.lineTo(0, 25 + 18 + Math.random() * 10); ctx.fill();
+                fg.addColorStop(0, '#fff'); 
+                fg.addColorStop(0.2, '#f1c40f'); 
+                fg.addColorStop(1, 'rgba(231,76,60,0)');
+                ctx.fillStyle = fg; 
+                ctx.beginPath(); 
+                ctx.moveTo(-8, 25); 
+                ctx.lineTo(8, 25); 
+                ctx.lineTo(0, 25 + 18 + Math.random() * 10); 
+                ctx.fill();
                 ctx.restore();
                 
-                ctx.save(); ctx.translate(obj.startX_m + (obj.targetX - obj.startX_m) * p, obj.startY_m + (obj.targetY - obj.startY_m) * p); ctx.rotate(0.75);
-                const tg = ctx.createRadialGradient(0, 0, 4, -18, -18, 45 + Math.random() * 8);
-                tg.addColorStop(0, 'rgba(255,220,120,0.95)'); tg.addColorStop(1, 'rgba(231,76,60,0)');
-                ctx.fillStyle = tg; ctx.beginPath(); ctx.ellipse(-15, -15, 45 + Math.random() * 8, 16 + Math.random() * 6, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+                // СТАЛО:
+// Метеорит (поворот строго по направлению к ракете)
+const meteorAngle = Math.atan2(obj.targetY - obj.startY_m, obj.targetX - obj.startX_m);
+
+ctx.save(); 
+ctx.translate(obj.startX_m + (obj.targetX - obj.startX_m) * p, obj.startY_m + (obj.targetY - obj.startY_m) * p); 
+ctx.rotate(meteorAngle - Math.PI / 4); // Выравниваем нос и хвост по траектории
+
+const tg = ctx.createRadialGradient(0, 0, 4, -18, -18, 45 + Math.random() * 8);
+tg.addColorStop(0, 'rgba(255,220,120,0.95)'); 
+tg.addColorStop(1, 'rgba(231,76,60,0)');
+ctx.fillStyle = tg; 
+ctx.beginPath(); 
+ctx.ellipse(-15, -15, 45 + Math.random() * 8, 16 + Math.random() * 6, Math.PI / 4, 0, Math.PI * 2); 
+ctx.fill();
+if (meteorImg.complete) ctx.drawImage(meteorImg, -22, -22, 45, 45);
+ctx.restore();
+                tg.addColorStop(0, 'rgba(255,220,120,0.95)'); 
+                tg.addColorStop(1, 'rgba(231,76,60,0)');
+                ctx.fillStyle = tg; 
+                ctx.beginPath(); 
+                ctx.ellipse(-15, -15, 45 + Math.random() * 8, 16 + Math.random() * 6, Math.PI / 4, 0, Math.PI * 2); 
+                ctx.fill();
                 if (meteorImg.complete) ctx.drawImage(meteorImg, -22, -22, 45, 45);
                 ctx.restore();
             } else if (!obj.exploded) {
-                obj.exploded = true; shakeTime = 16;
+                obj.exploded = true; 
+                shakeTime = 16;
                 for (let k = 0; k < 14; k++) debrisArray.push({ x: obj.targetX, y: obj.targetY, vx: (Math.random() - 0.5) * 24, vy: (Math.random() - 0.5) * 24, rot: Math.random() * Math.PI, rotSpeed: 0.35, width: 10 + Math.random() * 8, height: 10 + Math.random() * 8 });
             }
             if (obj.t >= 1.0) { obj.x = -999; obj.y = -999; }
-        } 
+        }
         else {
             ctx.save();
             if (obj.type === 'star') {
-                const twinkle = 0.08 + 0.92 * Math.abs(Math.sin(obj.animTimer * 8.5));
+                const now = Date.now();
+                const twinkle = 0.15 + 0.85 * Math.abs(Math.sin(obj.animTimer * 8.5));
+                
+                // === ГРАВИТАЦИОННОЕ ЛИНЗИРОВАНИЕ (Только для Чёрной дыры и Абсолюта) ===
+                let renderX = obj.x;
+                let renderY = obj.y;
+                let stretch = 1.0;
+                let angle = 0;
+
+                const hasBlackHole = (currentSkinId === 'endless' || currentSkinId === 'absolute');
+                if (hasBlackHole && blackHoleBonus > 0) {
+                    // Координаты центра гравитационной аномалии на экране
+                    const bhCenterX = canvas.width / 2;
+                    const bhCenterY = canvas.height * 0.48;
+
+                    const dx = obj.x - bhCenterX;
+                    const dy = obj.y - bhCenterY;
+                    const dist = Math.hypot(dx, dy);
+
+                    // Масса растет вместе с бонусом (+1000% дает максимальное искривление)
+                    const bhMass = (2500 + blackHoleBonus * 600) * (canvas.width / 400);
+                    const horizonR = 25 * (canvas.width / 400);
+
+                    // Звезда поглощена горизонтом событий
+                    if (dist < horizonR) {
+                        ctx.restore();
+                        continue; 
+                    }
+
+                    // Формула гравитационного смещения света: гиперболическое отталкивание видимого луча
+                    if (dist < 260) {
+                        const displacement = bhMass / (dist * 1.4);
+                        renderX += (dx / dist) * displacement;
+                        renderY += (dy / dist) * displacement;
+
+                        // Звезда сплющивается в дугу по касательной к окружности дыры
+                        stretch = Math.min(4.5, 1.0 + displacement / 12);
+                        angle = Math.atan2(dy, dx) + Math.PI / 2; // Перпендикулярно лучу
+                    }
+                }
+
                 ctx.fillStyle = `rgba(255, 255, 255, ${twinkle})`;
-                if (obj.size > 1.1 && twinkle > 0.4) {
+
+                if (stretch > 1.2) {
+                    // Рисуем искривленную звезду-дугу (Гравитационная линза)
+                    ctx.beginPath();
+                    ctx.ellipse(renderX, renderY, obj.size * stretch, Math.max(0.6, obj.size * 0.6), angle, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obj.size > 1.1 && twinkle > 0.4) {
                     const rl = obj.size * 3.2, rt = obj.size * 0.45;
-                    ctx.beginPath(); ctx.moveTo(obj.x, obj.y - rl); ctx.lineTo(obj.x + rt, obj.y); ctx.lineTo(obj.x, obj.y + rl); ctx.lineTo(obj.x - rt, obj.y);
-                    ctx.moveTo(obj.x - rl, obj.y); ctx.lineTo(obj.x, obj.y + rt); ctx.lineTo(obj.x + rl, obj.y); ctx.lineTo(obj.x, obj.y - rt); ctx.fill();
-                    ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.size * 0.6, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); 
+                    ctx.moveTo(renderX, renderY - rl); ctx.lineTo(renderX + rt, renderY); ctx.lineTo(renderX, renderY + rl); ctx.lineTo(renderX - rt, renderY);
+                    ctx.moveTo(renderX - rl, renderY); ctx.lineTo(renderX, renderY + rt); ctx.lineTo(renderX + rl, renderY); ctx.lineTo(renderX - rt, renderY); 
+                    ctx.fill();
                 } else {
-                    ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.size * 0.8, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); 
+                    ctx.arc(renderX, renderY, obj.size * 0.8, 0, Math.PI * 2); 
+                    ctx.fill();
                 }
             } else {
                 ctx.fillStyle = obj.color;
-            }
-            if (obj.type !== 'star') {
-                ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); 
+                ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI * 2); 
+                ctx.fill();
             }
             ctx.restore();
         }
@@ -1637,6 +2086,14 @@ function drawBGObjects() {
             bgObjects.splice(i, 1);
         }
     }
+}
+
+// === АНИМАЦИЯ РЕТРО-МОНЕТКИ ===
+const coinFrames = [];
+for (let i = 1; i <= 4; i++) {
+    let img = new Image();
+    img.src = `assets/coin_frame${i}.webp`; // Точно как на твоем скриншоте
+    coinFrames.push(img);
 }
 
 // ==========================================
@@ -1649,11 +2106,13 @@ let selectedCustSkin = null; // ID скина, который сейчас ра�
 const custModal = document.getElementById('customization-modal');
 const luckModal = document.getElementById('luck-modal');
 
-// Обновление иконок прямо на игровом экране (вызывать при старте и смене скинов)
+// Обновление иконок прямо на игровом экране
 function updateFieldIcons() {
     const spIcon = document.getElementById('field-icon-speaker');
     const nwIcon = document.getElementById('field-icon-newton');
     const lkVal = document.getElementById('field-luck-val');
+    const lkIcon = document.getElementById('field-luck-icon');
+    const btnLuck = document.getElementById('btn-field-luck');
 
     if (spIcon) {
         const curSp = SPEAKER_SKINS[currentSpeakerSkin] || SPEAKER_SKINS.old;
@@ -1665,8 +2124,48 @@ function updateFieldIcons() {
         nwIcon.src = curNw.file || STEEL_BALL_IMG_URL;
         nwIcon.style.display = 'block';
     }
+
+    // 1. Делаем саму кнопку контейнером для абсолютного позиционирования
+    if (btnLuck) {
+        btnLuck.style.position = 'relative';
+        btnLuck.style.display = 'flex';
+        btnLuck.style.alignItems = 'center';
+        btnLuck.style.justifyContent = 'center';
+        btnLuck.style.padding = '0';
+        btnLuck.style.overflow = 'hidden';
+    }
+
+    // 2. Иконка/талисман растягивается почти на весь квадрат
+    if (lkIcon) {
+        lkIcon.style.width = '100%';
+        lkIcon.style.height = '100%';
+        lkIcon.style.display = 'flex';
+        lkIcon.style.alignItems = 'center';
+        lkIcon.style.justifyContent = 'center';
+
+        if (currentTalisman && TALISMANS[currentTalisman]) {
+            lkIcon.innerHTML = `<img src="${TALISMANS[currentTalisman].file}" style="width: 82%; height: 82%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));">`;
+        } else {
+            lkIcon.innerHTML = `<span style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">🍀</span>`;
+        }
+    }
+
+    // 3. Число удачи превращаем в компактный бейдж в правом нижнем углу
+    // В функции updateFieldIcons() замени блок стилей lkVal:
     if (lkVal) {
         lkVal.innerText = getTotalLuck();
+        lkVal.style.position = 'absolute';
+        lkVal.style.bottom = '1px';
+        lkVal.style.right = '2px';
+        lkVal.style.fontSize = '8.5px';       // Уменьшили шрифт
+        lkVal.style.fontWeight = 'bold';
+        lkVal.style.color = '#2ecc71';
+        lkVal.style.background = 'rgba(8, 12, 16, 0.88)';
+        lkVal.style.padding = '0px 3px';     // Уменьшили плашку
+        lkVal.style.borderRadius = '3px';
+        lkVal.style.border = '1px solid rgba(46, 204, 113, 0.4)';
+        lkVal.style.lineHeight = '1.1';
+        lkVal.style.pointerEvents = 'none';
     }
 }
 
@@ -1812,7 +2311,7 @@ document.getElementById('cust-preview-img').src = skinData.file || defaultPrevie
 
             ownedList.push(selectedCustSkin);
             equipItem(currentCustType, selectedCustSkin);
-            AudioEngine.play('jacpot', 1.0);
+            AudioEngine.play('gaiki', 0.8);
             
             uiNuts.innerText = `🔩 ${nuts}`;
             renderCustomizationModal();
@@ -1859,11 +2358,28 @@ card.innerHTML = `<img src="${cardImg}" style="max-width: 70%; max-height: 70%; 
 // Отрисовка окна Удачи
 function renderLuckModal() {
     const totalLuck = getTotalLuck();
-    document.getElementById('luck-total-val-modal').innerText = totalLuck;
-    document.getElementById('field-luck-val').innerText = totalLuck;
+    
+    const luckValModal = document.getElementById('luck-total-val-modal');
+    if (luckValModal) luckValModal.innerText = totalLuck;
+    
+    const lkValField = document.getElementById('field-luck-val');
+    if (lkValField) lkValField.innerText = totalLuck;
 
+    // Показываем картинку талисмана в модалке удачи
+    const imgCont = document.getElementById('modal-luck-image-container');
+    const imgEl = document.getElementById('modal-luck-image');
+    if (imgCont && imgEl) {
+        if (currentTalisman && TALISMANS[currentTalisman]) {
+            imgEl.src = TALISMANS[currentTalisman].file;
+            imgCont.style.display = 'block';
+        } else {
+            imgCont.style.display = 'none';
+        }
+    }
+    
     // Модификаторы текстом
     const modEl = document.getElementById('luck-modifiers-list');
+    if (!modEl) return;
     modEl.innerHTML = '';
 
     const ladderSkin = LADDER_SKINS[currentSkinId];
@@ -1872,6 +2388,9 @@ function renderLuckModal() {
     }
     if (currentTalisman && TALISMANS[currentTalisman]) {
         modEl.innerHTML += `<div>🧿 Талисман «${TALISMANS[currentTalisman].name}»: <b style="color:#2ecc71;">+${TALISMANS[currentTalisman].luck}</b></div>`;
+    }
+    if (hasMech('cyber') && cyberExtraAccessory.type === 'talismans' && cyberExtraAccessory.id && TALISMANS[cyberExtraAccessory.id]) {
+        modEl.innerHTML += `<div>🦾 Кибер-слот «${TALISMANS[cyberExtraAccessory.id].name}»: <b style="color:#00ffff;">+${TALISMANS[cyberExtraAccessory.id].luck}</b></div>`;
     }
     if (adState.fortuneTimer > 0) {
         modEl.innerHTML += `<div>📺 Буст от рекламы (Знак Фортуны): <b style="color:#2ecc71;">+15</b></div>`;
@@ -1882,6 +2401,7 @@ function renderLuckModal() {
 
     // Горизонтальный список талисманов для покупки
     const listEl = document.getElementById('luck-talismans-list');
+    if (!listEl) return;
     listEl.innerHTML = '';
 
     let nextTalismanToBuy = TALISMANS_ORDER.find(tId => !ownedTalismans.includes(tId));
@@ -1923,7 +2443,7 @@ function renderLuckModal() {
                     goldenNuts -= item.price;
                     ownedTalismans.push(id);
                     equipItem('talismans', id);
-                    AudioEngine.play('jacpot', 1.0);
+                    AudioEngine.play('gaiki', 0.8);
                     renderLuckModal();
                     updateFieldIcons();
                     saveGame();
@@ -1942,14 +2462,15 @@ function renderLuckModal() {
 function updateAutoClickers(dt) {
     if (typeof dt !== 'number' || isNaN(dt) || dt <= 0) return;
 
-    const skin = LADDER_SKINS[currentSkinId] || { buffs: {} };
+    const skin = { buffs: getActiveLadderBuffs() };
 
-// 1. КОЛОНКА
+    // 1. КОЛОНКА
     if (speakerLevel > 0) {
         const sTimeMult = hasMech('strato') ? 1.42 : 1.0;
         speakerTimer += (dt * sTimeMult);
         
-        const speakerInterval = (currentSpeakerSkin === 'cool') ? 1500 : 1000;
+        const isCoolSpeaker = currentSpeakerSkin === 'cool' || (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id === 'cool');
+        const speakerInterval = isCoolSpeaker ? 1500 : 1000;
 
         if (speakerTimer >= speakerInterval) {
             speakerTimer -= speakerInterval;
@@ -1957,9 +2478,15 @@ function updateAutoClickers(dt) {
 
             const speakerSkinData = SPEAKER_SKINS[currentSpeakerSkin] || SPEAKER_SKINS.old;
             const speakerMult = speakerSkinData.buff?.mpsMult || 1.0;
-            const speakerAdd = skin.buffs.speakerAdd || 0;
             
-            let finalMPS = Math.floor((speakerMPS + speakerAdd) * speakerMult);
+            // Проверка доп. множителя Киберпанка
+            let cyberSpeakerMult = 1.0;
+            if (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id) {
+                cyberSpeakerMult = SPEAKER_SKINS[cyberExtraAccessory.id]?.buff?.mpsMult || 1.0;
+            }
+            
+            const speakerAdd = skin.buffs.speakerAdd || 0;
+            let finalMPS = Math.floor((speakerMPS + speakerAdd) * speakerMult * cyberSpeakerMult);
             if (hasMech('vine')) finalMPS = Math.round(finalMPS * 1.4);
 
             if (adState.turboTimer > 0) finalMPS *= 3;
@@ -1968,9 +2495,9 @@ function updateAutoClickers(dt) {
             checkHeightMilestones();
             if (heightDisplay) heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
             
-            // Безопасный звук
+            // Безопасный звук колонки
             if (speakerSkinData.sound) {
-                AudioEngine.play(speakerSkinData.sound, 0.4);
+                AudioEngine.play(speakerSkinData.sound, 0.4, 'speaker');
             }
 
             // Безопасная анимация (не крашит цикл, если элемента нет)
@@ -1979,7 +2506,7 @@ function updateAutoClickers(dt) {
                 setTimeout(() => { if (slotSpeaker) slotSpeaker.style.transform = 'scale(1)'; }, 100);
             }
 
-            if (currentSpeakerSkin === 'cool' && speakerPulseCount % 3 === 0) {
+            if (isCoolSpeaker && speakerPulseCount % 3 === 0) {
                 goldenNuts += 1;
                 if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
                 if (slotSpeaker) {
@@ -2000,7 +2527,10 @@ function updateAutoClickers(dt) {
 
         let actualNSpeed = newtonSpeed;
         if (hasMech('plastic')) actualNSpeed = Math.max(200, actualNSpeed - 150);
-        if (hasMech('cement')) actualNSpeed += 300;
+      const activeEff = currentEffectId || currentSkinId;
+if (hasMech('cement') && activeEff !== 'absolute') {
+    actualNSpeed += 300;
+}
 
         if (newtonTimer >= actualNSpeed && newtonAnimProgress === 0) {
             newtonAnimProgress = 0.001;
@@ -2012,29 +2542,40 @@ function updateAutoClickers(dt) {
             newtonAnimProgress += dt / animDuration;
 
             const newtonMult = (NEWTON_SKINS[currentNewtonSkin]?.buff?.powerMult) || 1.0;
+            
+            // Проверка доп. множителя Киберпанка
+            let cyberNewtonMult = 1.0;
+            if (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id) {
+                cyberNewtonMult = NEWTON_SKINS[cyberExtraAccessory.id]?.buff?.powerMult || 1.0;
+            }
+
             const newtonAdd = skin.buffs.newtonAdd || 0;
             const cementMult = skin.buffs.newtonMult || 1.0;
 
-            let baseHit = Math.floor((newtonPower + newtonAdd) * newtonMult * cementMult);
+            let baseHit = Math.floor((newtonPower + newtonAdd) * newtonMult * cementMult * cyberNewtonMult);
             if (hasMech('vine')) baseHit = Math.round(baseHit * 1.4);
 
             const processBallHit = (isRightBall, ballX) => {
                 newtonHitCount++;
                 let hitDamage = baseHit;
 
-                if (currentNewtonSkin === 'billiard' && newtonHitCount % 8 === 0) {
+                const isBilliard = currentNewtonSkin === 'billiard' || (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'billiard');
+                const isPlasma = currentNewtonSkin === 'plasma' || (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'plasma');
+                const isPlanet = currentNewtonSkin === 'planet' || (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'planet');
+
+                if (isBilliard && newtonHitCount % 8 === 0) {
                     hitDamage = Math.floor(hitDamage * 2.5);
                     const bNuts = Math.floor(3 + Math.random() * 3);
                     addNuts(bNuts);
                     particles.push({ x: ballX, y: canvas.height * 0.22, text: `🎱 x2.5! +${bNuts} 🔩`, color: '#ffffff', font: 'bold 20px sans-serif', alpha: 1.6, speed: 2 });
                 }
 
-                if (currentNewtonSkin === 'plasma' && isRightBall) {
+                if (isPlasma && isRightBall) {
                     addNuts(1);
                     particles.push({ x: ballX, y: canvas.height * 0.24, text: '+1 🔩', color: '#00ffff', font: 'bold 18px sans-serif', alpha: 1.2, speed: 1.8 });
                 }
 
-                if (currentNewtonSkin === 'planet') {
+                if (isPlanet) {
                     clicksForBox += 3;
                     shakeTime = Math.max(shakeTime, 10);
                     let actualNeeded = clicksNeeded;
@@ -2048,23 +2589,26 @@ function updateAutoClickers(dt) {
                         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
                         pityStage++;
                         clicksNeeded = getClicksNeeded(pityStage);
+                        triggerCaseGainedPopup(); // Теперь всплывает "+📦 КЕЙС!"
                     }
                     if (uiBoxText) {
-        uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
-        uiBoxProgress.style.width = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
-    }
-}
+                        uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
+                    }
+                    if (uiBoxProgress) {
+                        uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
+                    }
+                }
 
-// Турбо x3 для шаров Ньютона
-if (adState.turboTimer > 0) hitDamage *= 3;
+                // Турбо x3 для шаров Ньютона
+                if (adState.turboTimer > 0) hitDamage *= 3;
 
-currentHeight += hitDamage;
-checkHeightMilestones();
+                currentHeight += hitDamage;
+                checkHeightMilestones();
                 heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
                 ladderScaleX = 1.06; ladderScaleY = 0.92; ladderSpeed = 16;
                 shakeTime = Math.max(shakeTime, 7);
 
-                AudioEngine.play(NEWTON_SKINS[currentNewtonSkin].sound, 0.6);
+                AudioEngine.play(NEWTON_SKINS[currentNewtonSkin].sound, 0.6, 'newton');
                 particles.push({ x: ballX, y: canvas.height * 0.28 + ladderDropY, text: `+${hitDamage}`, alpha: 1, speed: 2.5 });
             };
 
@@ -2084,14 +2628,81 @@ checkHeightMilestones();
     }
 }
 
+// Отрисовка горизонтального пояса космического мусора (350 000м - 850 000м)
+// Отрисовка пояса космического мусора (350 000м - 850 000м)
+function drawCosmicDebris() {
+    if (visualHouseHeight < 350000 || visualHouseHeight > 850000) return;
+    
+    // Защита от краша: если переменной нет или картинка ещё не загрузилась — выходим без падения игры
+    if (typeof cosmicDebrisImg === 'undefined') return;
+    if (!cosmicDebrisImg.complete || !cosmicDebrisImg.naturalWidth || cosmicDebrisImg.naturalHeight === 0) return;
+
+    let alpha = 1.0;
+    if (visualHouseHeight < 400000) {
+        alpha = (visualHouseHeight - 350000) / 50000;
+    } else if (visualHouseHeight > 800000) {
+        alpha = 1.0 - (visualHouseHeight - 800000) / 50000;
+    }
+    alpha = Math.max(0, Math.min(1, alpha));
+    if (alpha <= 0) return;
+
+    const time = Date.now();
+
+    ctx.save();
+    try {
+        ctx.globalCompositeOperation = 'screen';
+
+        const baseHeight = canvas.height * 0.40;
+        const scale = baseHeight / cosmicDebrisImg.naturalHeight;
+        const imgW = Math.ceil(cosmicDebrisImg.naturalWidth * scale);
+        const imgH = Math.ceil(cosmicDebrisImg.naturalHeight * scale);
+
+        if (imgW <= 0 || imgH <= 0) {
+            ctx.restore();
+            return;
+        }
+
+        const flightProgress = (visualHouseHeight - 350000) / 500000;
+        const worldY = -imgH + (canvas.height + imgH * 2) * flightProgress;
+
+        const drawLayer = (speedMult, scaleYMult, alphaMult, driftSpeed) => {
+            ctx.save();
+            ctx.globalAlpha = alpha * alphaMult;
+
+            const breathe = 1.0 + Math.sin(time * 0.0004 * driftSpeed) * 0.15;
+            const driftY = Math.cos(time * 0.0003 * driftSpeed) * 50;
+
+            const currentScaleY = scaleYMult * breathe;
+            const layerY = worldY + driftY;
+            const scrollX = -(time * 0.04 * speedMult) % imgW;
+
+            ctx.translate(0, layerY);
+            ctx.scale(1, currentScaleY);
+
+            ctx.drawImage(cosmicDebrisImg, scrollX, -imgH / 2, imgW, imgH);
+            ctx.drawImage(cosmicDebrisImg, scrollX + imgW, -imgH / 2, imgW, imgH);
+
+            ctx.restore();
+        };
+
+        drawLayer(0.4, 0.75, 0.35, 0.8);
+        drawLayer(1.2, 1.0, 1.0, 1.3);
+    } finally {
+        ctx.restore(); // Гарантированно возвращает стандартные настройки Canvas для лестницы
+    }
+}
+
 // --- ГЛАВНЫЙ ЦИКЛ ---
 function gameLoop() {
-    const now = performance.now(); // Высокоточные часы браузера
+    const now = performance.now();
     if (!window._lastLoopTime) window._lastLoopTime = now;
     
-    // Чистое реальное время, прошедшее с прошлого кадра (в миллисекундах)
     const dt = Math.min(100, now - window._lastLoopTime);
     window._lastLoopTime = now;
+
+    // ГАРАНТИЯ ДВИЖЕНИЯ: плавная высота непрерывно догоняет реальную высоту тапов
+    if (isNaN(visualHouseHeight)) visualHouseHeight = currentHeight;
+    visualHouseHeight += (currentHeight - visualHouseHeight) * 0.15;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -2103,7 +2714,72 @@ function gameLoop() {
         shakeTime--;
     }
 
-    drawBackground();
+   // === 1. КОСМИЧЕСКАЯ ИНЕРЦИЯ (МЛЕЧНЫЙ ПУТЬ) ===
+    if (hasMech('milkyway') && cosmicMomentum > 0) {
+        currentHeight += (cosmicMomentum * getGlobalMultiplier()) * (dt / 1000);
+        if (heightDisplay) heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
+        
+        // Передаем скорость инерции в визуальный скролл лестницы
+        ladderSpeed = Math.max(ladderSpeed, Math.min(32, cosmicMomentum * 0.15));
+
+        cosmicMomentum -= (cosmicMomentum * 0.8) * (dt / 1000);
+        if (cosmicMomentum < 0.5) cosmicMomentum = 0;
+    }
+
+    // === 2. РОСТ МАССЫ И ПЫЛЕСОС (ЧЁРНАЯ ДЫРА) ===
+    const currentlyHasBH = hasMech('endless');
+    
+    if (currentlyHasBH) {
+        wasBlackHole = true;
+        
+        // Набираем массу: +50% в минуту -> ровно 10.0 (1000%) за 20 минут (1200 сек)
+        if (blackHoleBonus < 10.0) {
+            blackHoleBonus = Math.min(10.0, blackHoleBonus + (10.0 / 1200) * (dt / 1000));
+        }
+        
+        // Гравитационный автосбор (Пылесос)
+        if (blackHoleBonus >= 3.0) {
+            // На 1000% скорость притяжения бешеная
+            const pullSpeed = (blackHoleBonus >= 10.0) ? 1500 : 300; 
+            
+            // Засасываем контейнер НЛО (если он летит, ускоряем его в центр)
+            if (typeof ufoGift !== 'undefined' && ufoGift.active) {
+                ufoGift.progress += (pullSpeed / 10000) * (dt / 1000); 
+            }
+            // ПРИМЕЧАНИЕ: Если у тебя есть падающие гайки или монетки, 
+            // просто прибавляй к их координатам вектор в сторону центра экрана с силой pullSpeed.
+        }
+    } else {
+        // === 3. ИЗЛУЧЕНИЕ ХОКИНГА (ВЗРЫВ ПРИ СНЯТИИ) ===
+        if (wasBlackHole) {
+            if (blackHoleBonus >= 10.0) {
+                // Игрок дотерпел до 1000% и снял лестницу — выдаем катарсис!
+                currentHeight += 100000;
+                if (heightDisplay) heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
+                
+                AudioEngine.play('jacpot', 1.0);
+                shakeTime = 20; // Сильная тряска экрана
+                
+                particles.push({ 
+                    x: canvas.width / 2, y: canvas.height / 2, 
+                    text: '💥 ИЗЛУЧЕНИЕ ХОКИНГА: +100 000 м!', 
+                    color: '#9b59b6', font: 'bold 28px sans-serif', alpha: 3.0, speed: 1.5 
+                });
+            }
+            blackHoleBonus = 0.0; // Сбрасываем массу
+            wasBlackHole = false;
+        }
+    }
+
+   drawBackground();
+    drawFirstLocationBG();
+
+    drawMountain();         
+    drawEarthAtmosphere();  
+    drawCosmicDebris();     // Рисуется под лестницей
+    
+    drawTower();            
+    drawHouses();           
     drawBGObjects();
 
     ladderScaleX += (1 - ladderScaleX) * 0.15;
@@ -2121,123 +2797,288 @@ function gameLoop() {
     drawParticles();
     ctx.restore(); 
 
-    if (Math.abs(ladderSpeed) > 0.5) {
+    if (Math.abs(ladderSpeed) > 0.05) {
         ladderSpeed *= 0.85; 
         ladderYOffset += ladderSpeed;
+    } else {
+        ladderSpeed = 0; // ЖЕЛЕЗНЫЙ СТОП: когда стоим на месте, скорость строго 0!
     }
 
- // Отсчет времени баффов рекламы
+    // Отсчет времени баффов рекламы
     if (adState.turboTimer > 0) adState.turboTimer = Math.max(0, adState.turboTimer - dt);
     if (adState.fortuneTimer > 0) adState.fortuneTimer = Math.max(0, adState.fortuneTimer - dt);
     if (adState.frenzyTimer > 0) adState.frenzyTimer = Math.max(0, adState.frenzyTimer - dt);
 
-    // Передаем точный dt
- updateAutoClickers(dt);
- updateShopUI();
- updateBoostsUI();
+    updateAutoClickers(dt);
+    updateShopUI();
+    updateBoostsUI();
 
-
-
-    if (now - lastCpsTime > 1000) {
-        currentCps = clicksThisSec;
-        clicksThisSec = 0;
-        lastCpsTime = now;
-    }
-
-    // НЛО: Каждые 60 сек дроп бонуса
+    // === НЛО (Каждые 40 сек спавн инопланетного контейнера) ===
     if (hasMech('ufo')) {
         ufoBonusTimer += dt;
-        if (ufoBonusTimer >= 60000) {
+        if (ufoBonusTimer >= 30000 && !ufoGift.active) {
             ufoBonusTimer = 0;
+            
+            ufoGift.active = true;
+            ufoGift.progress = 0;
+            ufoGift.targetX = canvas.width / 2;
+            ufoGift.targetY = canvas.height * 0.45; // Тянем ровно в центр светящейся лестницы
+            
+            // Появление за экраном слева или справа-снизу
+            const isLeft = Math.random() > 0.5;
+            ufoGift.startX = isLeft ? -90 : canvas.width + 90;
+            ufoGift.startY = canvas.height * (0.15 + Math.random() * 0.6); 
+            
+            // Заранее решаем, что внутри контейнера
             const r = Math.random();
-            let bonusTxt = "";
-            if (r < 0.4) { addNuts(250); bonusTxt = "👽 +250 🔩"; }
-            else if (r < 0.7) { userCases.wooden++; boxesOwned++; if(uiCasesCount)uiCasesCount.innerText = boxesOwned; bonusTxt = "👽 +📦"; }
-            else if (r < 0.9) { userCases.iron++; bonusTxt = "👽 +🧰"; }
-            else { addNuts(25); bonusTxt = "👽 +25 🟡 (Эквивалент)"; goldenNuts+=25; }
-            particles.push({ x: canvas.width/2, y: canvas.height*0.2, text: bonusTxt, color: '#4cd137', alpha: 2, speed: 1.5 });
+            if (r < 0.4) ufoGift.rewardType = 0;
+            else if (r < 0.7) ufoGift.rewardType = 1;
+            else if (r < 0.9) ufoGift.rewardType = 2;
+            else ufoGift.rewardType = 3;
+
+            AudioEngine.play('ufo_tap', 0.6); // Звук старта грави-луча
         }
     }
 
-    // Ретро: Монетка снизу (1% каждую секунду)
-    if (hasMech('retro') && !retroCoin.active && Math.random() < 0.01 / 60) {
-        retroCoin.active = true;
-        retroCoin.x = 20 + Math.random() * (canvas.width - 80);
-        retroCoin.y = canvas.height + 50;
+    // === АНИМАЦИЯ ПРИТЯГИВАНИЯ ПОДАРКА НЛО ===
+    if (ufoGift.active) {
+        // Контейнер притягивается 2.4 секунды
+        ufoGift.progress += dt / 2400; 
+        
+        if (ufoGift.progress >= 1.0) {
+            // Контейнер достиг лестницы — открываем!
+            ufoGift.active = false;
+            let bonusTxt = "";
+
+            if (ufoGift.rewardType === 0) { 
+                addNuts(250); bonusTxt = "👽 +250 🔩"; AudioEngine.play('gaiki', 0.8);
+            } else if (ufoGift.rewardType === 1) { 
+                userCases.wooden++; boxesOwned++; 
+                if (uiCasesCount) uiCasesCount.innerText = boxesOwned; 
+                bonusTxt = "👽 +📦"; AudioEngine.play('case_drop_by_click', 0.9);
+            } else if (ufoGift.rewardType === 2) { 
+                userCases.iron++; bonusTxt = "👽 +🧰"; AudioEngine.play('win', 0.85);
+            } else { 
+                goldenNuts += 25; bonusTxt = "👽 +25 🟡"; AudioEngine.play('pickupCoin5', 1.0);
+            }
+
+            // Мощная вспышка текста при открытии
+            particles.push({ 
+                x: ufoGift.targetX, y: ufoGift.targetY, 
+                text: bonusTxt, color: '#4cd137', font: 'bold 28px sans-serif', alpha: 2.2, speed: 1.5 
+            });
+            // Эффект удара об лестницу
+            shakeTime = Math.max(shakeTime, 8); 
+
+        } else {
+            // Плавное замедление скорости при приближении к лестнице (EaseOut)
+            const p = 1 - Math.pow(1 - ufoGift.progress, 3);
+            
+            // Тряска "живого" контейнера: он сопротивляется лучу.
+            // Сильнее в начале пути, успокаивается у центра.
+            const shakeStr = (1 - p) * 12; 
+            const shakeX = (Math.random() - 0.5) * shakeStr;
+            const shakeY = (Math.random() - 0.5) * shakeStr;
+
+            ufoGift.x = ufoGift.startX + (ufoGift.targetX - ufoGift.startX) * p + shakeX;
+            ufoGift.y = ufoGift.startY + (ufoGift.targetY - ufoGift.startY) * p + shakeY;
+
+            ctx.save();
+            
+            // 1. НЕОНОВЫЙ КОНУС ПРИТЯЖЕНИЯ
+            const beamAlpha = 0.15 + Math.sin(Date.now() / 60) * 0.1; // Быстрое мерцание луча
+            ctx.fillStyle = `rgba(0, 255, 100, ${beamAlpha})`;
+            ctx.beginPath();
+            ctx.moveTo(ufoGift.targetX, ufoGift.targetY); // Узкая вершина на лестнице
+            
+            // Широкий раструб луча захватывает сам контейнер
+            const angleToGift = Math.atan2(ufoGift.y - ufoGift.targetY, ufoGift.x - ufoGift.targetX);
+            ctx.lineTo(ufoGift.x - Math.cos(angleToGift - Math.PI/2) * 55, ufoGift.y - Math.sin(angleToGift - Math.PI/2) * 55);
+            ctx.lineTo(ufoGift.x - Math.cos(angleToGift + Math.PI/2) * 55, ufoGift.y - Math.sin(angleToGift + Math.PI/2) * 55);
+            ctx.fill();
+
+            // 2. ДВИЖУЩИЕСЯ КОЛЬЦА/ВОЛНЫ ВНУТРИ ЛУЧА
+            const waveP = (Date.now() % 500) / 500; // Цикл 0.5 сек (волна бежит к лестнице)
+            const wX = ufoGift.x + (ufoGift.targetX - ufoGift.x) * waveP;
+            const wY = ufoGift.y + (ufoGift.targetY - ufoGift.y) * waveP;
+            
+            ctx.strokeStyle = `rgba(0, 255, 150, ${1 - waveP})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(wX, wY, 15 + waveP * 35, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 3. ОТРИСОВКА САМОГО КОНТЕЙНЕРА (ufo_gift.webp)
+            const gw = 85; 
+            if (ufoGiftImg.complete && ufoGiftImg.naturalWidth !== 0) {
+                // Динамический расчет высоты, чтобы тарелка сохраняла идеальные пропорции
+                const gh = gw * (ufoGiftImg.naturalHeight / ufoGiftImg.naturalWidth);
+                
+                ctx.translate(ufoGift.x, ufoGift.y);
+                ctx.rotate(shakeX * 0.05); // Контейнер слегка кренится при рывках
+                
+                // Тень/Ореол вокруг контейнера
+                ctx.shadowColor = '#00ff99';
+                ctx.shadowBlur = 15;
+                ctx.drawImage(ufoGiftImg, -gw / 2, -gh / 2, gw, gh);
+            }
+            
+            ctx.restore();
+        }
     }
+
+    // === РЕТРО МОНЕТКА (Вылет строго раз в 45-65 секунд) ===
+    if (hasMech('retro')) {
+        if (!retroCoin.active) {
+            retroCoinSpawnTimer += dt;
+            if (retroCoinSpawnTimer >= nextCoinDelay) {
+                retroCoinSpawnTimer = 0;
+                nextCoinDelay = 20000 + Math.random() * 15000;
+
+                retroCoin.active = true;
+                retroCoin.x = 25 + Math.random() * (canvas.width - 90);
+                retroCoin.y = canvas.height + 50;
+                retroCoin.animTimer = 0;
+            }
+        }
+    } else {
+        retroCoinSpawnTimer = 0;
+    }
+
     if (retroCoin.active) {
-        retroCoin.y -= 180 * (dt / 1000); // Скорость вверх
-        ctx.fillStyle = '#f1c40f';
-        ctx.beginPath();
-        ctx.arc(retroCoin.x + retroCoin.size/2, retroCoin.y + retroCoin.size/2, retroCoin.size/2, 0, Math.PI*2);
-        ctx.fill();
-        ctx.fillStyle = '#d35400';
-        ctx.font = '24px Arial';
-        ctx.fillText('C', retroCoin.x + 14, retroCoin.y + 32);
+        retroCoin.y -= 180 * (dt / 1000);
+        retroCoin.animTimer += dt;
+        
+        // Смена кадров каждые 130 мс
+        const frameIdx = Math.floor(retroCoin.animTimer / 130) % 4;
+        const currentFrame = coinFrames[frameIdx];
+
+        if (currentFrame && currentFrame.complete && currentFrame.naturalWidth !== 0) {
+            ctx.drawImage(currentFrame, retroCoin.x, retroCoin.y, retroCoin.size, retroCoin.size);
+        } else {
+            ctx.fillStyle = '#f1c40f';
+            ctx.beginPath();
+            ctx.arc(retroCoin.x + retroCoin.size/2, retroCoin.y + retroCoin.size/2, retroCoin.size/2, 0, Math.PI*2);
+            ctx.fill();
+        }
         
         if (retroCoin.y < -100) retroCoin.active = false;
     }
 
-// --- ТАЙМЕР БЕСПЛАТНОГО ЯЩИКА (С КАПОМ В 1 ЯЩИК) ---
-    const activeBoxTarget = (currentSpeakerSkin === 'monster') ? 120000 : 180000;
+    // Таймер ящика
+    const isMonster = currentSpeakerSkin === 'monster' || (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id === 'monster');
+    const activeBoxTarget = isMonster ? 120000 : 180000;
 
-    // Таймер тикает ТОЛЬКО если готовый ящик ещё не ожидает игрока
     if (!isTimedBoxReady) {
         activePlayBoxTimer += dt;
-
         if (activePlayBoxTimer >= activeBoxTarget) {
             activePlayBoxTimer = activeBoxTarget;
-            isTimedBoxReady = true; // Склад полон: таймер остановлен!
+            isTimedBoxReady = true;
             AudioEngine.play('case_drop_by_click', 0.9);
         }
     }
 
-    // Обновляем визуальный таймер на экране
-    // СТАЛО:
     if (timedBoxText && btnClaimTimedBox) {
         const timedBoxLabel = document.getElementById('timed-box-label');
-        
         if (isTimedBoxReady) {
             timedBoxText.innerText = "ГОТОВО!";
-            if (timedBoxLabel) timedBoxLabel.style.display = 'none'; // Прячем слово "Беспл:", оставляем только "ГОТОВО!"
+            if (timedBoxLabel) timedBoxLabel.style.display = 'none';
             btnClaimTimedBox.style.background = "#27ae60";
             btnClaimTimedBox.style.borderColor = "#2ecc71";
             btnClaimTimedBox.style.color = "#ffffff";
         } else {
-            if (timedBoxLabel) timedBoxLabel.style.display = 'inline'; // Показываем "Беспл:"
-            
+            if (timedBoxLabel) timedBoxLabel.style.display = 'inline';
             const timeLeftSec = Math.max(0, Math.ceil((activeBoxTarget - activePlayBoxTimer) / 1000));
             const m = Math.floor(timeLeftSec / 60);
             const s = timeLeftSec % 60;
             timedBoxText.innerText = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-            
             btnClaimTimedBox.style.background = "rgba(44, 62, 80, 0.95)";
             btnClaimTimedBox.style.borderColor = "#f39c12";
             btnClaimTimedBox.style.color = "#f1c40f";
         }
         const topGoldDisplay = document.getElementById('gold-display');
-    if (topGoldDisplay) {
-        topGoldDisplay.innerText = `🟡 ${goldenNuts}`;
-    }
+        if (topGoldDisplay) topGoldDisplay.innerText = `🟡 ${goldenNuts}`;
     }
 
-    // Обновление круглых иконок баффов и свечения стрика
     updateActiveBuffsDisplay();
 
-    // Обновление валюты на экране (компактно в шапке, полно в магазинах)
     const uiNutsEl = document.getElementById('nuts-display');
     const uiGoldEl = document.getElementById('gold-display');
     if (uiNutsEl) uiNutsEl.innerText = `🔩 ${nuts >= 10000 ? (nuts / 1000).toFixed(1) + 'K' : Math.floor(nuts)}`;
     if (uiGoldEl) uiGoldEl.innerText = `🟡 ${goldenNuts >= 10000 ? (goldenNuts / 1000).toFixed(1) + 'K' : Math.floor(goldenNuts)}`;
 
-    // В магазинах — полные числа с пробелами (например, 1 500 000):
-    const casesModalNutsEl = document.getElementById('cases-modal-nuts');
-    const casesModalGoldEl = document.getElementById('cases-modal-gold');
-    if (casesModalNutsEl) casesModalNutsEl.innerText = formatFullCurrency(nuts);
-    if (casesModalGoldEl) casesModalGoldEl.innerText = formatFullCurrency(goldenNuts);
+// === ИСПЫТАНИЕ НА 20 МИНУТ (РЕТРО-СКИН) ===
+    const timerContainer = document.getElementById('retro-timer-container');
+    
+    // Показываем таймер только если скина еще нет
+    if (!ownedSkins.includes('retro')) {
+        if (timerContainer && timerContainer.classList.contains('hidden')) {
+            timerContainer.classList.remove('hidden');
+            timerContainer.style.display = 'flex';
+        }
 
-    updateActiveBuffsDisplay();
+        retroChallengeMs += dt;
+        const timeLeftMs = Math.max(0, RETRO_CHALLENGE_GOAL - retroChallengeMs);
+        
+        const progressCircle = document.getElementById('retro-timer-progress');
+        const timerText = document.getElementById('retro-timer-text');
+        
+        // Обновляем текст
+        if (timerText) {
+            const m = Math.floor(timeLeftMs / 60000);
+        const s = Math.floor((timeLeftMs % 60000) / 1000);
+        const timeFormatted = `${m}:${s < 10 ? '0' : ''}${s}`;
+        if (timerText) timerText.innerText = timeFormatted;
+        
+        const infoTimeText = document.getElementById('retro-info-time-left');
+        if (infoTimeText) infoTimeText.innerText = timeFormatted;
+        }
+        
+        // Полоса прогресса (82 — полная длина окружности для радиуса 13)
+        if (progressCircle) {
+            const pct = retroChallengeMs / RETRO_CHALLENGE_GOAL;
+            progressCircle.style.strokeDashoffset = 82 - (pct * 82);
+        }
+
+        // Событие завершения испытания
+        if (retroChallengeMs >= RETRO_CHALLENGE_GOAL) {
+            // Выдаем скин, чтобы таймер больше не появлялся
+            ownedSkins.push('retro');
+            saveGame();
+            
+            if (timerContainer) timerContainer.classList.add('hidden');
+            
+            const modal = document.getElementById('retro-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                AudioEngine.play('jacpot', 1.0); // Эпичный звук победы
+            }
+        }
+    } else {
+        // Прячем таймер, если скин уже получен
+        if (timerContainer && !timerContainer.classList.contains('hidden')) {
+            timerContainer.classList.add('hidden');
+        }
+    } 
+
     requestAnimationFrame(gameLoop);
+}
+
+// Открытие окна информации об испытании
+function openRetroInfo() {
+    const modal = document.getElementById('retro-info-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        AudioEngine.play('click', 0.5);
+    }
+}
+
+// Закрытие окна информации
+function closeRetroInfo() {
+    const modal = document.getElementById('retro-info-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
 }
 
 function drawBackground() {
@@ -2272,9 +3113,9 @@ function drawBackground() {
             moonAlpha = (currentHeight - 7000) / 6000;
         } 
         // Растворение перед Млечным Путем (900 000 - 1 000 000 м)
-        else if (currentHeight > 900000) {
-            moonAlpha = 1 - ((currentHeight - 900000) / 100000);
-        }
+        else if (currentHeight > 384000) {
+    moonAlpha = Math.max(0, 1 - ((currentHeight - 384000) / 116000));
+}
 
         // Ограничиваем прозрачность от 0 до 1
         moonAlpha = Math.max(0, Math.min(1, moonAlpha));
@@ -2312,13 +3153,379 @@ function drawBackground() {
             ctx.restore();
         }
     }
+    // ========================================================
+    // === ГЛУБОКИЙ КОСМИЧЕСКИЙ ЗАДНИК (НЕБУЛА И ЧЕРНАЯ ДЫРА) ==
+    // ========================================================
+
+    // 1. МЛЕЧНЫЙ ПУТЬ И ДАЛЕЕ (>= 800 000 м): Бесшовная сияющая туманность
+    if (currentHeight >= 800000) {
+        // Проявление на Млечном Пути, легкое приглушение возле Черной Дыры для атмосферы бездны
+        let nebFade = Math.min(1, Math.max(0, (currentHeight - 800000) / 400000));
+        if (currentHeight >= 8500000) {
+            nebFade *= 0.55; // У черной дыры туманность становится темнее и глубже
+        }
+
+        const nebPulse = 0.42 + Math.sin(Date.now() * 0.0006) * 0.06;
+        const finalNebAlpha = nebFade * nebPulse;
+
+        if (finalNebAlpha > 0 && nebulaImg.complete && nebulaImg.naturalWidth !== 0) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+
+            const nebW = canvas.width * 2.5;
+            const nebH = nebW * (1097 / 3168);
+
+            // Мягкий непрерывный микро-дрейф плазмы
+            const timeFloatX = Math.sin(Date.now() * 0.00025) * 12;
+            const timeFloatY = Math.cos(Date.now() * 0.0002) * 8;
+            const liveScale = 1.0 + Math.sin(Date.now() * 0.00035) * 0.02;
+
+            // БЕСШОВНЫЙ ШАГ: шаг равен 75% экрана
+            const stepY = canvas.height * 0.75;
+            const scrollY = (currentHeight * 0.035) % stepY;
+            const blockIndex = Math.floor((currentHeight * 0.035) / stepY); // Глобальный счетчик высоты
+
+            const drawNebulaArm = (posX, posY, rotDeg, flip = false) => {
+                ctx.save();
+                ctx.translate(posX + timeFloatX, posY + timeFloatY);
+                ctx.rotate(rotDeg * Math.PI / 180);
+                if (flip) ctx.scale(-1, 1);
+                ctx.scale(liveScale, liveScale);
+
+                // Внешнее рассеянное свечение (Bloom)
+                ctx.globalAlpha = finalNebAlpha * 0.35;
+                ctx.drawImage(nebulaImg, -nebW * 1.08 / 2, -nebH * 1.08 / 2, nebW * 1.08, nebH * 1.08);
+
+                // Основное тело газового рукава
+                ctx.globalAlpha = finalNebAlpha;
+                ctx.drawImage(nebulaImg, -nebW / 2, -nebH / 2, nebW, nebH);
+
+                ctx.restore();
+            };
+
+            // Рисуем непрерывные слои без скачков ориентации при переходе
+            for (let i = -1; i <= 2; i++) {
+                const curY = scrollY + (i * stepY);
+                // ИСПРАВЛЕНО: ориентация привязана к глобальному положению слоя в космосе
+                const globalLayer = i - blockIndex;
+                const isFlipped = Math.abs(globalLayer) % 2 === 1;
+                drawNebulaArm(canvas.width * 0.5, curY, isFlipped ? 22 : -22, isFlipped);
+            }
+
+            ctx.restore();
+        }
+    }
+
+    // 2. БЕСКРАЙНИЙ ПРОСТОР (>= 8 500 000 м): Величественная Черная Дыра строго по центру
+    if (currentHeight >= 8500000) {
+        const bhFade = Math.min(1, Math.max(0, (currentHeight - 8500000) / 1500000));
+
+        if (bhFade > 0 && blackHoleImg.complete && blackHoleImg.naturalWidth !== 0) {
+            ctx.save();
+            ctx.globalAlpha = bhFade;
+
+            // Комфортный масштаб: крылья диска огибают лестницу
+            const bhW = canvas.width * 1.48;
+            const bhH = bhW * (1062 / 2187);
+
+            // ПОЗИЦИЯ: 0.48 — ровно по центру экрана за лестницей (не улетает вверх!)
+            const bhX = canvas.width * 0.5;
+            const bhY = canvas.height * 0.48 + Math.sin(Date.now() * 0.00018) * 3;
+
+            const bhAngle = -0.05 + Math.sin(Date.now() * 0.00015) * 0.008;
+            const bhScale = 1.0 + Math.sin(Date.now() * 0.00025) * 0.008;
+
+            // Тонкие релятивистские волны искажения пространства
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+            ctx.lineWidth = 1.5;
+            for (let r = 1; r <= 3; r++) {
+                const ringR = (bhW * 0.28 * r + (Date.now() * 0.0028) % (bhW * 0.28)) * 0.75;
+                ctx.beginPath();
+                ctx.ellipse(bhX, bhY, ringR, ringR * 0.48, bhAngle, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // Теплый ореол гравитационного линзирования
+            const aura = ctx.createRadialGradient(bhX, bhY, bhW * 0.12, bhX, bhY, bhW * 0.48);
+            aura.addColorStop(0, 'rgba(230, 126, 34, 0.28)');
+            aura.addColorStop(0.55, 'rgba(155, 89, 182, 0.12)');
+            aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = aura;
+            ctx.beginPath();
+            ctx.arc(bhX, bhY, bhW * 0.48, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Сама Черная Дыра (строго source-over — черная дыра поглощает свет за собой)
+            ctx.translate(bhX, bhY);
+            ctx.rotate(bhAngle);
+            ctx.scale(bhScale, bhScale);
+            ctx.drawImage(blackHoleImg, -bhW / 2, -bhH / 2, bhW, bhH);
+
+            ctx.restore();
+        }
+    }
     locationDisplay.innerText = loc.name;
 }
 
+// Отрисовка дальнего городского фона с мягким бесшовным небом
+function drawFirstLocationBG() {
+    // Выше 650м город уже полностью под полом, а небо бесшовно перешло в градиент игры
+    if (visualHouseHeight > 650) return;
+    if (!bgFirstLocImg.complete || !bgFirstLocImg.naturalWidth) return;
+
+    const scale = Math.max(
+        canvas.width / bgFirstLocImg.naturalWidth,
+        canvas.height / bgFirstLocImg.naturalHeight
+    );
+    const bgW = bgFirstLocImg.naturalWidth * scale;
+    const bgH = bgFirstLocImg.naturalHeight * scale;
+    const bgX = (canvas.width - bgW) / 2;
+
+    // Опускание дальних домов вниз: к 500м крыши уходят под срез пола
+    const shiftY = (visualHouseHeight / 500) * (bgH * 0.52);
+    const drawY = (canvas.height - bgH) + shiftY;
+
+    // Плавное растворение остатка картинки (с 420м до 620м)
+    let alpha = 1.0;
+    if (visualHouseHeight > 420) {
+        alpha = Math.max(0, 1.0 - (visualHouseHeight - 420) / 200);
+    }
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // 1. Отрисовка самой панорамы города
+    ctx.drawImage(bgFirstLocImg, bgX, drawY, bgW, bgH);
+
+    // 2. БЕСШОВНОЕ НЕБО БЕЗ ПОЛОС И ГРАНИЦ:
+    // Если верхний край картинки опустился в кадр, мягко растушёвываем стык в цвет неба
+    if (drawY > 0) {
+        // Заливаем всё пространство над картинкой ровным цветом неба
+        ctx.fillStyle = '#018cc5';
+        ctx.fillRect(0, 0, canvas.width, drawY + 1);
+
+        // Мягкий 140-пиксельный градиентный переход от неба к изображению
+        const blendH = 140;
+        const grad = ctx.createLinearGradient(0, drawY, 0, drawY + blendH);
+        grad.addColorStop(0, '#018cc5');
+        grad.addColorStop(1, 'rgba(1, 140, 197, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, drawY, canvas.width, blendH);
+    }
+
+    ctx.restore();
+}
+
+// Отрисовка телевышки и стробоскопического маяка (спрятана за правым домом)
+function drawTower() {
+    if (!towerHeadImg.complete || !towerHeadImg.naturalWidth) return;
+
+    // 1. РАЗМЕРЫ ВЫШКИ
+    const destW = canvas.width * 0.22;
+    const scale = destW / 342;
+    const bodyH = 765 * scale;
+    const headH = 767 * scale;
+
+    if (bodyH < 15) return;
+
+    // 2. СМЕЩЕНИЕ ВПРАВО (строго за правый дом: 82% экрана)
+    const towerX = canvas.width * 0.82 - destW / 2;
+
+    const ppm = 3.2; 
+    const beaconRelY = 50 * scale; 
+    const eyeLevelY = canvas.height * 0.35; 
+
+    // Координата верхушки головы вышки
+    const headTopY = (eyeLevelY - beaconRelY) + (visualHouseHeight - 1000) * ppm;
+
+    // Вышка плавно скрывается под нижний край экрана выше 1150-1200м
+    if (headTopY > canvas.height + 60) return;
+
+    ctx.save();
+
+    // 3. ОТРИСОВКА ГОЛОВЫ ВЫШКИ
+    if (headTopY + headH >= -50 && headTopY <= canvas.height + 60) {
+        ctx.drawImage(towerHeadImg, towerX, headTopY, destW, headH);
+    }
+
+    // 4. ТАЙЛИНГ ТЕЛА ВЫШКИ ВНИЗ
+    let curBodyY = headTopY + headH;
+    const stepH = Math.max(20, bodyH - 1);
+    let safetyCounter = 0;
+
+    while (curBodyY < canvas.height + 60 && safetyCounter < 45) {
+        safetyCounter++;
+        if (curBodyY + bodyH >= -50 && towerBodyImg.complete && towerBodyImg.naturalWidth) {
+            ctx.drawImage(towerBodyImg, towerX, curBodyY, destW, bodyH);
+        }
+        curBodyY += stepH;
+    }
+
+    // 5. АВИАЦИОННЫЙ СТРОБОСКОП (смещён вместе с мачтой)
+    const beaconX = towerX + 170 * scale;
+    const beaconY = headTopY + beaconRelY;
+
+    if (beaconY >= -30 && beaconY <= canvas.height + 30) {
+        const cycle = (Date.now() % 650) / 650;
+        let flash = 0;
+
+        // Двойная частая вспышка
+        if (cycle >= 0 && cycle < 0.16) {
+            flash = Math.sin((cycle / 0.16) * Math.PI);
+        } else if (cycle >= 0.22 && cycle < 0.38) {
+            flash = Math.sin(((cycle - 0.22) / 0.16) * Math.PI);
+        }
+
+        // Постоянный красный диод
+        ctx.fillStyle = '#ff2222';
+        ctx.beginPath();
+        ctx.arc(beaconX, beaconY, 4 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Сверхъяркий импульс свечения
+        if (flash > 0) {
+            ctx.save();
+
+            const haloR = 55 * scale * flash;
+            const halo = ctx.createRadialGradient(beaconX, beaconY, 2, beaconX, beaconY, haloR);
+            halo.addColorStop(0, `rgba(255, 255, 255, ${1.0 * flash})`);
+            halo.addColorStop(0.18, `rgba(255, 50, 50, ${0.95 * flash})`);
+            halo.addColorStop(0.55, `rgba(235, 15, 15, ${0.45 * flash})`);
+            halo.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(beaconX, beaconY, haloR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Горизонтальный линзовый луч
+            const flareLen = 70 * scale * flash;
+            const flareH = 3 * scale * flash;
+            const flareGrad = ctx.createLinearGradient(beaconX - flareLen, beaconY, beaconX + flareLen, beaconY);
+            flareGrad.addColorStop(0, 'rgba(255, 50, 50, 0)');
+            flareGrad.addColorStop(0.5, `rgba(255, 240, 240, ${0.9 * flash})`);
+            flareGrad.addColorStop(1, 'rgba(255, 50, 50, 0)');
+
+            ctx.fillStyle = flareGrad;
+            ctx.fillRect(beaconX - flareLen, beaconY - flareH / 2, flareLen * 2, flareH);
+
+            ctx.restore();
+        }
+    }
+
+    ctx.restore();
+}
+
+// Отрисовка жилых домов хрущевки (от 0 до 250 метров)
+function drawHouses() {
+    if (visualHouseHeight > 350) return;
+    if (!houseDownImg.complete || !houseDownImg.naturalWidth) return;
+
+    const HOUSE_WIDTH_RATIO = 0.42; 
+    const destW = canvas.width * HOUSE_WIDTH_RATIO;
+
+    const hDown = destW * (houseDownImg.naturalHeight / (houseDownImg.naturalWidth * 0.5));
+    const hMid = (houseMidImg.complete && houseMidImg.naturalHeight)
+        ? destW * (houseMidImg.naturalHeight / (houseMidImg.naturalWidth * 0.5))
+        : hDown;
+    const hRoof = (houseRoofImg.complete && houseRoofImg.naturalHeight)
+        ? destW * (houseRoofImg.naturalHeight / (houseRoofImg.naturalWidth * 0.5))
+        : (destW * 0.5);
+
+    const MID_SECTIONS_COUNT = 4;
+    const totalWallHeight = hDown + (MID_SECTIONS_COUNT * hMid);
+
+    const ppm = totalWallHeight / 250;
+    const camY = visualHouseHeight * ppm;
+
+    const drawSplitSection = (img, worldBottom, height, isGround = false) => {
+        if (!img.complete || !img.naturalWidth) return;
+        const screenY = canvas.height - (worldBottom + height) + camY;
+        
+        if (screenY + height < -60 || screenY > canvas.height + 60) return;
+
+        const srcHalfW = img.naturalWidth * 0.5;
+        const srcH = img.naturalHeight;
+
+        if (isGround) {
+            const groundH = height * 0.22;
+            ctx.fillStyle = '#736e69';
+            ctx.fillRect(0, screenY + height - groundH, canvas.width, groundH);
+        }
+
+        ctx.drawImage(img, 0, 0, srcHalfW, srcH, 0, screenY, destW, height);
+        ctx.drawImage(img, srcHalfW, 0, srcHalfW, srcH, canvas.width - destW, screenY, destW, height);
+    };
+
+    drawSplitSection(houseDownImg, 0, hDown, true);
+
+    let currentY = hDown;
+    for (let i = 0; i < MID_SECTIONS_COUNT; i++) {
+        drawSplitSection(houseMidImg, currentY, hMid, false);
+        currentY += hMid;
+    }
+
+    drawSplitSection(houseRoofImg, currentY, hRoof, false);
+}
+
+// Автоматическое извлечение светящихся пикселей для Эндгейм-лестниц
+function initUfoGlowMask() {
+    if (ufoGlowCanvas || !ladderImg.complete || !ladderImg.naturalWidth) return;
+
+    const w = ladderImg.naturalWidth;
+    const h = ladderImg.naturalHeight;
+
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = w;
+    offCanvas.height = h;
+    const offCtx = offCanvas.getContext('2d');
+    offCtx.drawImage(ladderImg, 0, 0);
+
+    const imgData = offCtx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+
+    for (let i = 0; i < d.length; i += 4) {
+        const r = d[i];
+        const g = d[i + 1];
+        const b = d[i + 2];
+        const a = d[i + 3];
+
+        if (a < 15) continue; // Прозрачный фон пропускаем
+
+        // Вычисляем "яркость" и "насыщенность" пикселя (отбрасываем серый/чёрный металл)
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const diff = max - min;
+
+        // Если пиксель яркий и цветной (плазма/неон) ИЛИ он чисто белый (ядро)
+        const isNeon = (max > 120 && diff > 30) || (r > 190 && g > 190 && b > 190);
+
+        if (isNeon) {
+            // Усиливаем неон на 20%
+            d[i]     = Math.min(255, r * 1.2);
+            d[i + 1] = Math.min(255, g * 1.2);
+            d[i + 2] = Math.min(255, b * 1.2);
+        } else {
+            // Весь тёмный металл и тусклые детали стираем
+            d[i + 3] = 0;
+        }
+    }
+
+    offCtx.putImageData(imgData, 0, 0);
+    ufoGlowCanvas = offCanvas; 
+}
+
 function drawLadder() {
-    const imgAspect = ladderImg.width / ladderImg.height;
+    if (!ladderImg.complete || !ladderImg.naturalWidth || !ladderImg.naturalHeight) return;
+
+    const imgAspect = ladderImg.naturalWidth / ladderImg.naturalHeight;
     const targetWidth = canvas.width * 0.27;
     const targetHeight = targetWidth / imgAspect;
+    if (isNaN(targetHeight) || targetHeight <= 0) return;
+
     ladderYOffset = ((ladderYOffset % targetHeight) + targetHeight) % targetHeight;
 
     ctx.save();
@@ -2333,29 +3540,194 @@ function drawLadder() {
         ctx.drawImage(ladderImg, x, baseY, targetWidth, targetHeight); 
         ctx.drawImage(ladderImg, x, baseY - targetHeight + 2, targetWidth, targetHeight); 
         ctx.drawImage(ladderImg, x, baseY + targetHeight - 2, targetWidth, targetHeight); 
+        
+        // === ЖИВОЙ НЕОН ДЛЯ НЛО, МЛЕЧНОГО ПУТИ И АБСОЛЮТА ===
+        const isEndgameSkin = ['ufo', 'milkyway', 'endless', 'absolute'].includes(currentSkinId);
+        
+        if (isEndgameSkin) {
+            if (!ufoGlowCanvas && ladderImg.complete && ladderImg.naturalWidth) {
+                initUfoGlowMask(); // Создаем маску для текущей надетой лестницы
+            }
+
+            if (ufoGlowCanvas) {
+                ctx.save();
+                const now = Date.now();
+                const sx = targetWidth / ladderImg.naturalWidth;
+                const sy = targetHeight / ladderImg.naturalHeight;
+
+                // 1. ОСНОВНОЕ ТЕЛО РЕАКТОРА
+                ctx.globalCompositeOperation = 'screen';
+                const maskPulse = 0.34 + Math.sin(now / 420) * 0.18; 
+                ctx.globalAlpha = maskPulse;
+
+                ctx.drawImage(ufoGlowCanvas, x, baseY, targetWidth, targetHeight);
+                ctx.drawImage(ufoGlowCanvas, x, baseY - targetHeight + 2, targetWidth, targetHeight);
+                ctx.drawImage(ufoGlowCanvas, x, baseY + targetHeight - 2, targetWidth, targetHeight);
+
+                // 2. ЧЁТКИЙ ОСТРЫЙ ТРЕЗУБЕЦ (Только для НЛО!)
+                if (currentSkinId === 'ufo') {
+                    ctx.globalCompositeOperation = 'lighter';
+                    const lights = [
+                        {x: 23, y: 41},   {x: 135, y: 41}, {x: 23, y: 131},  {x: 135, y: 131},
+                        {x: 23, y: 216},  {x: 135, y: 216}, {x: 23, y: 298},  {x: 135, y: 298},
+                        {x: 23, y: 392},  {x: 135, y: 392}, {x: 23, y: 478},  {x: 135, y: 478},
+                        {x: 23, y: 562},  {x: 135, y: 562}, {x: 23, y: 650},  {x: 135, y: 650},
+                        {x: 23, y: 737},  {x: 135, y: 737}, {x: 23, y: 823},  {x: 135, y: 823},
+                        {x: 23, y: 911},  {x: 135, y: 911}
+                    ];
+
+                    const drawTridents = (offsetY) => {
+                        for (let i = 0; i < lights.length; i++) {
+                            const pt = lights[i];
+                            const isLeft = (i % 2 === 0);
+                            const row = Math.floor(i / 2);
+                            const baseAngle = isLeft ? (-Math.PI * 0.63) : (-Math.PI * 0.37);
+                            const pulse = 0.4 + Math.max(0, Math.sin(now / 140 - row * 0.45)) * 0.6;
+                            const lx = x + pt.x * sx;
+                            const ly = baseY + pt.y * sy + offsetY;
+
+                            ctx.save();
+                            ctx.translate(lx, ly);
+                            ctx.rotate(baseAngle);
+
+                            const drawBlade = (angleOffset, length, baseWidth, alphaMult) => {
+                                ctx.save();
+                                ctx.rotate(angleOffset);
+                                ctx.beginPath();
+                                ctx.moveTo(0, -baseWidth / 2); 
+                                ctx.lineTo(length, 0);          
+                                ctx.lineTo(0, baseWidth / 2);
+                                ctx.closePath();
+                                const grad = ctx.createLinearGradient(0, 0, length, 0);
+                                grad.addColorStop(0, `rgba(255, 255, 255, ${pulse * alphaMult})`);
+                                grad.addColorStop(0.35, `rgba(80, 255, 150, ${pulse * alphaMult * 0.9})`);
+                                grad.addColorStop(1, 'rgba(0, 255, 100, 0)');
+                                ctx.fillStyle = grad;
+                                ctx.fill();
+                                ctx.restore();
+                            };
+
+                            const mainLen = (18 + pulse * 5) * sx; 
+                            const sideLen = mainLen * 0.62;        
+                            const bladeW  = 2.2 * sx;               
+
+                            drawBlade(0, mainLen, bladeW * 1.2, 1.0);
+                            drawBlade(-0.38, sideLen, bladeW, 0.85);
+                            drawBlade(0.38, sideLen, bladeW, 0.85);
+                            ctx.restore();
+                        }
+                    };
+
+                    drawTridents(0);
+                    drawTridents(-targetHeight + 2);
+                    drawTridents(targetHeight - 2);
+                }
+                ctx.restore();
+            }
+        }
+
+        // === ВИЗУАЛ ЧЁРНОЙ ДЫРЫ (ЖИВЫЕ СИНГУЛЯРНОСТИ В ЩЕЛЯХ) ===
+        if ((currentSkinId === 'endless' || currentSkinId === 'absolute') && blackHoleBonus > 0) {
+            ctx.save();
+            const now = Date.now();
+            const sx = targetWidth / ladderImg.naturalWidth;
+            const sy = targetHeight / ladderImg.naturalHeight;
+            const intensity = blackHoleBonus / 10.0; // от 0.1 до 1.0
+
+            // ТВОИ ТОЧНЫЕ Y-КООРДИНАТЫ ЦЕНТРОВ РАЗЛОМОВ
+            const holeYs = [208, 440, 670, 894, 1123, 1353, 1806, 2033, 2257];
+
+            const drawSingularities = (offsetY) => {
+                for (let i = 0; i < holeYs.length; i++) {
+                    const hy = baseY + holeYs[i] * sy + offsetY;
+                    const hx = 0; // X=208 находится ровно по центру спрайта
+
+                    // Габариты вертикальной щели: узкая по X, вытянутая по Y
+                    const slitRx = 9 * sx;
+                    const slitRy = 26 * sy;
+
+                    // 1. ПУЛЬСИРУЮЩАЯ БЕЗДНА ИЗНУТРИ ЩЕЛИ (Режим Screen)
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'screen';
+                    
+                    const breathe = 0.5 + Math.sin(now / 300 + i) * 0.35;
+                    const auraGrad = ctx.createRadialGradient(hx, hy, 2 * sx, hx, hy, slitRy * 1.5);
+                    auraGrad.addColorStop(0, `rgba(255, 120, 30, ${0.4 + intensity * 0.6})`); // Горячее ядро
+                    auraGrad.addColorStop(0.4, `rgba(142, 68, 173, ${0.3 + intensity * 0.4})`); // Фиолетовый горизонт
+                    auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                    ctx.fillStyle = auraGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(hx, hy, slitRx * 1.6, slitRy * 1.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 2. ФОТОННОЕ КОЛЬЦО ЭЙНШТЕЙНА (Тончайшая дуга по кромке щели)
+                    ctx.lineWidth = 1.8 * sx;
+                    ctx.strokeStyle = `rgba(255, 180, 50, ${0.4 + breathe * 0.5 * intensity})`;
+                    ctx.beginPath();
+                    ctx.ellipse(hx, hy, slitRx * 0.95, slitRy * 0.95, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Внутренний квантовый циановый контур
+                    ctx.lineWidth = 1.0 * sx;
+                    ctx.strokeStyle = `rgba(0, 240, 255, ${0.3 + intensity * 0.5})`;
+                    ctx.beginPath();
+                    ctx.ellipse(hx, hy, slitRx * 0.7, slitRy * 0.7, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // 3. ЗАСАСЫВАНИЕ КВАНТОВЫХ ЧАСТИЦ (Спираль аккреции)
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    const swirlSpeed = now * 0.005;
+
+                    for (let s = 0; s < 3; s++) {
+                        // Каждая частица крутится на своей фазе
+                        const phase = swirlSpeed + (s * (Math.PI * 2 / 3)) + i;
+                        // Спираль: расстояние до центра плавно сжимается в ноль
+                        const distP = (swirlSpeed * 0.6 + s * 0.33) % 1;
+                        const curDistX = (1 - distP) * (slitRx * 2.5);
+                        const curDistY = (1 - distP) * (slitRy * 1.8);
+
+                        const px = hx + Math.cos(phase) * curDistX;
+                        const py = hy + Math.sin(phase) * curDistY;
+
+                        const sparkR = (1.5 + (1 - distP) * 1.5) * sx;
+                        ctx.fillStyle = `rgba(255, 230, 150, ${distP * (0.4 + intensity * 0.6)})`;
+                        ctx.beginPath();
+                        ctx.arc(px, py, sparkR, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            };
+
+            // Отрисовываем на всех 3-х тайлах лестницы
+            drawSingularities(0);
+            drawSingularities(-targetHeight + 2);
+            drawSingularities(targetHeight - 2);
+
+            ctx.restore();
+        }
+
         ctx.restore();
         return;
     }
 
-    // === КВАНТОВАЯ ЛЕСТНИЦА: RGB-СМЕЩЕНИЕ И ГЛИТЧ ===
+    // === КВАНТОВАЯ ЛЕСТНИЦА (ГЛИТЧ) ===
     const isBurst = quantumGlitch > 0;
     if (quantumGlitch > 0) quantumGlitch--;
 
-    // Фоновая квантовая нестабильность (рандомный редкий микро-тик)
     const isPassiveTwitch = Math.random() < 0.08;
     const glitchActive = isBurst || isPassiveTwitch;
-
-    // Сила расхождения каналов в пикселях
     const splitDist = isBurst ? (5 + Math.random() * 7) : (glitchActive ? 3 : 1.5);
 
-    // Вспомогательная функция отрисовки 3 сегментов бесконечной лестницы
     const drawSegments = (offsetX = 0, offsetY = 0) => {
         ctx.drawImage(ladderImg, x + offsetX, baseY + offsetY, targetWidth, targetHeight);
         ctx.drawImage(ladderImg, x + offsetX, baseY - targetHeight + 2 + offsetY, targetWidth, targetHeight);
         ctx.drawImage(ladderImg, x + offsetX, baseY + targetHeight - 2 + offsetY, targetWidth, targetHeight);
     };
 
-    // 1. Красный/Маджента канал (сдвиг влево)
     ctx.save();
     ctx.shadowColor = 'rgba(255, 0, 85, 0.75)';
     ctx.shadowOffsetX = -splitDist;
@@ -2364,7 +3736,6 @@ function drawLadder() {
     drawSegments();
     ctx.restore();
 
-    // 2. Синий/Циан канал (сдвиг вправо)
     ctx.save();
     ctx.shadowColor = 'rgba(0, 240, 255, 0.75)';
     ctx.shadowOffsetX = splitDist;
@@ -2372,11 +3743,9 @@ function drawLadder() {
     ctx.shadowBlur = isBurst ? 4 : 1;
     drawSegments();
     ctx.restore();
-//строка 1495
-    // 3. Основной четкий слой по центру
+
     drawSegments();
 
-    // 4. Горизонтальные разрывы текстуры (Slice Tearing) при активном импульсе
     if (isBurst) {
         const sliceCount = 3 + Math.floor(Math.random() * 3);
         for (let s = 0; s < sliceCount; s++) {
@@ -2388,11 +3757,7 @@ function drawLadder() {
             ctx.beginPath();
             ctx.rect(x - 30, sliceY, targetWidth + 60, sliceH);
             ctx.clip();
-
-            // Перерисовываем сдвинутый горизонтальный срез
             ctx.drawImage(ladderImg, x + sliceShift, baseY, targetWidth, targetHeight);
-            
-            // Неоновый артефакт на срезе
             ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0, 255, 255, 0.25)' : 'rgba(255, 0, 120, 0.25)';
             ctx.fillRect(x - 30, sliceY, targetWidth + 60, sliceH);
             ctx.restore();
@@ -2402,35 +3767,39 @@ function drawLadder() {
     ctx.restore();
 }
 
+// === 1. УВЕЛИЧЕННАЯ КОЛОНКА (В 2 РАЗА ШИРЕ И ВЫШЕ) ===
 function drawHangingSpeaker() {
     const targetWidth = canvas.width * 0.27;
     const ladderLeft = canvas.width / 2 - targetWidth / 2;
-    const speakerW = 34;
-    const speakerH = 46;
-    const speakerX = ladderLeft - speakerW; 
+    
+    // Новые пропорции: 68x92 px вместо старых 34x46 px
+    const speakerW = 68;
+    const speakerH = 92;
+    // Зазор 6px от балки лестницы, чтобы не наезжать на текстуру
+    const speakerX = ladderLeft - speakerW - 2; 
     
     const floatY = Math.sin(Date.now() / 450) * 4;
     const speakerY = canvas.height * 0.52 + ladderDropY + floatY;
     const anchorY = -30; 
 
     ctx.save();
-    // Тросы подвеса
+    // Тросы подвеса (сделали плотнее — 1.8px вместо 1.2px)
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.moveTo(speakerX + 6, anchorY);
-    ctx.lineTo(speakerX + 6, speakerY);
-    ctx.moveTo(speakerX + speakerW - 6, anchorY);
-    ctx.lineTo(speakerX + speakerW - 6, speakerY);
+    ctx.moveTo(speakerX + 12, anchorY);
+    ctx.lineTo(speakerX + 12, speakerY + 8);
+    ctx.moveTo(speakerX + speakerW - 12, anchorY);
+    ctx.lineTo(speakerX + speakerW - 12, speakerY + 8);
     ctx.stroke();
 
     let pulse = 1.0;
-    if (speakerTimer < 160) pulse = 1.14;
+    if (speakerTimer < 160) pulse = 1.12;
 
     ctx.translate(speakerX + speakerW / 2, speakerY + speakerH / 2);
     ctx.scale(pulse, pulse);
 
-    // Если спрайт загружен — рисуем его, иначе фоллбек
+    // Спрайт колонки
     if (speakerSprite.complete && speakerSprite.naturalWidth !== 0) {
         ctx.drawImage(speakerSprite, -speakerW / 2, -speakerH / 2, speakerW, speakerH);
     } else {
@@ -2443,16 +3812,19 @@ function drawHangingSpeaker() {
     ctx.restore();
 }
 
+// === 2. УВЕЛИЧЕННЫЕ ШАРЫ НЬЮТОНА (РАДИУС 22px ВМЕСТО 13px) ===
 function drawNewtonCradle() {
     const targetWidth = canvas.width * 0.27;
     const ladderLeft = canvas.width / 2 - targetWidth / 2;
     const ladderRight = canvas.width / 2 + targetWidth / 2;
 
-    const r = 13; 
+    // Радиус увеличен с 13px до 22px (диаметр стал 44px вместо 26px)
+    const r = 22; 
     const ballRestY = canvas.height * 0.28 + ladderDropY;
     const anchorY = -30;
     const stringLen = ballRestY - anchorY;
 
+    // Точки соприкосновения с боковинами лестницы
     const leftRestX = ladderLeft - r;
     const rightRestX = ladderRight + r;
 
@@ -2476,31 +3848,45 @@ function drawNewtonCradle() {
     const leftBallY = anchorY + Math.cos(leftAngle) * stringLen;
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(leftRestX, anchorY); ctx.lineTo(leftBallX, leftBallY); ctx.stroke();
+    ctx.lineWidth = 1.8;
+    ctx.beginPath(); 
+    ctx.moveTo(leftRestX, anchorY); 
+    ctx.lineTo(leftBallX, leftBallY); 
+    ctx.stroke();
 
     if (newtonSprite.src && newtonSprite.complete && newtonSprite.naturalWidth !== 0) {
         ctx.drawImage(newtonSprite, leftBallX - r, leftBallY - r, r * 2, r * 2);
     } else {
         ctx.fillStyle = '#bdc3c7';
-        ctx.beginPath(); ctx.arc(leftBallX, leftBallY, r, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); 
+        ctx.arc(leftBallX, leftBallY, r, 0, Math.PI * 2); 
+        ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(leftBallX - 3, leftBallY - 3, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); 
+        ctx.arc(leftBallX - 4, leftBallY - 4, 4, 0, Math.PI * 2); 
+        ctx.fill();
     }
 
     // 2. ПРАВЫЙ ШАР
     const rightBallX = rightRestX + Math.sin(rightAngle) * stringLen;
     const rightBallY = anchorY + Math.cos(rightAngle) * stringLen;
 
-    ctx.beginPath(); ctx.moveTo(rightRestX, anchorY); ctx.lineTo(rightBallX, rightBallY); ctx.stroke();
+    ctx.beginPath(); 
+    ctx.moveTo(rightRestX, anchorY); 
+    ctx.lineTo(rightBallX, rightBallY); 
+    ctx.stroke();
 
     if (newtonSprite.src && newtonSprite.complete && newtonSprite.naturalWidth !== 0) {
         ctx.drawImage(newtonSprite, rightBallX - r, rightBallY - r, r * 2, r * 2);
     } else {
         ctx.fillStyle = '#bdc3c7';
-        ctx.beginPath(); ctx.arc(rightBallX, rightBallY, r, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); 
+        ctx.arc(rightBallX, rightBallY, r, 0, Math.PI * 2); 
+        ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(rightBallX - 3, rightBallY - 3, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); 
+        ctx.arc(rightBallX - 4, rightBallY - 4, 4, 0, Math.PI * 2); 
+        ctx.fill();
     }
     ctx.restore();
 }
@@ -2508,6 +3894,13 @@ function drawNewtonCradle() {
 function drawParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
+        // Гравитационное притяжение частиц к центру лестницы при надетой Чёрной дыре
+        if ((currentSkinId === 'endless' || currentSkinId === 'absolute') && blackHoleBonus > 0) {
+            const pullForce = (0.8 + (blackHoleBonus / 10.0) * 2.2);
+            const dx = (canvas.width / 2) - p.x;
+            p.x += dx * 0.04 * pullForce; // Засасываем частицу к центральной оси дыры
+        }
+
         p.y -= p.speed; 
         p.alpha -= 0.02; 
         ctx.fillStyle = p.color ? p.color.replace('ALPHA', p.alpha) : `rgba(255, 255, 255, ${p.alpha})`;
@@ -2599,6 +3992,7 @@ canvas.addEventListener('pointerdown', (e) => {
 });
 
 window.addEventListener('pointerup', () => isPointerDown = false);
+window.addEventListener('pointercancel', () => isPointerDown = false); // <-- Добавить эту строку
 
 canvas.addEventListener('pointermove', (e) => {
     if (!isPointerDown) return;
@@ -2613,7 +4007,6 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 function handleTap(clientX, clientY) {
-    // Тактильный отклик на смартфонах
     if (settingsState.vibrate && navigator.vibrate) {
         navigator.vibrate(15);
     }
@@ -2621,154 +4014,266 @@ function handleTap(clientX, clientY) {
     AudioEngine.updateAmbient(currentHeight);
     
     const rect = canvas.getBoundingClientRect();
-    const clickX = clientX - rect.left;
-    const clickY = clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
 
-    clicksThisSec++;
-    totalClicks++;
+    const clickX = (clientX - rect.left) * scaleX;
+    const clickY = (clientY - rect.top) * scaleY;
 
-    // 1. Поимка монетки Ретро (Insert Coin)
+    const skin = { buffs: getActiveLadderBuffs() };
+
+    // === РАСЧЁТ МНОЖИТЕЛЯ ТАПОВ (КОСТЬ + БАНАН) ===
+    let isBananaProc = false;
+    if (hasMech('banana')) {
+        bananaTapCounter = (bananaTapCounter || 0) + 1;
+        if (bananaTapCounter >= 5) {
+            bananaTapCounter = 0;
+            isBananaProc = true;
+        }
+    } else {
+        bananaTapCounter = 0;
+    }
+
+    let tapsNum = 1;
+    if (hasMech('bone')) tapsNum *= 2;
+    if (isBananaProc) tapsNum *= 2; // На 5-й клик Банана tapsNum становится 2!
+
+    // Подсчет CPS в скользящем окне 1 секунды
+    const tapNow = Date.now();
+    for (let i = 0; i < tapsNum; i++) {
+        clickTimestamps.push(tapNow);
+    }
+    clickTimestamps = clickTimestamps.filter(t => tapNow - t <= 1000);
+    const liveCps = clickTimestamps.length;
+    totalClicks += tapsNum;
+
+    // Поимка монетки Ретро (Insert Coin)
     if (hasMech('retro') && retroCoin.active) {
         const dx = clickX - (retroCoin.x + retroCoin.size/2);
         const dy = clickY - (retroCoin.y + retroCoin.size/2);
-        if (Math.sqrt(dx*dx + dy*dy) < retroCoin.size * 1.5) { // Хитбокс чуть больше
+        if (Math.sqrt(dx*dx + dy*dy) < retroCoin.size * 1.5) {
             retroCoin.active = false;
+            
+            // Награда: Обычные гайки + Золотые гайки (5-15)
             const coinReward = Math.floor(75 + Math.random() * 50);
+            const goldReward = Math.floor(5 + Math.random() * 11); 
+            
             addNuts(coinReward);
-            AudioEngine.play('jacpot', 0.8);
-            particles.push({ x: clickX, y: clickY, text: `+${coinReward} 🔩!`, color: '#f1c40f', speed: 3, alpha: 1.5 });
-            return; // Забираем клик на монету
+            goldenNuts += goldReward;
+
+            AudioEngine.play('pickupCoin5', 1.0);
+            particles.push({ 
+                x: clickX, 
+                y: clickY, 
+                text: `+${coinReward} 🔩 и +${goldReward} 🟡!`, 
+                color: '#f1c40f', 
+                speed: 3, 
+                alpha: 1.6 
+            });
+            return;
         }
     }
 
-const skin = LADDER_SKINS[currentSkinId] || { buffs: {} };
-    let tapsNum = hasMech('bone') ? 2 : 1; // Костяная: 1 тап за 2 (для ящика)
+    // === ПОИМКА ПОДАРКА НЛО В ВОЗДУХЕ ===
+    if (hasMech('ufo') && typeof ufoGift !== 'undefined' && ufoGift.active) {
+        // Вычисляем расстояние от клика до центра летящего подарка
+        const dx = clickX - ufoGift.x;
+        const dy = clickY - ufoGift.y;
+        
+        // Радиус захвата 70px (делаем зону клика чуть больше самой картинки, чтобы было легко попасть)
+        if (Math.sqrt(dx*dx + dy*dy) < 70) {
+            ufoGift.active = false; // Скрываем и останавливаем анимацию притяжения
+            
+            let bonusTxt = "";
+            if (ufoGift.rewardType === 0) { 
+                addNuts(250); bonusTxt = "👽 +250 🔩"; AudioEngine.play('gaiki', 0.8);
+            } else if (ufoGift.rewardType === 1) { 
+                userCases.wooden++; boxesOwned++; 
+                if (uiCasesCount) uiCasesCount.innerText = boxesOwned; 
+                bonusTxt = "👽 +📦"; AudioEngine.play('case_drop_by_click', 0.9);
+            } else if (ufoGift.rewardType === 2) { 
+                userCases.iron++; bonusTxt = "👽 +🧰"; AudioEngine.play('win', 0.85);
+            } else { 
+                goldenNuts += 25; bonusTxt = "👽 +25 🟡"; AudioEngine.play('pickupCoin5', 1.0);
+            }
 
-    // База клика + бафф скина
+            // Спавним текст ровно в точке клика
+            particles.push({ 
+                x: clickX, y: clickY, 
+                text: bonusTxt, color: '#4cd137', font: 'bold 28px sans-serif', alpha: 2.2, speed: 1.5 
+            });
+            
+            shakeTime = Math.max(shakeTime, 8); // Легкая тряска экрана от взрыва контейнера
+            
+            // Прерываем функцию, чтобы этот клик не засчитался как удар по лестнице
+            return; 
+        }
+    }
+
+    // База клика + баффы
     let currentClickPower = clickPower; 
-    if (skin.buffs.clickAdd) currentClickPower += skin.buffs.clickAdd; // Огненная, Шторм
+    if (skin.buffs.clickAdd) currentClickPower += skin.buffs.clickAdd;
+
+    // Умножаем урон клика на количество тапов (Кость x2, Банан на 5-й тап x2)
+    currentClickPower *= tapsNum;
+
+    // Накачиваем инерцию Млечного пути (теперь переменная объявлена и не крашит игру!)
+    if (hasMech('milkyway')) {
+        cosmicMomentum += currentClickPower * 1.5; 
+        cosmicMomentum = Math.min(cosmicMomentum, currentClickPower * 20); 
+    }
+
+    // Если сработал Банан — выводим визуальное уведомление
+    if (isBananaProc) {
+        particles.push({
+            x: clickX,
+            y: clickY - 35,
+            text: '🍌 x2 КЛИК!',
+            color: '#f1c40f',
+            font: 'bold 18px sans-serif',
+            speed: 2.2,
+            alpha: 1.8
+        });
+    }
 
     // Когтеточка (Комбо CPS)
-    if (hasMech('scratch') && currentCps > 4) {
-        const comboMult = Math.min(1.5, 1.0 + (currentCps - 4) * 0.05);
-        currentClickPower = Math.floor(currentClickPower * comboMult);
+    if (hasMech('scratch') && liveCps > 4) {
+        const comboMult = Math.min(1.5, 1.0 + (liveCps - 4) * 0.08);
+        currentClickPower = Math.round(currentClickPower * comboMult);
+        particles.push({ 
+            x: clickX + (Math.random() * 30 - 15), 
+            y: clickY - 50, 
+            text: `🔥 x${comboMult.toFixed(2)} (${liveCps} CPS)`, 
+            color: '#ff4757', 
+            font: 'bold 18px sans-serif', 
+            speed: 2.2, 
+            alpha: 1.6 
+        });
     }
 
-    // Банановая (Каждый 5-й тап х2)
-    if (hasMech('banana') && totalClicks % 5 === 0) currentClickPower *= 2;
 
-    // === ВОТ СЮДА ВСТАВЛЯЙ КОСТЯНУЮ ===
-    // Костяная лестница (удваивает урон за тап)
-    if (hasMech('bone')) {
-        currentClickPower *= 2;
-    }
+const activeEff = currentEffectId || currentSkinId;
+if (hasMech('storm') && activeEff !== 'absolute' && Math.random() < 0.05) {
+    currentHeight = Math.max(0, currentHeight - (currentClickPower * 3));
+    heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
+    triggerPurchaseEffect(10);
+    return; 
+}
 
-    // Грозовой фронт (Риск надлома 10%)
-    if (hasMech('storm') && Math.random() < 0.10) {
-        currentHeight = Math.max(0, currentHeight - (currentClickPower * 3));
-        heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
-        triggerPurchaseEffect(10);
-        return; 
-    }
-
-    // Лоза (+40% ко всему)
+    // Лоза (+40%)
     if (hasMech('vine')) currentClickPower = Math.round(currentClickPower * 1.4);
 
-// Турбо-рывок x3 ко всем кликам
+    // Турбо x3
     if (adState.turboTimer > 0) {
         currentClickPower *= 3;
     }
 
-    // Механика Гайкопада (Frenzy)
+    // Гайкопад: честно дает гайки за каждый засчитанный тап
     if (adState.frenzyTimer > 0) {
-        addNuts(1);
-        if (Math.random() < 0.01) {
-            goldenNuts += 1;
-            particles.push({ x: clickX, y: clickY - 30, text: '+1 🟡!', color: '#f1c40f', speed: 2, alpha: 1.5 });
+        addNuts(tapsNum);
+        for (let i = 0; i < tapsNum; i++) {
+            if (Math.random() < 0.01) {
+                goldenNuts += 1;
+                particles.push({ x: clickX, y: clickY - 30, text: '+1 🟡!', color: '#f1c40f', speed: 2, alpha: 1.5 });
+            }
         }
     }
 
-    // Применяем урон
+    // Применяем высоту
     currentHeight += currentClickPower;
     heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
     checkHeightUnlocks();
 
-    // Ржавая лестница (Гайки из ниоткуда)
-    if (hasMech('rusty') && Math.random() < 0.65) addNuts(1);
+    // Ржавая лестница: роллит шанс на каждый из тапов
+    if (hasMech('rusty')) {
+        for (let i = 0; i < tapsNum; i++) {
+            if (Math.random() < 0.65) addNuts(1);
+        }
+    }
 
     // Расчет лимита Pity для ящиков
     let actualClicksNeeded = clicksNeeded;
     if (skin.buffs.caseLimitMinus) actualClicksNeeded -= skin.buffs.caseLimitMinus;
     actualClicksNeeded = Math.max(10, actualClicksNeeded);
 
-    // Дроп кейса: 1.2% + (0.05% * удачу)
+    // Шанс дропа кейса (проверяется за каждый засчитанный тап)
     const totalLuck = getTotalLuck();
     const dropChance = 0.012 + (totalLuck * 0.0005);
-    
-    if (Math.random() < dropChance) {
-        // Шанс превратить деревянный ящик в железный сейф: (удача * 0.15)%
-        const ironUpgradeChance = (totalLuck * 0.15) / 100;
+    const ironUpgradeChance = (totalLuck * 0.15) / 100;
 
-        if (Math.random() < ironUpgradeChance) {
-            userCases.iron++;
-            AudioEngine.play('jacpot', 0.85);
-            particles.push({ x: clickX, y: clickY - 50, text: '🧰 ЖЕЛЕЗНЫЙ СЕЙФ (УДАЧА)!', color: '#7f8c8d', font: 'bold 22px sans-serif', alpha: 1.8, speed: 3.5 });
-        } else {
+    for (let i = 0; i < tapsNum; i++) {
+        if (Math.random() < dropChance) {
+            if (Math.random() < ironUpgradeChance) {
+                userCases.iron++;
+                AudioEngine.play('win', 0.85);
+                particles.push({ x: clickX, y: clickY - 50, text: '🧰 ЖЕЛЕЗНЫЙ СЕЙФ (УДАЧА)!', color: '#7f8c8d', font: 'bold 22px sans-serif', alpha: 1.8, speed: 3.5 });
+            } else {
+                boxesOwned++;
+                userCases.wooden = boxesOwned;
+                if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+                AudioEngine.play('case_drop_by_click', 0.9);
+                particles.push({ x: clickX, y: clickY - 45, text: '+ 📦!', color: '#f1c40f', alpha: 1.4, speed: 3.5 });
+            }
+            break;
+        }
+    }
+
+  // === ПРОГРЕСС-БАР КЕЙСА И ВЫДАЧА НАГРАД (С УЧЕТОМ ЗОЛОТОЙ И МРАМОРНОЙ) ===
+    clicksForBox += tapsNum;
+    if (clicksForBox >= actualClicksNeeded) {
+        clicksForBox = clicksForBox - actualClicksNeeded;
+        
+        pityStage++;
+        clicksNeeded = getClicksNeeded(pityStage);
+
+        // 1. Золотая лестница: 100% замена на Железный сейф
+        if (hasMech('golden')) {
+            userCases.iron = (userCases.iron || 0) + 1;
+            AudioEngine.play('win', 0.85);
+            particles.push({ 
+                x: clickX, 
+                y: clickY - 50, 
+                text: '🧰 ЖЕЛЕЗНЫЙ СЕЙФ!', 
+                color: '#7f8c8d', 
+                font: 'bold 22px sans-serif', 
+                alpha: 1.8, 
+                speed: 3.5 
+            });
+        } 
+        // 2. Мраморная лестница: 25% шанс получить Золотой ящик вместо деревянного
+        else if (hasMech('marble') && Math.random() < 0.25) {
+            userCases.gold = (userCases.gold || 0) + 1;
+            AudioEngine.play('jacpot', 1.0);
+            particles.push({ 
+                x: clickX, 
+                y: clickY - 50, 
+                text: '🟡 ЗОЛОТОЙ КЕЙС!', 
+                color: '#f1c40f', 
+                font: 'bold 24px sans-serif', 
+                alpha: 2.0, 
+                speed: 3.5 
+            });
+        } 
+        // 3. Обычная выдача Деревянного ящика (если нет Золотой или Мраморной)
+        else {
             boxesOwned++;
             userCases.wooden = boxesOwned;
             if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-            AudioEngine.play('case_drop_by_click', 0.9);
-            particles.push({ x: clickX, y: clickY - 45, text: '+ 📦!', color: '#f1c40f', alpha: 1.4, speed: 3.5 });
+            triggerCaseGainedPopup();
         }
     }
     
-    if (Math.random() < dropChance) {
-        boxesOwned++;
-        userCases.wooden = boxesOwned;
-        if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-        AudioEngine.play('case_drop_by_click', 0.9);
-        particles.push({ x: clickX, y: clickY - 45, text: '+ 📦!', color: '#f1c40f', alpha: 1.4, speed: 3.5 });
-    }
-
-   // Прогресс-бар кейса
-    clicksForBox += tapsNum;
-    if (clicksForBox >= actualClicksNeeded) {
-        clicksForBox = 0;
-        boxesOwned++;
-        userCases.wooden = boxesOwned;
-        if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-        
-        // Переход на следующий порог (40 -> 50 -> 60 -> 70 -> 80 -> 90 -> 100)
-        pityStage++;
-        clicksNeeded = getClicksNeeded(pityStage);
-        triggerCaseGainedPopup();
-    }
-    
-    // Двигаем вертикальную полоску снизу вверх:
+    // Обновление текста и вертикальной шкалы прогресса
     if (uiBoxText) {
-        uiBoxText.innerText = `${clicksForBox}/${actualClicksNeeded}`;
+        uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualClicksNeeded}`;
     }
     if (uiBoxProgress) {
         uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualClicksNeeded) * 100)}%`;
     }
 
-    // Золотая и Мраморная лестницы (События сотых кликов)
-    if (totalClicks % 100 === 0) {
-        if (hasMech('marble') && Math.random() < 0.25) {
-            userCases.gold++;
-            particles.push({ x: canvas.width/2, y: 150, text: '🟡 ЗОЛОТОЙ КЕЙС!', color: '#f1c40f', font: '30px sans-serif', alpha: 2, speed: 1 });
-        } else if (hasMech('golden')) {
-            userCases.iron++;
-            boxesOwned = Math.max(0, boxesOwned - 1); // Заменяет деревянный на железный
-            userCases.wooden = boxesOwned;
-            if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-            particles.push({ x: canvas.width/2, y: 150, text: '🧰 ЖЕЛЕЗНЫЙ СЕЙФ!', color: '#7f8c8d', font: '30px sans-serif', alpha: 2, speed: 1 });
-        }
-    }
-
-    // Новогодняя лестница (Подарки)
+    // Новогодняя лестница
     if (hasMech('new_year')) {
-        newYearCounter++;
+        newYearCounter += tapsNum;
         if (newYearCounter >= newYearTarget) {
             newYearCounter = 0;
             newYearTarget = Math.floor(150 + Math.random() * 100);
@@ -2790,26 +4295,27 @@ const skin = LADDER_SKINS[currentSkinId] || { buffs: {} };
     }
 
     // Визуал и физика
-    ladderScaleX = 1.1; ladderScaleY = 0.85; ladderSpeed = 25; 
+    ladderScaleX = 1.1; 
+    ladderScaleY = 0.85; 
+    ladderSpeed = 25; 
     particles.push({ x: clickX + (Math.random()*40-20), y: clickY - 20, text: `+${currentClickPower}`, alpha: 1, speed: 3+Math.random()*2 });
 
-    // Проверка триггера на Starter Pack (500 м)
+    // Проверка офферов на 500 м
     if (currentHeight >= 500 && !starterPack.unlocked && !starterPack.purchased) {
         starterPack.unlocked = true;
         starterPack.startTime = Date.now();
         saveGame();
     }
 
-    // Проверка триггера на Радар базы (500 м) — СТРОГО ОТДЕЛЬНЫМ БЛОКОМ ПОСЛЕ:
     if (currentHeight >= 500 && !radarState.prompted) {
         radarState.prompted = true;
         const radarMod = document.getElementById('radar-modal');
         if (radarMod) radarMod.classList.remove('hidden');
         saveGame();
     }
+
     checkHeightMilestones();
 }
-
 // --- МАГАЗИН И УПРАВЛЕНИЕ ---
 const shopModal = document.getElementById('shop-modal');
 const btnOpenShop = document.getElementById('btn-open-shop');
@@ -2941,60 +4447,47 @@ function createGachaItemCard(item, caseId = 'wooden') {
     card.style.justifyContent = 'center';
     card.style.alignItems = 'center';
 
-    // Стили балок и перекладин в зависимости от типа кейса
-    let leftRailCss = '';
-    let rightRailCss = '';
-    let rungCss = '';
-    let rivetColor = '';
-    let rivetGlow = '';
+    const leftRail = document.createElement('div');
+    const rightRail = document.createElement('div');
+    const rung = document.createElement('div');
 
-    if (caseId === 'iron') {
-        // === ЖЕЛЕЗНЫЙ СЕЙФ: Шлифованная сталь + бирюзовые неоновые диоды ===
-        leftRailCss = 'background: linear-gradient(to right, #2c3e50, #95a5a6 40%, #34495e); box-shadow: inset 2px 0 4px rgba(255,255,255,0.4), inset -2px 0 5px rgba(0,0,0,0.8); border-right: 1px solid #1a252f;';
-        rightRailCss = 'background: linear-gradient(to right, #34495e, #95a5a6 60%, #2c3e50); box-shadow: inset -2px 0 4px rgba(255,255,255,0.4), inset 2px 0 5px rgba(0,0,0,0.8); border-left: 1px solid #1a252f;';
-        rungCss = 'background: linear-gradient(to bottom, #ecf0f1 0%, #7f8c8d 45%, #2c3e50 100%); border-top: 1px solid #fff; border-bottom: 2px solid #111; box-shadow: 0 4px 8px rgba(0,0,0,0.85); border-radius: 3px;';
-        rivetColor = '#00d2d3';
-        rivetGlow = '0 0 6px #00d2d3';
-    } else if (caseId === 'gold') {
-        // === ЗОЛОТОЙ КЕЙС: Чистое золото + янтарно-рубиновые заклёпки и сияние ===
-        leftRailCss = 'background: linear-gradient(to right, #b7791f, #fef08a 35%, #ffd700 70%, #78350f); box-shadow: inset 2px 0 5px rgba(255,255,255,0.8), 0 0 10px rgba(241,196,15,0.45); border-right: 1px solid #5c3000;';
-        rightRailCss = 'background: linear-gradient(to right, #78350f, #ffd700 30%, #fef08a 65%, #b7791f); box-shadow: inset -2px 0 5px rgba(255,255,255,0.8), 0 0 10px rgba(241,196,15,0.45); border-left: 1px solid #5c3000;';
-        rungCss = 'background: linear-gradient(to bottom, #fff9d2 0%, #f1c40f 40%, #e67e22 80%, #7e2a00 100%); border-top: 1.5px solid #ffffff; border-bottom: 2px solid #3d1400; box-shadow: 0 4px 10px rgba(0,0,0,0.9), 0 0 10px rgba(241,196,15,0.65); border-radius: 4px;';
-        rivetColor = '#e74c3c';
-        rivetGlow = '0 0 6px #e74c3c, inset 1px 1px 2px #fff';
+    if (caseId === 'gold') {
+        // === ЗОЛОТАЯ ЛЕСТНИЦА-КЕЙС ===
+        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#d4ac0d 0%,#fff9d2 30%,#f1c40f 65%,#9a7d0a 100%);box-shadow:inset 1px 0 4px #ffffff,inset -2px 0 5px rgba(0,0,0,0.7),0 0 8px rgba(241,196,15,0.35);border-right:1px solid #7d6608;';
+        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#9a7d0a 0%,#f1c40f 35%,#fff9d2 70%,#d4ac0d 100%);box-shadow:inset 2px 0 5px rgba(0,0,0,0.7),inset -1px 0 4px #ffffff,0 0 8px rgba(241,196,15,0.35);border-left:1px solid #7d6608;';
+        rung.style.cssText = 'position:absolute;bottom:4px;left:14px;right:14px;height:16px;background:linear-gradient(180deg,#fffdf0 0%,#f9e79f 20%,#f1c40f 50%,#b7950b 80%,#7d6608 100%);box-shadow:0 4px 12px rgba(0,0,0,0.9),0 0 10px rgba(241,196,15,0.5),inset 0 1px 2px #fff;border-radius:3px;border-top:1px solid #fff;border-bottom:1px solid #564805;';
+        // Рубиновые заклёпки на золоте
+        rung.innerHTML = `
+            <div style="position:absolute;left:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#ff7675 25%,#d63031 75%,#2d3436 100%);border-radius:50%;box-shadow:0 0 6px #ff7675,0 1px 2px #000;"></div>
+            <div style="position:absolute;right:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#ff7675 25%,#d63031 75%,#2d3436 100%);border-radius:50%;box-shadow:0 0 6px #ff7675,0 1px 2px #000;"></div>
+        `;
+    } else if (caseId === 'iron') {
+        // === ЖЕЛЕЗНАЯ ЛЕСТНИЦА-СЕЙФ ===
+        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#636e72 0%,#b2bec3 35%,#4b5358 80%,#2d3436 100%);box-shadow:inset 1px 0 3px rgba(255,255,255,0.6),inset -2px 0 4px rgba(0,0,0,0.8);border-right:1px solid #1e272e;';
+        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#2d3436 0%,#4b5358 20%,#b2bec3 65%,#636e72 100%);box-shadow:inset 2px 0 4px rgba(0,0,0,0.8),inset -1px 0 3px rgba(255,255,255,0.6);border-left:1px solid #1e272e;';
+        rung.style.cssText = 'position:absolute;bottom:4px;left:14px;right:14px;height:16px;background:repeating-linear-gradient(90deg,#3d454d,#3d454d 3px,#636e72 3px,#636e72 6px),linear-gradient(180deg,#dfe6e9 0%,#636e72 40%,#2d3436 100%);background-blend-mode:overlay;box-shadow:0 4px 10px rgba(0,0,0,0.9),inset 0 1px 2px rgba(255,255,255,0.6);border-radius:3px;border-top:1px solid #dfe6e9;border-bottom:1px solid #111;';
+        // Стальные болты-шестигранники
+        rung.innerHTML = `
+            <div style="position:absolute;left:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#dfe6e9 30%,#2d3436 90%);border:1px solid #111;border-radius:2px;box-shadow:0 1px 2px #000;"></div>
+            <div style="position:absolute;right:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#dfe6e9 30%,#2d3436 90%);border:1px solid #111;border-radius:2px;box-shadow:0 1px 2px #000;"></div>
+        `;
     } else {
-        // === ДЕРЕВЯННЫЙ ЯЩИК: Тёмный дуб с древесной текстурой ===
-        leftRailCss = 'background: linear-gradient(to right, #3a2010, #6b4423 50%, #2d180b); box-shadow: inset 2px 0 4px rgba(0,0,0,0.8); border-right: 1px solid #1e0f06;';
-        rightRailCss = 'background: linear-gradient(to right, #2d180b, #6b4423 50%, #3a2010); box-shadow: inset -2px 0 4px rgba(0,0,0,0.8); border-left: 1px solid #1e0f06;';
-        rungCss = 'background: linear-gradient(to bottom, #a06331 0%, #6e3d17 50%, #3e1e07 100%); border-top: 1px solid rgba(255,255,255,0.25); border-bottom: 2px solid #1a0c04; box-shadow: 0 4px 6px rgba(0,0,0,0.85); border-radius: 2px;';
-        rivetColor = '#2d180b';
-        rivetGlow = 'inset 1px 1px 1px rgba(255,255,255,0.2)';
+        // === ДЕРЕВЯННАЯ СТРЕМЯНКА ===
+        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#5c3a21 0%,#8d5524 45%,#4a2e1b 100%);box-shadow:inset 1px 0 2px rgba(255,255,255,0.15),inset -2px 0 4px rgba(0,0,0,0.8);border-right:1px solid #341a0b;';
+        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#4a2e1b 0%,#7d4820 45%,#3c1e0e 100%);box-shadow:inset 2px 0 4px rgba(0,0,0,0.8),inset -1px 0 2px rgba(255,255,255,0.1);border-left:1px solid #341a0b;';
+        rung.style.cssText = 'position:absolute;bottom:4px;left:14px;right:14px;height:16px;background:linear-gradient(180deg,#965b2d 0%,#6d3d19 50%,#43220c 100%);box-shadow:0 4px 8px rgba(0,0,0,0.85),inset 0 1px 1px rgba(255,255,255,0.25);border-radius:2px;';
+        // Тёмные кованые гвозди
+        rung.innerHTML = `
+            <div style="position:absolute;left:3px;top:4px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#7f8c8d 30%,#2c3e50 90%);box-shadow:0 1px 2px #000;"></div>
+            <div style="position:absolute;right:3px;top:4px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#7f8c8d 30%,#2c3e50 90%);box-shadow:0 1px 2px #000;"></div>
+        `;
     }
 
-    // Левая вертикальная балка
-    const leftRail = document.createElement('div');
-    leftRail.style.cssText = `position:absolute;left:4px;top:0;bottom:0;width:14px;${leftRailCss}`;
-    // Заклёпка на левой балке
-    const leftRivet = document.createElement('div');
-    leftRivet.style.cssText = `position:absolute;bottom:9px;left:4px;width:6px;height:6px;border-radius:50%;background:${rivetColor};box-shadow:${rivetGlow};`;
-    leftRail.appendChild(leftRivet);
     card.appendChild(leftRail);
-
-    // Правая вертикальная балка
-    const rightRail = document.createElement('div');
-    rightRail.style.cssText = `position:absolute;right:4px;top:0;bottom:0;width:14px;${rightRailCss}`;
-    // Заклёпка на правой балке
-    const rightRivet = document.createElement('div');
-    rightRivet.style.cssText = `position:absolute;bottom:9px;right:4px;width:6px;height:6px;border-radius:50%;background:${rivetColor};box-shadow:${rivetGlow};`;
-    rightRail.appendChild(rightRivet);
     card.appendChild(rightRail);
-
-    // Ступенька (перекладина)
-    const rung = document.createElement('div');
-    rung.style.cssText = `position:absolute;bottom:4px;left:14px;right:14px;height:16px;${rungCss}`;
     card.appendChild(rung);
 
-    // Контент награды
+    // Контент награды между перекладинами
     const content = document.createElement('div');
     content.style.cssText = 'display:flex;flex-direction:column;align-items:center;margin-bottom:14px;z-index:2;';
 
@@ -3112,7 +4605,7 @@ if (btnClaimTimedBox) {
             userCases.wooden = boxesOwned;
             if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
 
-            AudioEngine.play('jacpot', 0.8);
+            AudioEngine.play('win', 0.8);
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.4,
@@ -3131,9 +4624,22 @@ if (btnClaimTimedBox) {
 let isGachaSpinning = false;
 
 function startCaseOpening(caseId = 'wooden', isReroll = false) {
-    // Сбрасываем флаг рекламы ТОЛЬКО если это новое открытие, а не реролл!
+    // 1. Сразу глушим все победные звуки предыдущего дропа
+    AudioEngine.stop('jacpot');
+    AudioEngine.stop('win');
+    AudioEngine.stop('gaiki');
+    AudioEngine.stop('open_case_end');
+
+    // 2. Сразу убираем кнопки реролла с экрана, пока крутится лента
+    const oldNeonBtn = document.getElementById('btn-neon-reroll');
+    if (oldNeonBtn) oldNeonBtn.remove();
+    const oldAdBtn = document.getElementById('btn-ad-reroll');
+    if (oldAdBtn) oldAdBtn.remove();
+
+    // 3. Сбрасываем попытки только если это абсолютно новый кейс
     if (!isReroll) {
         window._caseAdRerollUsed = false;
+        neonRerollUsed = false;
     }
 
     const modal = document.getElementById('gachaModal');
@@ -3141,11 +4647,18 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
     const claimBtn = document.getElementById('gachaClaimBtn');
     const title = document.getElementById('gachaTitle');
 
+    // Прячем окно со списком кейсов, чтобы не мешало
     if (casesModal) casesModal.classList.add('hidden');
 
     const caseData = CASES_DB[caseId] || CASES_DB.wooden;
     title.innerText = `Открываем: ${caseData.name}`;
     title.style.color = caseData.color;
+
+    // Подсвечиваем саму рамку рулетки под цвет текущего кейса
+    if (tape && tape.parentElement) {
+        tape.parentElement.style.borderColor = caseData.color;
+        tape.parentElement.style.boxShadow = `0 0 25px ${caseData.color}66`;
+    }
 
     modal.style.display = 'flex';
     claimBtn.style.display = 'none';
@@ -3154,7 +4667,7 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
 
     pendingPrize = rollLootFromCase(caseId);
 
-    // Сборка 50 ступеней (теперь передаем caseId, чтобы рисовались железные/золотые перекладины!)
+    // Сборка 50 ступеней лестницы (передаем caseId для отрисовки дерева/железа/золота)
     for (let i = 0; i < 50; i++) {
         const item = (i === GACHA_WIN_INDEX) 
             ? pendingPrize 
@@ -3179,7 +4692,7 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
         let isDuplicate = false;
         let prizeName = '';
 
-        // 1. Определение типа выигрыша
+        // Определение типа выигрыша
         if (pendingPrize.type === 'nuts') {
             title.innerText = `ВЫИГРЫШ: +${pendingPrize.amount} ГАЕК!`;
             title.style.color = '#f1c40f';
@@ -3207,11 +4720,9 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
                 isDuplicate = ownedTalismans.includes(pendingPrize.id);
             }
 
-            // Вычисляем точную награду за повторку по редкости предмета
             const goldReward = DUPLICATE_GOLD_REWARDS[prizeRarity] || 5;
 
             if (isDuplicate) {
-                // Пишем честную сумму в зависимости от редкости (5, 10, 35 или 150)
                 title.innerText = `ПОВТОРКА: ${prizeName} (+${goldReward} 🟡)`;
                 title.style.color = '#e67e22';
                 AudioEngine.play('gaiki', 0.8);
@@ -3227,7 +4738,7 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
             }
         }
 
-// 2. Механика Неоновой лестницы
+        // 1. Механика Неоновой лестницы (1 бесплатный реролл)
         const oldReroll = document.getElementById('btn-neon-reroll');
         if (oldReroll) oldReroll.remove();
 
@@ -3244,14 +4755,12 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
                 e.stopPropagation();
                 neonRerollUsed = true;
                 rerollBtn.remove();
-                startCaseOpening(caseId, window._caseAdRerollUsed); // сохраняем статус реролла
+                startCaseOpening(caseId, true); // <-- Передаем true (isReroll)
             };
             claimBtn.parentNode.insertBefore(rerollBtn, claimBtn.nextSibling);
-        } else {
-            neonRerollUsed = false;
         }
 
-        // Реролл кейса за рекламу (СТРОГО 1 раз на ящик)
+        // 2. Реролл кейса за рекламу (строго 1 раз за открытие!)
         const oldAdReroll = document.getElementById('btn-ad-reroll');
         if (oldAdReroll) oldAdReroll.remove();
 
@@ -3268,7 +4777,7 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
                 watchRewardedAd('case_reroll', () => {
                     window._caseAdRerollUsed = true;
                     adRerollBtn.remove();
-                    startCaseOpening(caseId, true); // <-- передаем isReroll = true!
+                    startCaseOpening(caseId, true); // <-- Передаем true (isReroll)
                 });
             };
             claimBtn.parentNode.insertBefore(adRerollBtn, claimBtn.nextSibling);
@@ -3294,7 +4803,6 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
         }
     }
 
-    // Клик по фону: во время прокрутки — пропустить, после завершения — забрать награду
     modal.onclick = (e) => {
         if (isGachaSpinning) {
             finishSpin();
@@ -3309,9 +4817,30 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
 // Забор награды
 document.getElementById('gachaClaimBtn').onclick = () => {
     AudioEngine.stop('jacpot');
+    AudioEngine.stop('win');
+    AudioEngine.stop('gaiki');
+    AudioEngine.stop('open_case_end');
+
     const oldReroll = document.getElementById('btn-neon-reroll');
     if (oldReroll) oldReroll.remove();
+    const oldAdReroll = document.getElementById('btn-ad-reroll');
+    if (oldAdReroll) oldAdReroll.remove();
+
     if (!pendingPrize) return;
+
+    // === ПАССИВКА КРИСТАЛЬНОЙ ЛЕСТНИЦЫ (+3 ЗОЛОТА ЗА ЛЮБОЙ КЕЙС) ===
+    if (hasMech('crystal')) {
+        goldenNuts += 3;
+        particles.push({
+            x: canvas.width / 2,
+            y: canvas.height * 0.32,
+            text: '💎 +3 🟡 (Кристалл)!',
+            color: '#00ffff',
+            font: 'bold 22px sans-serif',
+            alpha: 2.2,
+            speed: 2
+        });
+    }
 
     if (pendingPrize.type === 'nuts') {
         addNuts(pendingPrize.amount);
@@ -3515,6 +5044,24 @@ document.getElementById('btn-close-inventory').onclick = () => {
     inventoryModal.classList.add('hidden');
 };
 
+function equipLadderEffect(id, silent = false) {
+    if (!LADDER_SKINS[id]) return;
+    currentEffectId = id;
+
+    // Пересчет урона клика под активный эффект
+    const ladderBuffs = getActiveLadderBuffs();
+    const extraClick = ladderBuffs.click || 0;
+    clickPower = (typeof baseClickPower !== 'undefined' ? baseClickPower : 1) + extraClick;
+    if (typeof uiClickPower !== 'undefined' && uiClickPower) {
+        uiClickPower.innerText = clickPower;
+    }
+
+    if (!silent) AudioEngine.play('click', 0.5);
+    saveGame();
+    renderInventory();
+    updateFieldIcons();
+}
+
 // Функция надевания обвесов и скинов
 function equipItem(type, id, silent = false) {
     if (type === 'ladders') {
@@ -3522,13 +5069,17 @@ function equipItem(type, id, silent = false) {
         currentSkinId = id;
         const skinData = LADDER_SKINS[id];
         ladderImg.src = skinData.file;
-
-        const extraClick = (skinData.buffs && skinData.buffs.click) ? skinData.buffs.click : 0;
+        
+        ufoGlowCanvas = null;
+        
+        // Пересчет клика берем из getActiveLadderBuffs()
+        const ladderBuffs = getActiveLadderBuffs();
+        const extraClick = ladderBuffs.click || 0;
         clickPower = (typeof baseClickPower !== 'undefined' ? baseClickPower : 1) + extraClick;
         if (typeof uiClickPower !== 'undefined' && uiClickPower) {
             uiClickPower.innerText = clickPower;
         }
-    } 
+    }
     else if (type === 'speakers') {
         if (!SPEAKER_SKINS[id]) return;
         currentSpeakerSkin = id;
@@ -3541,15 +5092,14 @@ function equipItem(type, id, silent = false) {
         newtonSprite.src = skinData.file ? skinData.file : '';
     } 
     else if (type === 'talismans') {
-        currentTalisman = (currentTalisman === id) ? null : id;
-        const slotTalisman = document.getElementById('slot-talisman');
-        if (slotTalisman) {
-            if (currentTalisman && TALISMANS[currentTalisman]) {
-                slotTalisman.innerHTML = `<img src="${TALISMANS[currentTalisman].file}" style="width: 32px; height: 32px; object-fit: contain;">`;
-            } else {
-                slotTalisman.innerHTML = '';
-            }
+        // При тихой загрузке (silent === true) не сбрасываем, а строго надеваем!
+        if (silent) {
+            currentTalisman = id;
+        } else {
+            currentTalisman = (currentTalisman === id) ? null : id;
+            saveGame(); // Сразу сохраняем изменение
         }
+        updateFieldIcons();
     }
 
     // Звук играет только при ручном клике в инвентаре, а при загрузке молчит:
@@ -3574,6 +5124,7 @@ const LADDER_DESC = {
     scratch: 'CPS > 4 включает комбо до x1.5',
     new_year: 'Подарки каждые 150-250 тапов',
     bone: 'Каждый клик считается за два',
+    crystal: '+3 🟡 за каждое открытие кейса',
     cyber: '+1 слот под аксессуары',
     golden: 'Сейф каждые 100 кликов',
     goth: '-20% скидка на всё',
@@ -3625,7 +5176,6 @@ function getItemBuffText(type, item) {
     return '';
 }
 
-// Отрисовка списка предметов
 // Отрисовка списка предметов инвентаря
 function renderInventory() {
     if (!inventoryItemsList) return;
@@ -3639,6 +5189,16 @@ function renderInventory() {
         itemsSource = LADDER_SKINS;
         ownedList = ownedSkins;
         equippedId = currentSkinId;
+
+        const curVisName = LADDER_SKINS[currentSkinId]?.name || 'Деревянная';
+        const curEffName = LADDER_SKINS[currentEffectId]?.name || 'Деревянная';
+        const statusBox = document.createElement('div');
+        statusBox.style.cssText = 'background: rgba(0,0,0,0.5); border: 1px solid #34495e; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; font-size: 11px; display: flex; justify-content: space-between; color: #bdc3c7;';
+        statusBox.innerHTML = `
+            <div>🎨 Облик: <b style="color: #2ecc71;">${curVisName}</b></div>
+            <div>✨ Эффект: <b style="color: #9b59b6;">${curEffName}</b></div>
+        `;
+        inventoryItemsList.appendChild(statusBox);
     } else if (currentInventoryTab === 'speakers') {
         itemsSource = SPEAKER_SKINS;
         ownedList = ownedSpeakerSkins;
@@ -3653,7 +5213,6 @@ function renderInventory() {
         equippedId = currentTalisman;
     }
 
-    // Определяем следующий доступный для покупки талисман в цепочке
     let nextTalismanToBuy = null;
     if (currentInventoryTab === 'talismans') {
         nextTalismanToBuy = TALISMANS_ORDER.find(tId => !ownedTalismans.includes(tId));
@@ -3666,44 +5225,115 @@ function renderInventory() {
         if (!item) continue;
 
         const isOwned = ownedList.includes(id);
-        const isEquipped = (equippedId === id);
         const rarityColor = RARITY_COLORS[item.rarity] || '#bdc3c7';
 
         const card = document.createElement('div');
-        card.className = `inv-item-card ${isEquipped ? 'equipped' : ''}`;
-        card.style.borderColor = isEquipped ? '#f1c40f' : (isOwned ? rarityColor : '#333');
+        card.className = 'inv-item-card';
+
+        if (currentInventoryTab === 'ladders') {
+            const isVis = (currentSkinId === id);
+            const isEff = (currentEffectId === id);
+            if (isVis && isEff) card.style.borderColor = '#f1c40f';
+            else if (isVis) card.style.borderColor = '#2ecc71';
+            else if (isEff) card.style.borderColor = '#9b59b6';
+            else card.style.borderColor = isOwned ? rarityColor : '#333';
+        } else {
+            card.style.borderColor = (equippedId === id) ? '#f1c40f' : (isOwned ? rarityColor : '#333');
+        }
+
         card.style.opacity = isOwned ? '1' : '0.65';
 
         const buffDesc = getItemBuffText(currentInventoryTab, item);
         const imgSrc = item.file || (currentInventoryTab === 'newton' ? '' : 'assets/wood_stair-removebg-preview.png');
 
-        // Кнопка действия (Надеть / Снять / Купить / Закрыто)
-        let actionBtnHtml = '';
+        let actionAreaHtml = '';
 
-        if (isEquipped) {
-            actionBtnHtml = `<button class="btn-equip active">${currentInventoryTab === 'talismans' ? 'СНЯТЬ' : 'НАДЕТО'}</button>`;
-        } else if (isOwned) {
-            actionBtnHtml = `<button class="btn-equip available">Надеть</button>`;
-        } else if (currentInventoryTab === 'talismans') {
-            // Покупка талисманов по цепочке
-            if (id === nextTalismanToBuy) {
-                const canAfford = goldenNuts >= item.price;
-                actionBtnHtml = `<button class="btn-equip buy-gear-btn" data-type="talismans" data-id="${id}" style="background: ${canAfford ? '#f1c40f' : '#555'}; color: #000;" ${!canAfford ? 'disabled' : ''}>${item.price} 🟡</button>`;
+        if (currentInventoryTab === 'ladders') {
+            if (isOwned) {
+                const isVis = (currentSkinId === id);
+                const isEff = (currentEffectId === id);
+
+                let mainBtnText = 'Экипировать';
+                let mainBtnStyle = 'background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111;';
+                let mainBtnDisabled = false;
+
+                if (isVis && isEff) {
+                    mainBtnText = 'Надето ✓';
+                    mainBtnStyle = 'background: #27ae60; color: #fff; cursor: default;';
+                    mainBtnDisabled = true;
+                } else if (isVis && !isEff) {
+                    mainBtnText = 'Надеть эффект';
+                    mainBtnStyle = 'background: #9b59b6; color: #fff;';
+                } else if (!isVis && isEff) {
+                    mainBtnText = 'Надеть облик';
+                    mainBtnStyle = 'background: #2ecc71; color: #111;';
+                }
+
+                const mimicGearBtn = (id === 'mimic') 
+                    ? `<button onclick="openMimicConfig()" style="background: none; border: 1px dashed #8c7ae6; color: #8c7ae6; border-radius: 4px; font-size: 9px; padding: 2px 5px; cursor: pointer; margin-bottom: 2px; width: 100%;">⚙️ Слоты (${LADDER_SKINS[mimicSlots[0]]?.name || '1'}, ${LADDER_SKINS[mimicSlots[1]]?.name || '2'})</button>`
+                    : '';
+
+                let cyberGearBtn = '';
+                if (id === 'cyber') {
+                    let cyberEquippedName = 'Не выбран';
+                    if (cyberExtraAccessory.id) {
+                        if (cyberExtraAccessory.type === 'speakers') cyberEquippedName = SPEAKER_SKINS[cyberExtraAccessory.id]?.name || '';
+                        else if (cyberExtraAccessory.type === 'newton') cyberEquippedName = NEWTON_SKINS[cyberExtraAccessory.id]?.name || '';
+                        else if (cyberExtraAccessory.type === 'talismans') cyberEquippedName = TALISMANS[cyberExtraAccessory.id]?.name || '';
+                    }
+                    cyberGearBtn = `<button onclick="openCyberConfig()" style="background: none; border: 1px dashed #00ffff; color: #00ffff; border-radius: 4px; font-size: 9px; padding: 2px 5px; cursor: pointer; margin-bottom: 2px; width: 100%;">🦾 Слот (${cyberEquippedName})</button>`;
+                }
+
+                actionAreaHtml = `
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                        ${mimicGearBtn}
+                        ${cyberGearBtn}
+                        <div style="display: flex; gap: 4px;">
+                            <button class="badge-vis-btn" title="Надеть только облик" style="
+                                padding: 3px 6px; font-size: 11px; border-radius: 6px; cursor: pointer;
+                                border: 1px solid ${isVis ? '#2ecc71' : '#57606f'};
+                                background: ${isVis ? 'rgba(46, 204, 113, 0.25)' : 'rgba(0,0,0,0.35)'};
+                                color: ${isVis ? '#2ecc71' : '#bdc3c7'}; font-weight: bold;
+                            ">🎨${isVis ? '✓' : ''}</button>
+
+                            <button class="badge-eff-btn" title="Надеть только эффект" style="
+                                padding: 3px 6px; font-size: 11px; border-radius: 6px; cursor: pointer;
+                                border: 1px solid ${isEff ? '#9b59b6' : '#57606f'};
+                                background: ${isEff ? 'rgba(155, 89, 182, 0.25)' : 'rgba(0,0,0,0.35)'};
+                                color: ${isEff ? '#e056fd' : '#bdc3c7'}; font-weight: bold;
+                            ">✨${isEff ? '✓' : ''}</button>
+                        </div>
+                        <button class="main-equip-btn" ${mainBtnDisabled ? 'disabled' : ''} style="
+                            padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 6px;
+                            border: none; cursor: ${mainBtnDisabled ? 'default' : 'pointer'}; min-width: 95px; text-align: center;
+                            ${mainBtnStyle}
+                        ">${mainBtnText}</button>
+                    </div>
+                `;
             } else {
-                actionBtnHtml = `<button class="btn-equip locked" disabled>По очереди</button>`;
+                actionAreaHtml = `<button class="btn-equip locked" disabled>Закрыто</button>`;
             }
-        } else if (currentInventoryTab === 'speakers' || currentInventoryTab === 'newton') {
-            // Прямая покупка обвесов за Гайки или Золото
-            const isGold = item.priceType === 'goldenNuts';
-            const canAfford = isGold ? (goldenNuts >= item.price) : (nuts >= item.price);
-            const currencyIcon = isGold ? '🟡' : '🔩';
-            const btnBg = canAfford ? (isGold ? '#f1c40f' : '#3498db') : '#555';
-            const btnColor = isGold ? '#000' : '#fff';
-
-            actionBtnHtml = `<button class="btn-equip buy-gear-btn" data-type="${currentInventoryTab}" data-id="${id}" style="background: ${btnBg}; color: ${btnColor}; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} ${currencyIcon}</button>`;
         } else {
-            // Лестницы остаются закрытыми (выбиваются из сейфов/наград)
-            actionBtnHtml = `<button class="btn-equip locked" disabled>Закрыто</button>`;
+            const isEquipped = (equippedId === id);
+            if (isEquipped) {
+                actionAreaHtml = `<button class="btn-equip active">${currentInventoryTab === 'talismans' ? 'СНЯТЬ' : 'НАДЕТО'}</button>`;
+            } else if (isOwned) {
+                actionAreaHtml = `<button class="btn-equip available">Надеть</button>`;
+            } else if (currentInventoryTab === 'talismans') {
+                if (id === nextTalismanToBuy) {
+                    const canAfford = goldenNuts >= item.price;
+                    actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="talismans" data-id="${id}" style="background: ${canAfford ? '#f1c40f' : '#555'}; color: #000;" ${!canAfford ? 'disabled' : ''}>${item.price} 🟡</button>`;
+                } else {
+                    actionAreaHtml = `<button class="btn-equip locked" disabled>По очереди</button>`;
+                }
+            } else if (currentInventoryTab === 'speakers' || currentInventoryTab === 'newton') {
+                const isGold = item.priceType === 'goldenNuts';
+                const canAfford = isGold ? (goldenNuts >= item.price) : (nuts >= item.price);
+                const currencyIcon = isGold ? '🟡' : '🔩';
+                const btnBg = canAfford ? (isGold ? '#f1c40f' : '#3498db') : '#555';
+                const btnColor = isGold ? '#000' : '#fff';
+                actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="${currentInventoryTab}" data-id="${id}" style="background: ${btnBg}; color: ${btnColor}; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} ${currencyIcon}</button>`;
+            }
         }
 
         card.innerHTML = `
@@ -3716,16 +5346,43 @@ function renderInventory() {
                     <p>${buffDesc}</p>
                 </div>
             </div>
-            <div>${actionBtnHtml}</div>
+            <div>${actionAreaHtml}</div>
         `;
 
-        // Клик по карточке надевает экипировку
-        if (isOwned) {
+        if (currentInventoryTab === 'ladders' && isOwned) {
+            const bVis = card.querySelector('.badge-vis-btn');
+            const bEff = card.querySelector('.badge-eff-btn');
+            const bMain = card.querySelector('.main-equip-btn');
+
+            if (bVis) bVis.onclick = (e) => { e.stopPropagation(); equipItem('ladders', id); };
+            if (bEff) bEff.onclick = (e) => { 
+                e.stopPropagation(); 
+                equipLadderEffect(id); 
+                if (id === 'mimic') openMimicConfig(); 
+                if (id === 'cyber') openCyberConfig(); 
+            };
+            if (bMain) bMain.onclick = (e) => {
+                e.stopPropagation();
+                const isVis = (currentSkinId === id);
+                const isEff = (currentEffectId === id);
+                if (!isVis && !isEff) {
+                    equipItem('ladders', id, true);
+                    equipLadderEffect(id);
+                    if (id === 'mimic') openMimicConfig();
+                    if (id === 'cyber') openCyberConfig();
+                } else if (isVis && !isEff) {
+                    equipLadderEffect(id);
+                    if (id === 'mimic') openMimicConfig();
+                    if (id === 'cyber') openCyberConfig();
+                } else if (!isVis && isEff) {
+                    equipItem('ladders', id);
+                }
+            };
+        } else if (isOwned) {
             card.style.cursor = 'pointer';
             card.onclick = () => equipItem(currentInventoryTab, id);
         }
 
-        // Покупка обвеса или талисмана
         const buyBtn = card.querySelector('.buy-gear-btn');
         if (buyBtn) {
             buyBtn.onclick = (e) => {
@@ -3741,16 +5398,13 @@ function renderInventory() {
                     goldenNuts -= targetItem.price;
                 } else if (!isGold && nuts >= targetItem.price) {
                     nuts -= targetItem.price;
-                } else {
-                    return; // Недостаточно средств
-                }
+                } else return;
 
-                // Добавляем предмет в соответствующий список
                 if (bType === 'talismans') ownedTalismans.push(bId);
                 else if (bType === 'speakers') ownedSpeakerSkins.push(bId);
                 else if (bType === 'newton') ownedNewtonSkins.push(bId);
 
-                AudioEngine.play('jacpot', 0.9);
+                AudioEngine.play('gaiki', 0.8);
                 uiNuts.innerText = `🔩 ${nuts}`;
                 if (typeof modalNutsVal !== 'undefined' && modalNutsVal) modalNutsVal.innerText = nuts;
                 if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
@@ -3826,6 +5480,8 @@ window.addEventListener('keydown', (e) => {
     }
 
     // 3. ОБЫЧНЫЕ МЕНЮ (Их безопасно закрывать на Esc)
+    const retroInfoModal = document.getElementById('retro-info-modal');
+if (retroInfoModal) retroInfoModal.classList.add('hidden');
     if (shopModal) shopModal.classList.add('hidden');
     if (casesModal) casesModal.classList.add('hidden');
     if (inventoryModal) inventoryModal.classList.add('hidden');
@@ -3862,6 +5518,10 @@ function triggerPurchaseEffect(cost = 10) {
 
 function saveGame() {
     const saveData = {
+        retroChallengeMs,
+        mimicSlots,
+        cyberExtraAccessory,
+        currentEffectId: currentEffectId || currentSkinId || 'wood',
         settingsState,
         radarState,
         calendarState,
@@ -3883,7 +5543,6 @@ function saveGame() {
 function loadGame() {
     const saved = localStorage.getItem('cosmicStaircaseSave');
 
-    // Проверка и авто-открытие календаря на старте сессии (перенесли сюда, чтобы работало плавно)
     setTimeout(() => {
         if (checkDailyCalendarStatus()) {
             renderCalendarUI();
@@ -3895,71 +5554,76 @@ function loadGame() {
     if (!saved) return false;
 
     try {
-if (data.settingsState) {
-    Object.assign(settingsState, data.settingsState);
-    applySettingsUI();
-}
 
-        if (data.radarState) radarState = data.radarState;
+        // 1. СНАЧАЛА ПАРСИМ СЕЙВ (исправлена критическая ошибка)
         const data = JSON.parse(saved);
-        
-        // ВОТ ЗДЕСЬ ПРАВИЛЬНОЕ МЕСТО ДЛЯ ЗАГРУЗКИ КАЛЕНДАРЯ
+        if (data.mimicSlots && Array.isArray(data.mimicSlots)) {
+            mimicSlots = data.mimicSlots;
+        }
+        visualHouseHeight = currentHeight;
+        if (data.cyberExtraAccessory) cyberExtraAccessory = data.cyberExtraAccessory; // <-- ДОБАВИЛИ
+
+        if (data.settingsState) {
+            Object.assign(settingsState, data.settingsState);
+            applySettingsUI();
+        }
+        if (data.radarState) radarState = data.radarState;
         if (data.calendarState) calendarState = data.calendarState;
         
         isVip = data.isVip || false;
         hasAdFree = data.hasAdFree || false;
         if (data.starterPack) starterPack = data.starterPack;
 
-        // 1. Восстанавливаем валюту и высоты
         currentHeight = data.currentHeight || 0;
         nuts = data.nuts || 0;
         goldenNuts = data.goldenNuts || 0;
         boxesOwned = data.boxesOwned || 0; 
+        retroChallengeMs = data.retroChallengeMs || 0;
 
-        // ежедневная акция
         claimedMilestones = data.claimedMilestones || [];
         dailyDeal = data.dailyDeal || dailyDeal;
 
-        // таймер беслпатного ящика
         activePlayBoxTimer = data.activePlayBoxTimer || 0;
         isTimedBoxReady = data.isTimedBoxReady || false;
 
-        // 2. Восстанавливаем цепочку порогов ящика
         pityStage = data.pityStage || 0;
         clicksNeeded = data.clicksNeeded || getClicksNeeded(pityStage);
         clicksForBox = data.clicksForBox || 0;
         
-        // 3. Восстанавливаем уровни прокачки
         clickLevel = data.clickLevel || 0;
         speakerLevel = data.speakerLevel || 0;
         newtonLevel = data.newtonLevel || 0;
 
-        // 4. Восстанавливаем инвентарь
         if (data.userCases) Object.assign(userCases, data.userCases);
         if (data.ownedSkins) ownedSkins = data.ownedSkins;
         if (data.ownedSpeakerSkins) ownedSpeakerSkins = data.ownedSpeakerSkins;
         if (data.ownedNewtonSkins) ownedNewtonSkins = data.ownedNewtonSkins;
         if (data.ownedTalismans) ownedTalismans = data.ownedTalismans;
 
-        // 5. Восстанавливаем экипированные скины
+        // 2. ВОССТАНАВЛИВАЕМ ОБЛИК И ЭФФЕКТ
         currentSkinId = data.currentSkinId || 'wood';
+        currentEffectId = data.currentEffectId || data.currentSkinId || 'wood';
         currentSpeakerSkin = data.currentSpeakerSkin || 'old';
         currentNewtonSkin = data.currentNewtonSkin || 'steel';
         currentTalisman = data.currentTalisman || null;
 
-        // 6. Пересчитываем характеристики (ровно один раз)
         baseClickPower = UPGRADES_CONFIG.click.basePower + (clickLevel * UPGRADES_CONFIG.click.powerPerLevel);
         speakerMPS = UPGRADES_CONFIG.speaker.basePower + (speakerLevel * UPGRADES_CONFIG.speaker.powerPerLevel);
         newtonPower = UPGRADES_CONFIG.newton.basePower + (newtonLevel * UPGRADES_CONFIG.newton.powerPerLevel);
         newtonSpeed = Math.max(500, 3000 - (newtonLevel * 130));
 
-        // 7. Надеваем предметы тихо (без щелчков звука)
+        // Надеваем облик и обвесы
         equipItem('ladders', currentSkinId, true);
         equipItem('speakers', currentSpeakerSkin, true);
         equipItem('newton', currentNewtonSkin, true);
-        if (currentTalisman) equipItem('talismans', currentTalisman, true);
+        if (data.currentTalisman) {
+    equipItem('talismans', data.currentTalisman, true);
+}
 
-        // 8. Обновляем все элементы интерфейса
+        // Применяем пассивный эффект
+        equipLadderEffect(currentEffectId, true);
+
+        // Обновляем UI
         heightDisplay.innerText = `${Math.floor(currentHeight)} м`;
         uiNuts.innerText = `🔩 ${nuts}`;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
@@ -3968,34 +5632,26 @@ if (data.settingsState) {
         if (uiLvlNewton) uiLvlNewton.innerText = newtonLevel;
         if (lvlNewtonDisplay) lvlNewtonDisplay.innerText = newtonLevel;
         
-        // 9. Синхронизируем полоску прогресса ящика
-        if (uiBoxText) {
-            uiBoxText.innerText = `${clicksForBox}/${clicksNeeded}`;
-        }
-        if (uiBoxProgress) {
-            uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / clicksNeeded) * 100)}%`;
-        }
+        if (uiBoxText) uiBoxText.innerText = `Ящик: ${clicksForBox}/${clicksNeeded}`;
+        if (uiBoxProgress) uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / clicksNeeded) * 100)}%`;
 
-        // Обновляем текст кнопки стрика [🎬 0/10]
         const streakBtnText = document.getElementById('ad-streak-btn-text');
         if (streakBtnText) streakBtnText.innerText = `${adState.streakCount}/10`;
 
-        // РАСЧЁТ ОФФЛАЙНА (Пункт 11) - Должен быть в самом конце, когда все скины загружены!
+        // Расчет оффлайна
         const now = Date.now();
         const lastTime = data.lastSaveTime || now;
         const offlineMs = Math.max(0, now - lastTime);
 
-        // Порог срабатывания: 60 секунд
         if (offlineMs > 60000) {
-            // Капы: 30 минут база, 3 часа Космос
-            const isCosmo = (data.currentSkinId === 'cosmo');
+            const activeSavedEff = data.currentEffectId || data.currentSkinId;
+const isCosmo = (activeSavedEff === 'cosmo' || activeSavedEff === 'absolute');
             const maxOfflineMs = isCosmo ? 3 * 3600000 : 30 * 60000;
             const effectiveMs = Math.min(offlineMs, maxOfflineMs);
             const seconds = effectiveMs / 1000;
 
-            const skin = LADDER_SKINS[data.currentSkinId] || { buffs: {} };
+            const skin = LADDER_SKINS[data.currentEffectId || data.currentSkinId] || { buffs: {} };
             
-            // 1. Метры Колонки
             let realMPS = 0;
             if (data.speakerLevel > 0) {
                 realMPS = Math.floor(((UPGRADES_CONFIG.speaker.basePower + (data.speakerLevel * UPGRADES_CONFIG.speaker.powerPerLevel)) + (skin.buffs.speakerAdd || 0)) * (SPEAKER_SKINS[data.currentSpeakerSkin]?.buff?.mpsMult || 1.0));
@@ -4003,7 +5659,6 @@ if (data.settingsState) {
             }
             const offSpeakerMeters = Math.floor(realMPS * seconds);
 
-            // 2. Метры Шаров Ньютона
             let offNewtonMeters = 0;
             if (data.newtonLevel > 0) {
                 let actualNSpeed = Math.max(500, 3000 - (data.newtonLevel * 130));
@@ -4013,12 +5668,10 @@ if (data.settingsState) {
                 let realHit = Math.floor(((UPGRADES_CONFIG.newton.basePower + (data.newtonLevel * UPGRADES_CONFIG.newton.powerPerLevel)) + (skin.buffs.newtonAdd||0)) * (NEWTON_SKINS[data.currentNewtonSkin]?.buff?.powerMult||1.0) * (skin.buffs.newtonMult||1.0));
                 if (hasMech('vine')) realHit = Math.round(realHit * 1.4);
 
-                // 2 удара за цикл
                 const hits = Math.floor(effectiveMs / actualNSpeed) * 2; 
                 offNewtonMeters = hits * realHit;
             }
 
-            // 3. Ящики (1 ящик в 10 минут)
             let offCases = Math.floor(effectiveMs / 600000);
             offCases = Math.min(offCases, isCosmo ? 8 : 3);
             const totalOffMeters = offSpeakerMeters + offNewtonMeters;
@@ -4026,8 +5679,6 @@ if (data.settingsState) {
             if (totalOffMeters > 0 || offCases > 0) {
                 setTimeout(() => {
                     const offModal = document.getElementById('offline-modal');
-                    
-                    // Заполняем UI
                     const offMin = Math.floor(effectiveMs / 60000);
                     const offSec = Math.floor((effectiveMs % 60000) / 1000);
                     document.getElementById('off-time-txt').innerText = `${offMin}м ${offSec}с`;
@@ -4043,7 +5694,6 @@ if (data.settingsState) {
 
                     offModal.classList.remove('hidden');
 
-                    // Кнопки
                     document.getElementById('btn-claim-offline-normal').onclick = () => {
                         currentHeight += totalOffMeters;
                         boxesOwned += offCases;
@@ -4075,6 +5725,43 @@ if (data.settingsState) {
         console.error("Ошибка при загрузке сохранения:", e);
         return false;
     }
+}
+
+// Возвращает активные баффы (для Мимика и Абсолюта объединяет статы)
+function getActiveLadderBuffs() {
+    const effId = currentEffectId || currentSkinId;
+
+    // 1. АБСОЛЮТ — полный сводный набор числовых характеристик
+    if (effId === 'absolute') {
+        return {
+            click: 7,              // +7 к клику (Огненная)
+            clickAdd: 20,          // +20 к клику (Грозовой фронт)
+            luck: 22,              // +22 к Удаче (Пивная 5 + Книжная 7 + Календарь 10)
+            caseLimitMinus: 60,    // -60 кликов до ящика (Огненная 10 + Квантовая 50)
+            discount: 0.20,        // 20% скидка на магазин за метры и кейсы (Готика)
+            speakerAdd: 20,        // +20 к колонке (Кактус)
+            newtonAdd: 25,         // +25 к шарам (Пожарная 15 + Кактус 10)
+            newtonMult: 1.5        // +50% урона шаров Ньютона (Цементная)
+        };
+    }
+
+    // 2. МИМИК — объединяет статы 2-х выбранных слотов
+    if (effId === 'mimic') {
+        const s1 = LADDER_SKINS[mimicSlots[0]]?.buffs || {};
+        const s2 = LADDER_SKINS[mimicSlots[1]]?.buffs || {};
+        return {
+            click: (s1.click || 0) + (s2.click || 0),
+            clickAdd: (s1.clickAdd || 0) + (s2.clickAdd || 0),
+            luck: (s1.luck || 0) + (s2.luck || 0),
+            discount: Math.max(s1.discount || 0, s2.discount || 0),
+            caseLimitMinus: (s1.caseLimitMinus || 0) + (s2.caseLimitMinus || 0),
+            speakerAdd: (s1.speakerAdd || 0) + (s2.speakerAdd || 0),
+            newtonAdd: (s1.newtonAdd || 0) + (s2.newtonAdd || 0),
+            newtonMult: (s1.newtonMult || 1.0) * (s2.newtonMult || 1.0)
+        };
+    }
+
+    return LADDER_SKINS[effId]?.buffs || {};
 }
 
 // === КОНФИГУРАЦИЯ И ЛОГИКА РЕКЛАМНОГО СТРИКА (1-10) ===
@@ -4394,7 +6081,7 @@ function renderDailyDealUI() {
                     ownedTalismans.push(dailyDeal.id);
                 }
 
-                AudioEngine.play('jacpot', 1.0);
+                AudioEngine.play('gaiki', 0.8);
                 saveGame();
                 renderDailyDealUI();
                 if (typeof renderInventory === 'function') renderInventory();
@@ -4421,10 +6108,12 @@ function renderDailyDealUI() {
             rerollBtn.style.opacity = '1';
             rerollBtn.style.cursor = 'pointer';
             rerollBtn.onclick = () => {
-                dailyDeal.lastAdReroll = Date.now();
-                refreshDailyDeal(true);
-                renderDailyDealUI();
-            };
+    watchRewardedAd('daily_deal_reroll', () => {
+        dailyDeal.lastAdReroll = Date.now();
+        refreshDailyDeal(true);
+        renderDailyDealUI();
+    });
+};
         }
     }
 }
@@ -4668,6 +6357,16 @@ const btnClaimCalendarNormal = document.getElementById('btn-claim-calendar-norma
 const btnRestoreStreak = document.getElementById('btn-restore-streak');
 const btnResetStreak = document.getElementById('btn-reset-streak');
 
+const btnClaimRetro = document.getElementById('btn-claim-retro');
+if (btnClaimRetro) {
+    btnClaimRetro.onclick = () => {
+        const modal = document.getElementById('retro-modal');
+        if (modal) modal.classList.add('hidden');
+        equipItem('ladders', 'retro'); // Сразу надеваем скин
+        saveGame();
+    };
+}
+
 if (btnCloseCalendar && calendarModal) btnCloseCalendar.onclick = () => calendarModal.classList.add('hidden');
 
 if (btnClaimCalendarNormal) {
@@ -4813,7 +6512,7 @@ if (btnEnableRadar && radarModal) {
 
         radarState.enabled = true;
         goldenNuts += 25;
-        AudioEngine.play('jacpot', 1.0);
+        AudioEngine.play('win', 0.85);
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.4,
@@ -4842,7 +6541,7 @@ function checkDeepLinks() {
             renderDailyDealUI();
         } else if (action === 'gift') {
             addNuts(500);
-            AudioEngine.play('jacpot', 1.0);
+            AudioEngine.play('win', 0.85);
             particles.push({ x: canvas.width/2, y: canvas.height*0.35, text: '🎁 ВОЗВРАЩЕНИЕ: +500 🔩!', color: '#3498db', alpha: 2.5, speed: 2 });
         }
     }, 1000);
@@ -4897,7 +6596,7 @@ const MOCK_LEADERS = {
     ]
 };
 
-// Отрисовка интерфейса Лидерборда
+// Отрисовка интерфейса Лидерборда с честной сортировкой
 function renderLeaderboardUI() {
     const listEl = document.getElementById('leaderboard-list');
     const playerCardEl = document.getElementById('lb-player-card');
@@ -4909,45 +6608,76 @@ function renderLeaderboardUI() {
         ? 'Общий рейтинг покорителей космоса' 
         : 'Сброс каждый понедельник в 00:00';
 
-    const leaders = MOCK_LEADERS[currentLeaderboardTab] || [];
     const myScore = Math.floor(currentHeight);
 
-    // Отрисовка списка топа
-    leaders.forEach(p => {
+    // 1. Клонируем список ботов и добавляем игрока
+    const baseLeaders = MOCK_LEADERS[currentLeaderboardTab] || [];
+    const allEntries = baseLeaders.map(p => ({ ...p, isPlayer: false }));
+
+    allEntries.push({
+        name: 'Ты (Игрок)',
+        score: myScore,
+        isVip: isVip,
+        isPlayer: true
+    });
+
+    // 2. Сортируем всех участников по убыванию высоты
+    allEntries.sort((a, b) => b.score - a.score);
+
+    // 3. Пересчитываем ранги
+    let playerRank = 1;
+    allEntries.forEach((entry, idx) => {
+        entry.rank = idx + 1;
+        if (entry.isPlayer) playerRank = entry.rank;
+    });
+
+    // 4. Отрисовываем топ-6 участников
+    const topLeaders = allEntries.slice(0, 6);
+
+    topLeaders.forEach(p => {
         const row = document.createElement('div');
-        const vipClass = p.isVip ? 'border: 1px solid #f1c40f; box-shadow: 0 0 6px rgba(241,196,15,0.3);' : 'border: 1px solid #34495e;';
         
+        let borderStyle = 'border: 1px solid #34495e;';
+        let bgStyle = 'background: rgba(30, 39, 46, 0.85);';
+
+        if (p.isPlayer) {
+            borderStyle = 'border: 2px solid #2ecc71;';
+            bgStyle = 'background: rgba(46, 204, 113, 0.2);';
+        } else if (p.isVip) {
+            borderStyle = 'border: 1px solid #f1c40f; box-shadow: 0 0 6px rgba(241,196,15,0.3);';
+        }
+
         row.style.cssText = `
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(30, 39, 46, 0.85); padding: 8px 10px; border-radius: 8px; font-size: 12px;
-            ${vipClass}
+            padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-bottom: 4px;
+            ${bgStyle} ${borderStyle}
         `;
 
         row.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: bold; width: 20px; color: ${p.rank <= 3 ? '#f1c40f' : '#bdc3c7'};">#${p.rank}</span>
-                <span style="color: ${p.isVip ? '#f1c40f' : '#fff'}; font-weight: ${p.isVip ? 'bold' : 'normal'};">
+                <span style="font-weight: bold; width: 24px; color: ${p.rank <= 3 ? '#f1c40f' : '#bdc3c7'};">#${p.rank}</span>
+                <span style="color: ${p.isPlayer ? '#2ecc71' : (p.isVip ? '#f1c40f' : '#fff')}; font-weight: bold;">
                     ${p.isVip ? '👑 ' : ''}${p.name}
                 </span>
             </div>
-            <b style="color: #3498db;">${p.score.toLocaleString()} м</b>
+            <b style="color: ${p.rank <= 3 ? '#f1c40f' : '#3498db'};">${p.score.toLocaleString('ru-RU')} м</b>
         `;
         listEl.appendChild(row);
     });
 
-    // Карточка самого игрока внизу
+    // 5. Нижняя карточка игрока со своим реальным рассчитанным местом
     if (playerCardEl) {
-        playerCardEl.style.borderColor = isVip ? '#f1c40f' : '#3498db';
+        playerCardEl.style.borderColor = isVip ? '#f1c40f' : '#2ecc71';
         playerCardEl.style.boxShadow = isVip ? '0 0 10px rgba(241,196,15,0.4)' : 'none';
 
         playerCardEl.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: bold; color: #f1c40f;">Ты</span>
+                <span style="font-weight: bold; color: #f1c40f;">#${playerRank}</span>
                 <span style="color: ${isVip ? '#f1c40f' : '#fff'}; font-weight: bold;">
-                    ${isVip ? '👑 ' : ''}Игрок ${isVip ? '(VIP)' : ''}
+                    ${isVip ? '👑 ' : ''}Ты ${isVip ? '(VIP)' : ''}
                 </span>
             </div>
-            <b style="color: #f1c40f; font-size: 13px;">${myScore.toLocaleString()} м</b>
+            <b style="color: #f1c40f; font-size: 13px;">${myScore.toLocaleString('ru-RU')} м</b>
         `;
     }
 }
@@ -4990,26 +6720,52 @@ const settingsModal = document.getElementById('settings-modal');
 const btnOpenSettings = document.getElementById('btn-open-settings');
 const btnCloseSettings = document.getElementById('btn-close-settings');
 
+// DOM элементы ползунков
 const sliderMusic = document.getElementById('slider-music');
 const sliderTap = document.getElementById('slider-tap');
+const sliderSpeaker = document.getElementById('slider-speaker');
+const sliderNewton = document.getElementById('slider-newton');
 const sliderSfx = document.getElementById('slider-sfx');
 const toggleVibrate = document.getElementById('toggle-vibrate');
 
 const valMusic = document.getElementById('val-music');
 const valTap = document.getElementById('val-tap');
+const valSpeaker = document.getElementById('val-speaker');
+const valNewton = document.getElementById('val-newton');
 const valSfx = document.getElementById('val-sfx');
 
 function applySettingsUI() {
     if (sliderMusic) sliderMusic.value = settingsState.musicVol;
     if (sliderTap) sliderTap.value = settingsState.tapVol;
+    if (sliderSpeaker) sliderSpeaker.value = settingsState.speakerVol;
+    if (sliderNewton) sliderNewton.value = settingsState.newtonVol;
     if (sliderSfx) sliderSfx.value = settingsState.sfxVol;
     if (toggleVibrate) toggleVibrate.checked = settingsState.vibrate;
 
     if (valMusic) valMusic.innerText = `${Math.round(settingsState.musicVol * 100)}%`;
     if (valTap) valTap.innerText = `${Math.round(settingsState.tapVol * 100)}%`;
+    if (valSpeaker) valSpeaker.innerText = `${Math.round(settingsState.speakerVol * 100)}%`;
+    if (valNewton) valNewton.innerText = `${Math.round(settingsState.newtonVol * 100)}%`;
     if (valSfx) valSfx.innerText = `${Math.round(settingsState.sfxVol * 100)}%`;
 
     if (AudioEngine.bgm) AudioEngine.bgm.volume = settingsState.musicVol;
+}
+
+// Слушатели изменений
+if (sliderSpeaker) {
+    sliderSpeaker.oninput = (e) => {
+        settingsState.speakerVol = parseFloat(e.target.value);
+        applySettingsUI();
+        saveGame();
+    };
+}
+
+if (sliderNewton) {
+    sliderNewton.oninput = (e) => {
+        settingsState.newtonVol = parseFloat(e.target.value);
+        applySettingsUI();
+        saveGame();
+    };
 }
 
 if (sliderMusic) {
@@ -5132,14 +6888,15 @@ if (btnFieldLuck && modalLuck) {
 function activateBuffDirectly(type, durationMs) {
     if (typeof adState === 'undefined') window.adState = {};
 
-    // Выставляем таймер в миллисекундах (как считает весь остальной game.js)
     if (type === 'fortune') adState.fortuneTimer = durationMs;
     if (type === 'turbo') adState.turboTimer = durationMs;
     if (type === 'frenzy') adState.frenzyTimer = durationMs;
 
-    if (typeof AudioEngine !== 'undefined') AudioEngine.play('jacpot', 1.0);
-    if (typeof saveGame === 'function') saveGame();
+    // БЫЛО: AudioEngine.play('jacpot', 1.0);
+    // СТАЛО:
+    AudioEngine.play('whoosh_air', 0.7);
 
+    if (typeof saveGame === 'function') saveGame();
     if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
 }
 
@@ -5187,6 +6944,21 @@ bindBuffAdAction('btn-buy-buff-frenzy-ad', 30000, 'frenzy', 'btn-boost-frenzy');
 // ==========================================================
 function updateActiveBuffsDisplay() {
     if (typeof adState === 'undefined') return;
+
+    // === ЖИВОЕ ОБНОВЛЕНИЕ УДАЧИ НА ЭКРАНЕ ===
+    const lkVal = document.getElementById('field-luck-val');
+    if (lkVal) {
+        const curLuck = getTotalLuck();
+        if (lkVal.innerText !== String(curLuck)) {
+            lkVal.innerText = curLuck;
+        }
+    }
+
+    // Если открыто само окно удачи — обновляем число и там
+    const modalLuckVal = document.getElementById('luck-total-val-modal');
+    if (modalLuckVal && luckModal && !luckModal.classList.contains('hidden')) {
+        modalLuckVal.innerText = getTotalLuck();
+    }
 
     const dock = document.getElementById('active-buffs-dock');
     if (!dock) return;
@@ -5256,6 +7028,291 @@ function updateActiveBuffsDisplay() {
     }
 }
 
+// ==========================================================
+// === ЗАКРЫТИЕ ОКОН И ШТОРКИ ПРИ КЛИКЕ ВНЕ ИХ ОБЛАСТИ =======
+// ==========================================================
+
+// 1. Все модальные окна с затемнением (Overlay)
+let overlayMouseDownTarget = null; // Переменная для отслеживания старта свайпа
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    // Запоминаем элемент, по которому ИЗНАЧАЛЬНО был сделан клик/свайп
+    overlay.addEventListener('pointerdown', (e) => {
+        overlayMouseDownTarget = e.target; 
+    });
+    
+    overlay.addEventListener('click', (e) => {
+        // Окно закрывается ТОЛЬКО если и нажал, и отпустил строго по темному фону
+        if (e.target === overlay && overlayMouseDownTarget === overlay) {
+            const protectedModals = ['milestone-modal', 'calendar-modal', 'offline-modal', 'thank-you-modal', 'gachaModal'];
+            
+            if (!protectedModals.includes(overlay.id)) {
+                overlay.classList.add('hidden');
+                AudioEngine.stop('jacpot');
+            }
+        }
+    });
+});
+
+// 2. Закрытие правой шторки баффов и черного рынка при клике мимо
+document.addEventListener('pointerdown', (e) => {
+    // Шторка баффов
+    if (buffsDrawer && buffsDrawer.style.transform === 'translateX(0%)') {
+        if (!buffsDrawer.contains(e.target) && !btnToggleBuffs.contains(e.target)) {
+            buffsDrawer.style.transform = 'translateX(105%)';
+        }
+    }
+
+    // Черный рынок (магазин метров)
+    if (shopModal && !shopModal.classList.contains('hidden')) {
+        if (!shopModal.contains(e.target) && !btnOpenShop.contains(e.target)) {
+            shopModal.classList.add('hidden');
+        }
+    }
+});
+
+// === ПЛАВНЫЙ СКРОЛЛ ЗАЖАТИЕМ (DRAG-TO-SCROLL) ===
+function enableDragScroll(slider) {
+    if (!slider) return;
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let hasMoved = false;
+
+    slider.style.cursor = 'grab';
+
+    slider.addEventListener('pointerdown', (e) => {
+        // Игнорируем нажатия правой кнопки мыши
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        isDown = true;
+        hasMoved = false;
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+        slider.style.cursor = 'grabbing';
+    });
+
+    slider.addEventListener('pointerleave', () => {
+        isDown = false;
+        slider.style.cursor = 'grab';
+    });
+
+    slider.addEventListener('pointerup', () => {
+        isDown = false;
+        slider.style.cursor = 'grab';
+    });
+
+    slider.addEventListener('pointermove', (e) => {
+        if (!isDown) return;
+        // На телефонах тач-скролл идеально работает нативно с физикой инерции
+        if (e.pointerType === 'touch') return;
+
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        const walk = (x - startX) * 1.5; // Скорость перетаскивания
+        if (Math.abs(walk) > 5) {
+            hasMoved = true;
+        }
+        slider.scrollLeft = scrollLeft - walk;
+    });
+
+    // Если список тянули, предотвращаем случайный клик/покупку предмета при отпускании
+    slider.addEventListener('click', (e) => {
+        if (hasMoved) {
+            e.stopPropagation();
+            e.preventDefault();
+            hasMoved = false;
+        }
+    }, true);
+}
+
+// === УПРАВЛЕНИЕ МИМИКОМ ===
+const mimicModal = document.getElementById('mimic-modal');
+const btnCloseMimic = document.getElementById('btn-close-mimic');
+const btnConfirmMimic = document.getElementById('btn-confirm-mimic');
+
+if (btnCloseMimic && mimicModal) btnCloseMimic.onclick = () => mimicModal.classList.add('hidden');
+if (btnConfirmMimic && mimicModal) {
+    btnConfirmMimic.onclick = () => {
+        mimicModal.classList.add('hidden');
+        saveGame();
+        renderInventory();
+        AudioEngine.play('click', 0.5);
+    };
+}
+
+// === УПРАВЛЕНИЕ МИМИКОМ ===
+function openMimicConfig() {
+    const modal = document.getElementById('mimic-modal');
+    if (!modal) return;
+    
+    renderMimicUI();
+    modal.classList.remove('hidden');
+    AudioEngine.play('click', 0.5);
+
+    // Привязываем кнопки закрытия и подтверждения
+    const btnClose = document.getElementById('btn-close-mimic');
+    const btnConfirm = document.getElementById('btn-confirm-mimic');
+    
+    if (btnClose) {
+        btnClose.onclick = () => modal.classList.add('hidden');
+    }
+    if (btnConfirm) {
+        btnConfirm.onclick = () => {
+            modal.classList.add('hidden');
+            saveGame();
+            renderInventory();
+            AudioEngine.play('click', 0.5);
+        };
+    }
+}
+
+function renderMimicUI() {
+    const listEl = document.getElementById('mimic-selection-list');
+    const slot0El = document.querySelector('#mimic-slot-0 .slot-name');
+    const slot1El = document.querySelector('#mimic-slot-1 .slot-name');
+    if (!listEl) return;
+
+    if (slot0El) slot0El.innerText = LADDER_SKINS[mimicSlots[0]]?.name || 'Пусто';
+    if (slot1El) slot1El.innerText = LADDER_SKINS[mimicSlots[1]]?.name || 'Пусто';
+
+    listEl.innerHTML = '';
+
+    // Перебираем открытые лестницы (кроме самого Мимика и Абсолюта)
+    ownedSkins.forEach(id => {
+        if (id === 'mimic' || id === 'absolute') return;
+        const item = LADDER_SKINS[id];
+        if (!item) return;
+
+        const isSlot0 = mimicSlots[0] === id;
+        const isSlot1 = mimicSlots[1] === id;
+        const isSelected = isSlot0 || isSlot1;
+
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: ${isSelected ? 'rgba(140, 122, 230, 0.25)' : 'rgba(0,0,0,0.35)'};
+            border: 1.5px solid ${isSelected ? '#8c7ae6' : '#34495e'};
+            border-radius: 8px; padding: 6px; display: flex; flex-direction: column;
+            align-items: center; text-align: center; cursor: pointer;
+        `;
+
+        card.innerHTML = `
+            <img src="${item.file}" style="height: 32px; object-fit: contain; margin-bottom: 2px;">
+            <div style="font-size: 11px; font-weight: bold; color: ${item.color || '#fff'};">${item.name}</div>
+            <div style="font-size: 9px; color: #bdc3c7; height: 24px; overflow: hidden; line-height: 1.2; margin-top: 2px;">
+                ${LADDER_DESC[id] || 'Базовые свойства'}
+            </div>
+            <div style="margin-top: 4px; font-size: 9px; font-weight: bold; color: ${isSelected ? '#8c7ae6' : '#7f8c8d'};">
+                ${isSlot0 ? '✔ Слот 1' : (isSlot1 ? '✔ Слот 2' : '+ Выбрать')}
+            </div>
+        `;
+
+        // Клик по карточке выбирает способность
+        card.onclick = () => {
+            if (mimicSlots[0] === id) {
+                // Если кликнули по первому слоту — меняем их местами
+                const temp = mimicSlots[0];
+                mimicSlots[0] = mimicSlots[1];
+                mimicSlots[1] = temp;
+            } else if (mimicSlots[1] === id) {
+                // Если кликнули по второму — делаем его первым
+                mimicSlots[1] = mimicSlots[0];
+                mimicSlots[0] = id;
+            } else {
+                // Новый выбор: сдвигаем очередь (Слот 1 уходит в Слот 2, новый встает в Слот 1)
+                mimicSlots[1] = mimicSlots[0];
+                mimicSlots[0] = id;
+            }
+            AudioEngine.play('click', 0.5);
+            renderMimicUI();
+        };
+
+        listEl.appendChild(card);
+    });
+}
+
+// === УПРАВЛЕНИЕ КИБЕРПАНКОМ ===
+let currentCyberTab = 'speakers';
+const cyberModal = document.getElementById('cyber-modal');
+const btnCloseCyber = document.getElementById('btn-close-cyber');
+const btnConfirmCyber = document.getElementById('btn-confirm-cyber');
+const cyberTabs = document.querySelectorAll('.cyber-tab');
+
+if (btnCloseCyber && cyberModal) btnCloseCyber.onclick = () => cyberModal.classList.add('hidden');
+if (btnConfirmCyber && cyberModal) {
+    btnConfirmCyber.onclick = () => {
+        cyberModal.classList.add('hidden');
+        saveGame();
+        renderInventory();
+        updateFieldIcons();
+        AudioEngine.play('click', 0.5);
+    };
+}
+
+cyberTabs.forEach(btn => {
+    btn.onclick = () => {
+        cyberTabs.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCyberTab = btn.dataset.tab;
+        renderCyberUI();
+        AudioEngine.play('click', 0.5);
+    };
+});
+
+function openCyberConfig() {
+    if (!cyberModal) return;
+    renderCyberUI();
+    cyberModal.classList.remove('hidden');
+    AudioEngine.play('click', 0.5);
+}
+
+function renderCyberUI() {
+    const listEl = document.getElementById('cyber-selection-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    let itemsSource = {};
+    let ownedList = [];
+    if (currentCyberTab === 'speakers') { itemsSource = SPEAKER_SKINS; ownedList = ownedSpeakerSkins; }
+    else if (currentCyberTab === 'newton') { itemsSource = NEWTON_SKINS; ownedList = ownedNewtonSkins; }
+    else if (currentCyberTab === 'talismans') { itemsSource = TALISMANS; ownedList = ownedTalismans; }
+
+    Object.keys(itemsSource).forEach(id => {
+        if (!ownedList.includes(id)) return;
+        const item = itemsSource[id];
+        const isSelected = (cyberExtraAccessory.type === currentCyberTab && cyberExtraAccessory.id === id);
+
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: ${isSelected ? 'rgba(0, 255, 255, 0.2)' : 'rgba(0,0,0,0.35)'};
+            border: 1.5px solid ${isSelected ? '#00ffff' : '#34495e'};
+            border-radius: 8px; padding: 6px; display: flex; flex-direction: column;
+            align-items: center; text-align: center; cursor: pointer;
+        `;
+
+        let buffDesc = getItemBuffText(currentCyberTab, item);
+        card.innerHTML = `
+            <img src="${item.file}" style="height: 32px; object-fit: contain; margin-bottom: 2px;">
+            <div style="font-size: 11px; font-weight: bold; color: ${item.color || RARITY_COLORS[item.rarity] || '#fff'};">${item.name}</div>
+            <div style="font-size: 9px; color: #bdc3c7; height: 24px; overflow: hidden; line-height: 1.2; margin-top: 2px;">${buffDesc}</div>
+            <div style="margin-top: 4px; font-size: 9px; font-weight: bold; color: ${isSelected ? '#00ffff' : '#7f8c8d'};">
+                ${isSelected ? '✔ Установлено' : '+ Выбрать'}
+            </div>
+        `;
+
+        card.onclick = () => {
+            if (isSelected) cyberExtraAccessory = { type: null, id: null };
+            else cyberExtraAccessory = { type: currentCyberTab, id: id };
+            
+            AudioEngine.play('click', 0.5);
+            renderCyberUI();
+        };
+        listEl.appendChild(card);
+    });
+}
+
+// Включаем перетаскивание для списка талисманов и скинов обвесов
+enableDragScroll(document.getElementById('luck-talismans-list'));
+enableDragScroll(document.getElementById('cust-items-list'));
 
 // --- ИНИЦИАЛИЗАЦИЯ ИГРЫ ПРИ СТАРТЕ ---
 loadGame();      // Сначала грузим сейв
