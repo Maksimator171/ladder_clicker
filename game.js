@@ -3922,17 +3922,24 @@ function drawNewtonCradle() {
 }
 
 function drawParticles() {
+    // 1. Ограничиваем массив: не больше 25 частиц на экране
+    if (particles.length > 25) {
+        particles.splice(0, particles.length - 25);
+    }
+
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
+
         // Гравитационное притяжение частиц к центру лестницы при надетой Чёрной дыре
         if ((currentSkinId === 'endless' || currentSkinId === 'absolute') && blackHoleBonus > 0) {
             const pullForce = (0.8 + (blackHoleBonus / 10.0) * 2.2);
             const dx = (canvas.width / 2) - p.x;
-            p.x += dx * 0.04 * pullForce; // Засасываем частицу к центральной оси дыры
+            p.x += dx * 0.04 * pullForce;
         }
 
         p.y -= p.speed;
         p.alpha -= 0.02;
+
         ctx.fillStyle = p.color ? p.color.replace('ALPHA', p.alpha) : `rgba(255, 255, 255, ${p.alpha})`;
         ctx.font = p.font || 'bold 28px sans-serif';
         ctx.textAlign = 'center';
@@ -3940,6 +3947,7 @@ function drawParticles() {
         ctx.strokeStyle = `rgba(0, 0, 0, ${p.alpha})`;
         ctx.strokeText(p.text, p.x, p.y);
         ctx.fillText(p.text, p.x, p.y);
+
         if (p.alpha <= 0) particles.splice(i, 1);
     }
 }
