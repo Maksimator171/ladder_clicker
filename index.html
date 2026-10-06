@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,27 +9,74 @@
     <style>
         /* Переливающаяся анимация для Стартер-пака */
         @keyframes starterShine {
-            0% { transform: scale(1); box-shadow: 0 0 6px rgba(243, 156, 18, 0.6); border-color: #f1c40f; }
-            50% { transform: scale(1.05); box-shadow: 0 0 16px rgba(241, 196, 15, 0.95); border-color: #ffffff; }
-            100% { transform: scale(1); box-shadow: 0 0 6px rgba(243, 156, 18, 0.6); border-color: #f1c40f; }
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 6px rgba(243, 156, 18, 0.6);
+                border-color: #f1c40f;
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 16px rgba(241, 196, 15, 0.95);
+                border-color: #ffffff;
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 6px rgba(243, 156, 18, 0.6);
+                border-color: #f1c40f;
+            }
         }
-        .starter-pulse-glow { animation: starterShine 1.8s infinite ease-in-out !important; }
+
+        .starter-pulse-glow {
+            animation: starterShine 1.8s infinite ease-in-out !important;
+        }
 
         /* Мягкое свечение кнопки стрика ТОЛЬКО при готовой награде */
         @keyframes streakGlowAnim {
-            0% { box-shadow: 0 0 4px rgba(155, 89, 182, 0.4); border-color: #9b59b6; }
-            50% { box-shadow: 0 0 14px rgba(241, 196, 15, 0.9), 0 0 20px rgba(155, 89, 182, 0.7); border-color: #f1c40f; }
-            100% { box-shadow: 0 0 4px rgba(155, 89, 182, 0.4); border-color: #9b59b6; }
+            0% {
+                box-shadow: 0 0 4px rgba(155, 89, 182, 0.4);
+                border-color: #9b59b6;
+            }
+
+            50% {
+                box-shadow: 0 0 14px rgba(241, 196, 15, 0.9), 0 0 20px rgba(155, 89, 182, 0.7);
+                border-color: #f1c40f;
+            }
+
+            100% {
+                box-shadow: 0 0 4px rgba(155, 89, 182, 0.4);
+                border-color: #9b59b6;
+            }
         }
-        .streak-ready-pulse { animation: streakGlowAnim 1.6s infinite ease-in-out !important; }
+
+        .streak-ready-pulse {
+            animation: streakGlowAnim 1.6s infinite ease-in-out !important;
+        }
 
         /* Всплывающее уведомление +КЕЙС */
         @keyframes floatUpCase {
-            0% { opacity: 0; transform: translateY(6px) scale(0.8); }
-            20% { opacity: 1; transform: translateY(0) scale(1.1); }
-            70% { opacity: 1; transform: translateY(-16px) scale(1); }
-            100% { opacity: 0; transform: translateY(-28px) scale(0.9); }
+            0% {
+                opacity: 0;
+                transform: translateY(6px) scale(0.8);
+            }
+
+            20% {
+                opacity: 1;
+                transform: translateY(0) scale(1.1);
+            }
+
+            70% {
+                opacity: 1;
+                transform: translateY(-16px) scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-28px) scale(0.9);
+            }
         }
+
         .case-floating-popup {
             animation: floatUpCase 1.4s ease-out forwards;
             position: absolute;
@@ -38,7 +86,7 @@
             font-size: 13px;
             font-weight: 900;
             color: #f1c40f;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(241,196,15,0.7);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 10px rgba(241, 196, 15, 0.7);
             pointer-events: none;
         }
 
@@ -63,11 +111,12 @@
             justify-content: center;
             background: rgba(20, 25, 35, 0.92);
             border: 2px solid #fff;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
             overflow: hidden;
             box-sizing: border-box;
             flex-shrink: 0;
         }
+
         .buff-clock-wipe {
             position: absolute;
             inset: 0;
@@ -75,182 +124,272 @@
             pointer-events: none;
             z-index: 1;
         }
-        .buff-badge-emoji { font-size: 16px; z-index: 2; line-height: 1; }
-        .buff-badge-time { font-size: 9px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px #000; z-index: 2; margin-top: 1px; }
+
+        .buff-badge-emoji {
+            font-size: 16px;
+            z-index: 2;
+            line-height: 1;
+        }
+
+        .buff-badge-time {
+            font-size: 9px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 1px 3px #000;
+        }
     </style>
 </head>
+
 <body>
     <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
-        
-        <div id="ui-layer">
+        <canvas id="canvas"></canvas>
 
-            <!-- 1. ВЕРХ СЛЕВА: Донат и плашка валюты (СТРОГО 135px) -->
-            <div style="position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 25; pointer-events: auto;">
+        <div id="ui-layer">
+            <!-- 1. ВЕРХ СЛЕВА: Донат и плашка валюты + Акции -->
+            <div class="zen-hide"
+                style="position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 25; pointer-events: auto;">
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <button id="btn-open-donate" style="height: 36px; padding: 0 12px; background: rgba(30, 39, 46, 0.95); border: 2px solid #f1c40f; border-radius: 12px; color: #f1c40f; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 12px rgba(241, 196, 15, 0.35); flex-shrink: 0; box-sizing: border-box;">
-                        + 🟡 Донат
+                    <button id="btn-open-donate"
+                        style="height: 36px; padding: 0 12px; background: rgba(30, 39, 46, 0.95); border: 2px solid #f1c40f; border-radius: 12px; color: #f1c40f; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 12px rgba(241, 196, 15, 0.35); flex-shrink: 0; box-sizing: border-box;">
+                        <img src="assets/golden_nut.webp" class="ui-ico"> Донат
                     </button>
-                    <div style="width: 135px; height: 36px; display: flex; justify-content: space-around; align-items: center; background: rgba(20, 25, 35, 0.9); border: 1.5px solid #34495e; border-radius: 12px; padding: 0 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box; flex-shrink: 0;">
-                        <span id="nuts-display" style="font-size: 12px; font-weight: bold; color: #54a0ff; text-shadow: 0 1px 3px #000; white-space: nowrap;">🔩 0</span>
+                    <div
+                        style="width: 135px; height: 36px; display: flex; justify-content: space-around; align-items: center; background: rgba(20, 25, 35, 0.9); border: 1.5px solid #34495e; border-radius: 12px; padding: 0 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box; flex-shrink: 0;">
+                        <img src="assets/nut.webp" class="ui-ico">
+                        <span id="nuts-display"
+                            style="font-size: 12px; font-weight: bold; color: #54a0ff; text-shadow: 0 1px 3px #000; white-space: nowrap;">
+                            0</span>
                         <span style="color: #576574; font-size: 11px;">|</span>
-                        <span id="gold-display" style="font-size: 12px; font-weight: bold; color: #f1c40f; text-shadow: 0 1px 3px #000; white-space: nowrap;">🟡 0</span>
+                        <img src="assets/golden_nut.webp" class="ui-ico">
+                        <span id="gold-display"
+                            style="font-size: 12px; font-weight: bold; color: #f1c40f; text-shadow: 0 1px 3px #000; white-space: nowrap;">
+                            0</span>
                     </div>
                 </div>
-                
-                <button id="btn-open-deal" style="height: 28px; padding: 0 10px; width: fit-content; background: rgba(30, 39, 46, 0.9); border: 1.5px solid #e67e22; border-radius: 10px; color: #f39c12; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
-                    🏷️ Сделка дня
+
+                <button id="btn-open-deal"
+                    style="height: 28px; padding: 0 10px; width: fit-content; background: rgba(30, 39, 46, 0.9); border: 1.5px solid #e67e22; border-radius: 10px; color: #f39c12; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
+                    <img src="assets/ico_deal_coin.webp" class="ui-ico"> Сделка дня
                 </button>
+
+                <!-- === КРУГОВОЙ ТАЙМЕР РЕТРО-СКИНА === -->
+                <div id="retro-timer-container" class="hidden zen-hide" onclick="openRetroInfo()"
+                    style="display: flex; align-items: center; gap: 7px; background: rgba(20, 25, 35, 0.95); padding: 4px 10px 4px 5px; border-radius: 25px; border: 1.5px solid #e67e22; box-shadow: 0 4px 12px rgba(0,0,0,0.6); cursor: pointer; user-select: none; pointer-events: auto; width: fit-content;">
+                    <div style="position: relative; width: 30px; height: 30px; pointer-events: none;">
+                        <svg width="30" height="30" style="transform: rotate(-90deg);">
+                            <circle cx="15" cy="15" r="13" fill="none" stroke="#34495e" stroke-width="3"></circle>
+                            <circle id="retro-timer-progress" cx="15" cy="15" r="13" fill="none" stroke="#f39c12"
+                                stroke-width="3" stroke-dasharray="82" stroke-dashoffset="82"
+                                style="transition: stroke-dashoffset 0.4s linear;"></circle>
+                        </svg>
+                        <img src="assets/retro_stair.webp"
+                            style="position: absolute; top: 5px; left: 5px; width: 20px; height: 20px; object-fit: contain;">
+                    </div>
+                    <div id="retro-timer-text"
+                        style="color: #f1c40f; font-family: sans-serif; font-weight: bold; font-size: 12px; text-shadow: 0 1px 3px #000; pointer-events: none;">
+                        20:00</div>
+                </div>
             </div>
 
             <!-- 2. ВЕРХ ПО ЦЕНТРУ: Высота и Локация -->
-            <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 25; pointer-events: none;">
-                <div id="height-display" style="font-size: 28px; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 12px rgba(255,255,255,0.3); line-height: 1;">
+            <div
+                style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 25; pointer-events: none;">
+                <div id="height-display"
+                    style="font-size: 28px; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 12px rgba(255,255,255,0.3); line-height: 1;">
                     0 м
                 </div>
-                <div id="location-name" style="font-size: 11px; font-weight: bold; color: #f1c40f; text-shadow: 0 2px 4px #000; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px;">
+                <div id="location-name"
+                    style="font-size: 11px; font-weight: bold; color: #f1c40f; text-shadow: 0 2px 4px #000; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px;">
                     Хрущевка
                 </div>
             </div>
 
-<!-- === КРУГОВОЙ ТАЙМЕР РЕТРО-СКИНА (pointer-events: auto) === -->
-<div id="retro-timer-container" class="hidden" onclick="openRetroInfo()" style="position: absolute; top: 165px; right: 12px; z-index: 2500; display: flex; align-items: center; gap: 7px; background: rgba(20, 25, 35, 0.95); padding: 4px 10px 4px 5px; border-radius: 25px; border: 1.5px solid #e67e22; box-shadow: 0 4px 12px rgba(0,0,0,0.6); cursor: pointer; user-select: none; pointer-events: auto;">
-    <div style="position: relative; width: 30px; height: 30px; pointer-events: none;">
-        <svg width="30" height="30" style="transform: rotate(-90deg);">
-            <circle cx="15" cy="15" r="13" fill="none" stroke="#34495e" stroke-width="3"></circle>
-            <circle id="retro-timer-progress" cx="15" cy="15" r="13" fill="none" stroke="#f39c12" stroke-width="3" stroke-dasharray="82" stroke-dashoffset="82" style="transition: stroke-dashoffset 0.4s linear;"></circle>
-        </svg>
-        <img src="assets/retro_stair.webp" style="position: absolute; top: 5px; left: 5px; width: 20px; height: 20px; object-fit: contain;">
-    </div>
-    <div id="retro-timer-text" style="color: #f1c40f; font-family: sans-serif; font-weight: bold; font-size: 12px; text-shadow: 0 1px 3px #000; pointer-events: none;">20:00</div>
-</div>
+            <!-- === ОКНО ПРЕДПРОСМОТРА ИСПЫТАНИЯ === -->
+            <div id="retro-info-modal" class="modal-overlay hidden" style="z-index: 28000;">
+                <div class="modal-card"
+                    style="max-width: 310px; width: 90%; height: auto !important; min-height: auto !important; padding: 18px; border: 2px solid #e67e22; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); text-align: center; box-shadow: 0 0 25px rgba(230,126,34,0.35);">
+                    <h3 style="color: #f39c12; margin: 0 0 6px 0; font-size: 17px; text-transform: uppercase;">Испытание
+                        на выдержку</h3>
+                    <p style="color: #bdc3c7; font-size: 11px; margin: 0 0 12px 0; line-height: 1.4;">Продержись в игре
+                        20 минут и бесплатно забери уникальный ретро-облик!</p>
 
-<!-- === ОКНО ПРЕДПРОСМОТРА ИСПЫТАНИЯ === -->
-<div id="retro-info-modal" class="modal-overlay hidden" style="z-index: 28000;">
-    <div class="modal-card" style="max-width: 310px; width: 90%; height: auto !important; min-height: auto !important; padding: 18px; border: 2px solid #e67e22; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); text-align: center; box-shadow: 0 0 25px rgba(230,126,34,0.35);">
-        <h3 style="color: #f39c12; margin: 0 0 6px 0; font-size: 17px; text-transform: uppercase;">Испытание на выдержку</h3>
-        <p style="color: #bdc3c7; font-size: 11px; margin: 0 0 12px 0; line-height: 1.4;">Продержись в игре 20 минут и бесплатно забери уникальный ретро-облик!</p>
+                    <div
+                        style="width: 90px; height: 100px; margin: 0 auto 10px auto; background: radial-gradient(circle, rgba(230,126,34,0.3) 0%, transparent 70%); display: flex; align-items: center; justify-content: center;">
+                        <img src="assets/retro_stair.webp"
+                            style="max-height: 95px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.7));">
+                    </div>
 
-        <div style="width: 90px; height: 100px; margin: 0 auto 10px auto; background: radial-gradient(circle, rgba(230,126,34,0.3) 0%, transparent 70%); display: flex; align-items: center; justify-content: center;">
-            <img src="assets/retro_stair.webp" style="max-height: 95px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.7));">
-        </div>
+                    <div style="font-weight: bold; color: #ff9f43; font-size: 14px; margin-bottom: 4px;">Скин «Ретро»
+                    </div>
+                    <div
+                        style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 8px; font-size: 11px; color: #ecf0f1; margin-bottom: 12px; line-height: 1.3;">
+                        ✨ <b style="color: #f1c40f;">Способность:</b> Запуск аркадных монеток каждые 20-35 сек (+75–125
+                        🔩 и +5–15 🟡)!
+                    </div>
 
-        <div style="font-weight: bold; color: #ff9f43; font-size: 14px; margin-bottom: 4px;">Скин «Ретро»</div>
-        <div style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 8px; font-size: 11px; color: #ecf0f1; margin-bottom: 12px; line-height: 1.3;">
-            ✨ <b style="color: #f1c40f;">Способность:</b> Запуск аркадных монеток каждые 20-35 сек (+75–125 🔩 и +5–15 🟡)!
-        </div>
+                    <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 14px;">
+                        Осталось продержаться: <b id="retro-info-time-left" style="color: #f1c40f;">20:00</b>
+                    </div>
 
-        <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 14px;">
-            Осталось продержаться: <b id="retro-info-time-left" style="color: #f1c40f;">20:00</b>
-        </div>
+                    <button onclick="closeRetroInfo()"
+                        style="width: 100%; background: #e67e22; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer;">ВПЕРЁД
+                        К ВЕРШИНЕ</button>
+                </div>
+            </div>
 
-        <button onclick="closeRetroInfo()" style="width: 100%; background: #e67e22; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer;">ВПЕРЁД К ВЕРШИНЕ</button>
-    </div>
-</div>
+            <!-- === ОКНО ВРУЧЕНИЯ (Через 20 минут) === -->
+            <div id="retro-modal" class="modal-overlay hidden"
+                style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.92); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;">
+                <h1
+                    style="color: #f1c40f; font-size: 26px; font-weight: bold; text-shadow: 0 0 15px #f1c40f; margin-bottom: 10px;">
+                    ИСПЫТАНИЕ ЗАВЕРШЕНО!</h1>
+                <p style="color: #fff; font-size: 14px; margin-bottom: 20px;">Ты выстоял 20 минут! Твоя заслуженная
+                    награда:</p>
 
-<!-- === ОКНО ВРУЧЕНИЯ (Через 20 минут) === -->
-<div id="retro-modal" class="modal-overlay hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.92); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;">
-    <h1 style="color: #f1c40f; font-size: 26px; font-weight: bold; text-shadow: 0 0 15px #f1c40f; margin-bottom: 10px;">ИСПЫТАНИЕ ЗАВЕРШЕНО!</h1>
-    <p style="color: #fff; font-size: 14px; margin-bottom: 20px;">Ты выстоял 20 минут! Твоя заслуженная награда:</p>
-    
-    <div style="position: relative; width: 130px; height: 130px; background: radial-gradient(circle, rgba(230,126,34,0.4) 0%, rgba(0,0,0,0) 70%); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
-        <img src="assets/retro_stair.webp" style="width: 90px; height: 130px; object-fit: contain; filter: drop-shadow(0 0 15px #e67e22);">
-    </div>
+                <div
+                    style="position: relative; width: 130px; height: 130px; background: radial-gradient(circle, rgba(230,126,34,0.4) 0%, rgba(0,0,0,0) 70%); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+                    <img src="assets/retro_stair.webp"
+                        style="width: 90px; height: 130px; object-fit: contain; filter: drop-shadow(0 0 15px #e67e22);">
+                </div>
 
-    <h2 style="color: #e67e22; font-size: 20px; margin-bottom: 30px; text-shadow: 0 2px 4px #000;">ЭПИЧЕСКИЙ СКИН «РЕТРО»</h2>
-    
-    <button id="btn-claim-retro" style="background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: 2px solid #d35400; padding: 14px 28px; font-size: 15px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.5);">ЗАБРАТЬ И НАДЕТЬ</button>
-</div>
+                <h2 style="color: #e67e22; font-size: 20px; margin-bottom: 30px; text-shadow: 0 2px 4px #000;">ЭПИЧЕСКИЙ
+                    СКИН «РЕТРО»</h2>
 
-            <!-- 3. ВЕРХ СПРАВА: ТОП, Настройки и Стартер-пак -->
-            <div style="position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; z-index: 50; pointer-events: auto;">
+                <button id="btn-claim-retro"
+                    style="background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: 2px solid #d35400; padding: 14px 28px; font-size: 15px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.5);">ЗАБРАТЬ
+                    И НАДЕТЬ</button>
+            </div>
+
+            <!-- 3. ВЕРХ СПРАВА: ТОП, Настройки, Дзен-режим, Стартер-пак и Рекламный стрик -->
+            <div id="top-bar-right"
+    style="position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; z-index: 50; pointer-events: none;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <button id="btn-open-leaderboard" style="height: 36px; padding: 0 14px; background: linear-gradient(135deg, rgba(44,62,80,0.95), rgba(30,39,46,0.95)); border: 2px solid #f1c40f; border-radius: 12px; color: #f1c40f; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(241,196,15,0.45); text-shadow: 0 1px 3px #000; box-sizing: border-box;">
-                        🏆 ТОП
-                    </button>
-                    <button id="btn-open-settings" style="width: 36px; height: 36px; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #7f8c8d; border-radius: 12px; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
+                    <button id="btn-open-leaderboard" class="zen-hide" style="height: 36px; padding: 0 14px; background: linear-gradient(135deg, rgba(44,62,80,0.95), rgba(30,39,46,0.95)); border: 2px solid #f1c40f; border-radius: 12px; color: #f1c40f; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(241,196,15,0.45); text-shadow: 0 1px 3px #000; box-sizing: border-box;">
+    <img src="assets/cup1.webp" style="width: 24px; height: 24px; object-fit: contain;"> ТОП
+</button>
+                    <button id="btn-open-settings" class="zen-hide"
+                        style="width: 36px; height: 36px; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #7f8c8d; border-radius: 12px; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
                         ⚙️
                     </button>
-                </div>
-                
-                <!-- Стартер-пак под кнопками ТОП и Настройки -->
-                <button id="btn-open-starter" class="starter-pulse-glow hidden" style="padding: 5px 10px; background: linear-gradient(135deg, #f39c12, #e74c3c); border: 2px solid #fff; border-radius: 10px; color: #fff; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-sizing: border-box;">
-                    ⭐ <span id="starter-timer-badge">79₽</span>
-                </button>
-            </div>
-
-            <!-- 4. МЕЖДУ ВЕРХОМ И СЕРЕДИНОЙ: Рекламный стрик -->
-            <div style="position: absolute; right: 12px; top: 25%; transform: translateY(-50%); z-index: 35; pointer-events: auto;">
-                <button id="btn-open-streak" style="height: 34px; padding: 0 12px; background: rgba(30, 39, 46, 0.95); border: 2px solid #9b59b6; border-radius: 12px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(155, 89, 182, 0.35); box-sizing: border-box;">
-                    🎬 Награды <span id="ad-streak-btn-text" style="color: #f1c40f; margin-left: 2px;">0/10</span>
-                </button>
-            </div>
-
-           <!-- 5. СЕРЕДИНА СПРАВА: Удача и Баффы строго по правой линии у стены -->
-            <div id="field-buffs-center" style="position: absolute; right: 8px !important; top: 48%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-end !important; gap: 8px; z-index: 35; pointer-events: auto;">
-                
-                <!-- Кнопка Удачи: жестко сброшен margin, прижата к правой стене -->
-                <button id="btn-field-luck" style="width: 44px !important; height: 44px !important; margin: 0 0 0 auto !important; align-self: flex-end !important; background: rgba(30, 39, 46, 0.95); border: 2px solid #2ecc71; border-radius: 12px; cursor: pointer; display: flex !important; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(46,204,113,0.35); box-sizing: border-box; flex-shrink: 0;">
-                    <span id="field-luck-icon" style="font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px;">🍀</span>
-                    <span id="field-luck-val" style="font-size: 10px; color: #2ecc71; font-weight: 900; margin-top: 2px;">0</span>
-                </button>
-
-                <!-- Кнопка БАФФЫ: правый край на одной линии с Удачей у стены -->
-                <button id="btn-toggle-buffs" style="width: auto !important; height: 34px !important; margin: 0 0 0 auto !important; align-self: flex-end !important; padding: 0 12px; background: linear-gradient(135deg, rgba(30,39,46,0.95), rgba(44,62,80,0.95)); border: 2px solid #f1c40f; border-radius: 10px; color: #f1c40f; font-weight: 900; font-size: 12px; cursor: pointer; display: flex !important; align-items: center; gap: 5px; box-shadow: 0 0 12px rgba(241,196,15,0.3); box-sizing: border-box; white-space: nowrap !important; flex-shrink: 0;">
-                    ⚡ БАФФЫ
-                </button>
-
-                <!-- Круглые часики: по той же правой линии -->
-                <div id="active-buffs-dock" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end !important; margin: 0 0 0 auto !important; align-self: flex-end !important;"></div>
-            </div>
-            <!-- ШТОРКА БАФФОВ (выезжает справа) -->
-            <div id="buffs-drawer" style="position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: rgba(18, 22, 30, 0.96); backdrop-filter: blur(8px); border-left: 2px solid #f1c40f; z-index: 1000; box-shadow: -10px 0 25px rgba(0,0,0,0.7); transform: translateX(105%); transition: transform 0.28s ease-out; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box; pointer-events: auto;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #34495e; padding-bottom: 10px;">
-                    <h2 style="color: #f1c40f; font-size: 16px; margin: 0; font-weight: 900; display: flex; align-items: center; gap: 6px;">⚡ УСИЛИТЕЛИ</h2>
-                    <button id="btn-close-buffs" style="background: none; border: none; color: #bdc3c7; font-size: 20px; cursor: pointer; padding: 4px;">✖</button>
+                    <button id="btn-toggle-zen" title="Дзен-режим (Скрыть UI)"
+                        style="width: 36px; height: 36px; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #00d2ff; border-radius: 12px; color: #00d2ff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,210,255,0.3); box-sizing: border-box;">
+                        👁️
+                    </button>
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1;">
-                    <!-- УДАЧА -->
-                    <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #2ecc71; border-radius: 12px; padding: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-weight: 900; color: #2ecc71; font-size: 13px;">🍀 УДАЧА</span>
-                            <span id="drawer-timer-fortune" style="font-size: 11px; color: #bdc3c7;">⏱️ 10:00</span>
-                        </div>
-                        <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">+15 к показателю удачи</div>
-                        <div style="display: flex; gap: 6px;">
-                            <button id="btn-buy-buff-fortune-ad" style="flex: 1; padding: 8px 4px; background: #2ecc71; color: #111; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">🎬 Реклама</button>
-                            <button id="btn-buy-buff-fortune-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">15 🟡</button>
-                        </div>
-                    </div>
+                <button id="btn-open-starter" class="starter-pulse-glow hidden zen-hide"
+                    style="padding: 5px 10px; background: linear-gradient(135deg, #f39c12, #e74c3c); border: 2px solid #fff; border-radius: 10px; color: #fff; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-sizing: border-box;">
+                    <img src="assets/golden_box.webp" class="ui-ico"> <span id="starter-timer-badge">79₽</span>
+                </button>
 
-                    <!-- ТУРБО -->
-                    <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #e67e22; border-radius: 12px; padding: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-weight: 900; color: #e67e22; font-size: 13px;">🔥 ТУРБО-ДОХОД</span>
-                            <span id="drawer-timer-turbo" style="font-size: 11px; color: #bdc3c7;">⏱️ 01:00</span>
-                        </div>
-                        <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">x3 ко всем источникам дохода</div>
-                        <div style="display: flex; gap: 6px;">
-                            <button id="btn-buy-buff-turbo-ad" style="flex: 1; padding: 8px 4px; background: #e67e22; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">🎬 Реклама</button>
-                            <button id="btn-buy-buff-turbo-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">15 🟡</button>
-                        </div>
-                    </div>
+                <button id="btn-open-streak" class="zen-hide"
+                    style="height: 34px; padding: 0 12px; background: rgba(30, 39, 46, 0.95); border: 2px solid #9b59b6; border-radius: 12px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(155, 89, 182, 0.35); box-sizing: border-box;">
+                    <img src="assets/ico_ad_streak.webp" class="ui-ico"> Награды <span id="ad-streak-btn-text" style="color: #f1c40f; margin-left: 2px;">0/10</span>
+                </button>
+            </div>
 
-                    <!-- ГАЙКОПАД -->
-                    <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #f1c40f; border-radius: 12px; padding: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-weight: 900; color: #f1c40f; font-size: 13px;">⚡ ГАЙКОПАД</span>
-                            <span id="drawer-timer-frenzy" style="font-size: 11px; color: #bdc3c7;">⏱️ 00:30</span>
-                        </div>
-                        <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">Гайки летят градом с неба</div>
-                        <div style="display: flex; gap: 6px;">
-                            <button id="btn-buy-buff-frenzy-ad" style="flex: 1; padding: 8px 4px; background: #f1c40f; color: #111; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">🎬 Реклама</button>
-                            <button id="btn-buy-buff-frenzy-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">15 🟡</button>
-                        </div>
-                    </div>
+            <!-- 5. СЕРЕДИНА СЛЕВА: Удача и Баффы -->
+            <div id="field-buffs-center" class="zen-hide"
+                style="position: absolute; left: 12px !important; right: auto !important; top: 40%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start !important; gap: 8px; z-index: 35; pointer-events: auto;">
+
+                <button id="btn-field-luck"
+                    style="width: 44px !important; height: 44px !important; margin: 0 auto 0 0 !important; align-self: flex-start !important; background: rgba(30, 39, 46, 0.95); border: 2px solid #2ecc71; border-radius: 12px; cursor: pointer; display: flex !important; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(46,204,113,0.35); box-sizing: border-box; flex-shrink: 0;">
+                    <span id="field-luck-icon"
+                        style="font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px;"><img src="assets/clover_lucky.webp" class="ui-ico-badge"></span>
+                    <span id="field-luck-val"
+                        style="font-size: 10px; color: #2ecc71; font-weight: 900; margin-top: 2px;">0</span>
+                </button>
+
+                <button id="btn-toggle-buffs"
+                    style="width: auto !important; height: 34px !important; margin: 0 auto 0 0 !important; align-self: flex-start !important; padding: 0 12px; background: linear-gradient(135deg, rgba(30,39,46,0.95), rgba(44,62,80,0.95)); border: 2px solid #f1c40f; border-radius: 10px; color: #f1c40f; font-weight: 900; font-size: 12px; cursor: pointer; display: flex !important; align-items: center; gap: 5px; box-shadow: 0 0 12px rgba(241,196,15,0.3); box-sizing: border-box; white-space: nowrap !important; flex-shrink: 0;">
+                    <img src="assets/x3_bust.webp" class="ui-ico"> БАФФЫ
+                </button>
+
+                <div id="active-buffs-dock"
+                    style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start !important; margin: 0 auto 0 0 !important; align-self: flex-start !important;">
                 </div>
             </div>
+
+<div id="buffs-drawer" style="position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: rgba(18, 22, 30, 0.96); backdrop-filter: blur(8px); border-left: 2px solid #f1c40f; z-index: 1000; box-shadow: -10px 0 25px rgba(0,0,0,0.7); transform: translateX(105%); transition: transform 0.28s ease-out; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box; pointer-events: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #34495e; padding-bottom: 10px;">
+        <h2 style="color: #f1c40f; font-size: 16px; margin: 0; font-weight: 900; display: flex; align-items: center; gap: 6px;">⚡ УСИЛИТЕЛИ</h2>
+        <button id="btn-close-buffs" style="background: none; border: none; color: #bdc3c7; font-size: 20px; cursor: pointer; padding: 4px;">✖</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1;">
+        <!-- УДАЧА -->
+        <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #2ecc71; border-radius: 12px; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-weight: 900; color: #2ecc71; font-size: 13px;"><img src="assets/clover_lucky.webp" class="drawer-buff-ico"> УДАЧА</span>
+                <span id="drawer-timer-fortune" style="font-size: 11px; color: #bdc3c7;">⏱️ 10:00</span>
+            </div>
+            <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">+15 к показателю удачи</div>
+            <div style="display: flex; gap: 6px;">
+                <button id="btn-buy-buff-fortune-ad" style="flex: 1; padding: 8px 4px; background: #2ecc71; color: #111; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;"><img src="assets/ico_ad_tv.webp" class="ui-ico"> Реклама</button>
+                <button id="btn-buy-buff-fortune-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">39 <img src="assets/golden_nut.webp" class="ui-ico"></button>
+            </div>
+        </div>
+        <!-- ТУРБО -->
+        <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #e67e22; border-radius: 12px; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-weight: 900; color: #e67e22; font-size: 13px;"><img src="assets/x3_bust.webp" class="drawer-buff-ico"> ТУРБО-ДОХОД</span>
+                <span id="drawer-timer-turbo" style="font-size: 11px; color: #bdc3c7;">⏱️ 01:00</span>
+            </div>
+            <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">x3 ко всем источникам дохода</div>
+            <div style="display: flex; gap: 6px;">
+                <button id="btn-buy-buff-turbo-ad" style="flex: 1; padding: 8px 4px; background: #e67e22; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;"><img src="assets/ico_ad_tv.webp" class="ui-ico"> Реклама</button>
+                <button id="btn-buy-buff-turbo-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">39 <img src="assets/golden_nut.webp" class="ui-ico"></button>
+            </div>
+        </div>
+        <!-- ГАЙКОПАД -->
+        <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #f1c40f; border-radius: 12px; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-weight: 900; color: #f1c40f; font-size: 13px;"><img src="assets/nut_rain.webp" class="drawer-buff-ico"> ГАЙКОПАД</span>
+                <span id="drawer-timer-frenzy" style="font-size: 11px; color: #bdc3c7;">⏱️ 00:30</span>
+            </div>
+            <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">Гайки летят градом с неба</div>
+            <div style="display: flex; gap: 6px;">
+                <button id="btn-buy-buff-frenzy-ad" style="flex: 1; padding: 8px 4px; background: #f1c40f; color: #111; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;"><img src="assets/ico_ad_tv.webp" class="ui-ico"> Реклама</button>
+                <button id="btn-buy-buff-frenzy-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">39 <img src="assets/golden_nut.webp" class="ui-ico"></button>
+            </div>
+        </div>
+        <!-- АВТОПИЛОТ -->
+        <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #00d2ff; border-radius: 12px; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-weight: 900; color: #00d2ff; font-size: 13px;"><img src="assets/robot_hand.webp" class="drawer-buff-ico"> АВТОПИЛОТ</span>
+                <span id="drawer-timer-autotap" style="font-size: 11px; color: #bdc3c7;">⏱️ 00:40</span>
+            </div>
+            <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">Авто-клики 15 раз/сек по лестнице</div>
+            <div style="display: flex; gap: 6px;">
+                <button id="btn-buy-buff-autotap-ad" style="flex: 1; padding: 8px 4px; background: #00d2ff; color: #111; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;"><img src="assets/ico_ad_tv.webp" class="ui-ico"> Реклама</button>
+                <button id="btn-buy-buff-autotap-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">39 <img src="assets/golden_nut.webp" class="ui-ico"></button>
+            </div>
+        </div>
+        <!-- МАШИНА ВРЕМЕНИ -->
+        <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #9b59b6; border-radius: 12px; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-weight: 900; color: #9b59b6; font-size: 13px;"><img src="assets/time_skip.webp" class="drawer-buff-ico"> МАШИНА ВРЕМЕНИ</span>
+                <span style="font-size: 11px; color: #2ecc71;">Мгновенно</span>
+            </div>
+            <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">Доход за 5 минут пассивного фарма</div>
+            <div style="display: flex; gap: 6px;">
+                <button id="btn-buy-buff-timewarp-ad" style="flex: 1; padding: 8px 4px; background: #9b59b6; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;"><img src="assets/ico_ad_tv.webp" class="ui-ico"> Реклама</button>
+                <button id="btn-buy-buff-timewarp-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">39 <img src="assets/golden_nut.webp" class="ui-ico"></button>
+            </div>
+        </div>
+        <!-- МАГНИТ НЛО -->
+        <div style="background: rgba(0,0,0,0.4); border: 1.5px solid #4cd137; border-radius: 12px; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-weight: 900; color: #4cd137; font-size: 13px;"><img src="assets/ufo_gift.webp" class="drawer-buff-ico"> МАГНИТ НЛО</span>
+                <span style="font-size: 11px; color: #4cd137;">Призыв</span>
+            </div>
+            <div style="font-size: 11px; color: #ecf0f1; margin-bottom: 8px;">Притягивает контейнер с ресурсами</div>
+            <div style="display: flex; gap: 6px;">
+                <button id="btn-buy-buff-ufo-ad" style="flex: 1; padding: 8px 4px; background: #4cd137; color: #111; border: none; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;"><img src="assets/ico_ad_tv.webp" class="ui-ico"> Реклама</button>
+                <button id="btn-buy-buff-ufo-gold" style="flex: 1; padding: 8px 4px; background: rgba(241,196,15,0.15); border: 1.5px solid #f1c40f; color: #f1c40f; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer;">39 <img src="assets/golden_nut.webp" class="ui-ico"></button>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- НЕВИДИМЫЕ ЗАГЛУШКИ ДЛЯ ЗАЩИТЫ ОТ ОШИБОК СТАРОГО JS -->
             <div style="display: none !important;" aria-hidden="true">
@@ -260,117 +399,207 @@
             </div>
 
             <!-- 6. СЛЕВА ПО ЦЕНТРУ: Колонка и Шары (Аксессуары) -->
-            <div id="field-accessories-left" style="position: absolute; left: 10px; top: 48%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 20; pointer-events: auto;">
-                <button id="btn-field-speaker" style="width: 46px; height: 46px; background: rgba(30, 39, 46, 0.9); border: 2px solid #3498db; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            <div id="field-accessories-left" class="zen-hide"
+                style="position: absolute; left: 12px; top: 62%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 20; pointer-events: auto;">
+                <button id="btn-field-speaker"
+                    style="width: 44px; height: 44px; background: rgba(30, 39, 46, 0.95); border: 2px solid #3498db; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
                     <img id="field-icon-speaker" src="" style="max-width: 75%; max-height: 75%; object-fit: contain;">
                 </button>
-                <button id="btn-field-newton" style="width: 46px; height: 46px; background: rgba(30, 39, 46, 0.9); border: 2px solid #9b59b6; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                <button id="btn-field-newton"
+                    style="width: 44px; height: 44px; background: rgba(30, 39, 46, 0.95); border: 2px solid #9b59b6; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
                     <img id="field-icon-newton" src="" style="max-width: 75%; max-height: 75%; object-fit: contain;">
                 </button>
             </div>
 
-            <!-- 7. ЛЕВЫЙ НИЖНИЙ УГОЛ: Таймер, Склад, Вертикальная шкала и Счётчик над ней -->
-            <div id="loot-block-corner" style="position: absolute; left: 12px; bottom: 12px; z-index: 25; pointer-events: auto; display: flex; align-items: flex-end; gap: 8px;">
-                <div style="display: flex; flex-direction: column; gap: 6px; position: relative;">
-                    <div id="case-popups-layer" style="position: absolute; top: -24px; left: 0; width: 100%; pointer-events: none; z-index: 30;"></div>
+            <!-- === ВЕРТИКАЛЬНАЯ ШКАЛА ПРОГРЕССА ЗОН (ALTITUDE TRACKER) === -->
+            <div id="altitude-tracker-container" class="zen-hide"
+                style="position: absolute; right: 10px; left: auto; top: 50%; transform: translateY(-50%); width: 32px; height: 48vh; pointer-events: none; z-index: 30; display: flex; flex-direction: column; align-items: center;">
+                <div class="altitude-track-bg"
+                    style="position: absolute; top: 0; bottom: 0; width: 8px; background: rgba(10, 15, 25, 0.85); border: 1px solid rgba(0, 220, 255, 0.25); border-radius: 5px; overflow: hidden; z-index: 1;">
+                    <div id="altitude-track-fill"
+                        style="position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(to top, #00d2ff, #ffffff); box-shadow: 0 0 10px rgba(0, 210, 255, 0.8); transition: height 0.15s ease-out;">
+                    </div>
+                </div>
 
-                    <button id="btn-claim-timed-box" style="width: 108px; height: 34px; padding: 0; background: rgba(44, 62, 80, 0.95); border: 1.5px solid #f39c12; color: #f1c40f; border-radius: 10px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box; flex-shrink: 0; overflow: hidden;">
-                        <span>🎁</span> <span id="timed-box-label">Беспл:</span> <span id="timed-box-text">03:00</span>
+                <!-- Индикатор/бегунок высоты (прилегает к левой грани трека) -->
+                <div id="altitude-marker"
+                    style="position: absolute; bottom: 0%; left: -14px; transform: translateY(50%); width: 22px; height: 20px; background: rgba(10, 25, 40, 0.95); border: 1.5px solid #00d2ff; border-radius: 6px 0 0 6px; box-shadow: 0 0 8px rgba(0, 210, 255, 0.8); z-index: 2; transition: bottom 0.15s ease-out, transform 0.1s ease-out; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff;">
+                    🪜▶
+                </div>
+
+                <!-- 7 Контрольных точек локаций (0m .. 10M m) -->
+                <div class="altitude-checkpoint locked" data-stage="6"
+                    style="position: absolute; bottom: 100%; left: 50%; transform: translate(-50%, 50%); z-index: 3;"
+                    title="10 000 000 м — Бескрайний простор">
+                    <img src="assets/loc_10000000.webp" class="checkpoint-img" alt="Бескрайний простор">
+                </div>
+                <div class="altitude-checkpoint locked" data-stage="5"
+                    style="position: absolute; bottom: 83.3333%; left: 50%; transform: translate(-50%, 50%); z-index: 3;"
+                    title="1 000 000 м — Млечный Путь">
+                    <img src="assets/loc_1000000.webp" class="checkpoint-img" alt="Млечный Путь">
+                </div>
+                <div class="altitude-checkpoint locked" data-stage="4"
+                    style="position: absolute; bottom: 66.6666%; left: 50%; transform: translate(-50%, 50%); z-index: 3;"
+                    title="100 000 м — Космос">
+                    <img src="assets/loc_100000.webp" class="checkpoint-img" alt="Космос">
+                </div>
+                <div class="altitude-checkpoint locked" data-stage="3"
+                    style="position: absolute; bottom: 50%; left: 50%; transform: translate(-50%, 50%); z-index: 3;"
+                    title="10 000 м — Стратосфера">
+                    <img src="assets/loc_10000.webp" class="checkpoint-img" alt="Стратосфера">
+                </div>
+                <div class="altitude-checkpoint locked" data-stage="2"
+                    style="position: absolute; bottom: 33.3333%; left: 50%; transform: translate(-50%, 50%); z-index: 3;"
+                    title="1 000 м — Грозовой фронт">
+                    <img src="assets/loc_1000.webp" class="checkpoint-img" alt="Грозовой фронт">
+                </div>
+                <div class="altitude-checkpoint locked" data-stage="1"
+                    style="position: absolute; bottom: 16.6666%; left: 50%; transform: translate(-50%, 50%); z-index: 3;"
+                    title="250 м — Крыши">
+                    <img src="assets/loc_250.webp" class="checkpoint-img" alt="Крыши">
+                </div>
+                <div class="altitude-checkpoint unlocked" data-stage="0"
+                    style="position: absolute; bottom: 0%; left: 50%; transform: translate(-50%, 50%); z-index: 3;"
+                    title="0 м — Хрущевка">
+                    <img src="assets/loc_0.webp" class="checkpoint-img" alt="Хрущевка">
+                </div>
+            </div>
+
+            <!-- === КАРТОЧКА ЛОКАЦИИ «БОРТОВОЙ ЖУРНАЛ» === -->
+            <div id="location-card" class="hidden"
+                style="position: absolute; right: 54px; top: 50%; transform: translateY(-50%); z-index: 100; width: 230px; background: rgba(15, 20, 30, 0.95); backdrop-filter: blur(10px); border: 1.5px solid #00d2ff; border-radius: 14px; padding: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 210, 255, 0.2); color: #fff; font-family: sans-serif; pointer-events: auto;">
+                <button id="btn-close-location-card"
+                    style="position: absolute; top: 6px; right: 6px; background: none; border: none; color: #7f8c8d; font-size: 16px; cursor: pointer; z-index: 2; padding: 2px 6px;">✖</button>
+
+                <div
+                    style="position: relative; width: 100%; height: 95px; border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: #0c1017; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <img id="loc-card-img" src="" style="width: 100%; height: 100%; object-fit: cover;">
+                    <span id="loc-card-badge"
+                        style="position: absolute; bottom: 6px; left: 6px; padding: 3px 8px; border-radius: 6px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">ИССЛЕДОВАНО</span>
+                </div>
+
+                <div id="loc-card-title"
+                    style="font-size: 15px; font-weight: 900; color: #00d2ff; margin-bottom: 2px; text-shadow: 0 1px 3px #000;">
+                    Хрущевка</div>
+                <div id="loc-card-height"
+                    style="font-size: 11px; font-weight: bold; color: #f1c40f; margin-bottom: 6px;">Высота: 0 м</div>
+                <div id="loc-card-desc"
+                    style="font-size: 11px; color: #bdc3c7; line-height: 1.35; max-height: 80px; overflow-y: auto;">
+                    Описание локации...</div>
+            </div>
+
+            <!-- 7. ЛЕВЫЙ НИЖНИЙ УГОЛ: Таймер, Склад, Прогресс-бар -->
+            <div id="loot-block-corner" class="zen-hide"
+                style="position: absolute; left: 12px; bottom: 12px; z-index: 25; pointer-events: auto; display: flex; align-items: flex-end; gap: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 6px; position: relative;">
+                    <div id="case-popups-layer"
+                        style="position: absolute; top: -24px; left: 0; width: 100%; pointer-events: none; z-index: 30;">
+                    </div>
+
+                    <button id="btn-claim-timed-box"
+                        style="width: 108px; height: 34px; padding: 0; background: rgba(44, 62, 80, 0.95); border: 1.5px solid #f39c12; color: #f1c40f; border-radius: 10px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box; flex-shrink: 0; overflow: hidden;">
+                        <img src="assets/ico_gift.webp" class="ui-ico"> <span id="timed-box-label">Беспл:</span> <span id="timed-box-text">03:00</span>
                     </button>
 
-                    <button id="btn-open-cases" style="width: 108px; height: 34px; padding: 0; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #9b59b6; border-radius: 10px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box; flex-shrink: 0;">
-                        📦 Кейсы: <span id="cases-count" style="color: #f1c40f;">0</span>
+                    <button id="btn-open-cases"
+                        style="width: 108px; height: 34px; padding: 0; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #9b59b6; border-radius: 10px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box; flex-shrink: 0;">
+                        <img src="assets/wooden_box.webp" class="ui-ico"> Кейсы: <span id="cases-count" style="color: #f1c40f;">0</span>
                     </button>
                 </div>
 
-                <!-- Вертикальная шкала с текстом СТРОГО НАД НЕЙ -->
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 66px; flex-shrink: 0;">
-                    <span id="box-progress-text" style="font-size: 10px; font-weight: 900; color: #f1c40f; text-shadow: 0 1px 3px #000; white-space: nowrap;">Ящик: 0/40</span>
-                    <div class="box-progress-container" style="width: 14px; height: 74px; background: rgba(20, 25, 35, 0.95); border: 1.5px solid #e67e22; border-radius: 7px; overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0;">
-                        <div id="box-progress-bar" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(0deg, #d35400, #f1c40f); transition: height 0.15s ease;"></div>
+                <div
+                    style="display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 66px; flex-shrink: 0;">
+                    <span id="box-progress-text"
+                        style="font-size: 10px; font-weight: 900; color: #f1c40f; text-shadow: 0 1px 3px #000; white-space: nowrap;">Ящик:
+                        0/40</span>
+                    <div class="box-progress-container"
+                        style="width: 14px; height: 74px; background: rgba(20, 25, 35, 0.95); border: 1.5px solid #e67e22; border-radius: 7px; overflow: hidden; position: relative; box-sizing: border-box; flex-shrink: 0;">
+                        <div id="box-progress-bar"
+                            style="position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(0deg, #d35400, #f1c40f); transition: height 0.15s ease;">
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- 8. НИЗ ПО ЦЕНТРУ: Кнопка Магазина -->
-            <div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 25; pointer-events: auto;">
-                <button id="btn-open-shop" style="padding: 9px 20px; background: linear-gradient(135deg, #f39c12, #e67e22); border: 2px solid #f1c40f; border-radius: 12px; color: #fff; font-weight: 900; font-size: 13px; letter-spacing: 0.5px; cursor: pointer; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.45);">
+            <div class="zen-hide"
+                style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 25; pointer-events: auto;">
+                <button id="btn-open-shop"
+                    style="padding: 9px 20px; background: linear-gradient(135deg, #f39c12, #e67e22); border: 2px solid #f1c40f; border-radius: 12px; color: #fff; font-weight: 900; font-size: 13px; letter-spacing: 0.5px; cursor: pointer; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.45);">
                     МАГАЗИН
                 </button>
             </div>
 
             <!-- 9. ПРАВЫЙ НИЖНИЙ УГОЛ: Кнопка Скинов -->
-            <div style="position: absolute; right: 12px; bottom: 12px; z-index: 25; pointer-events: auto;">
-                <button id="btn-open-inventory" style="width: 108px; height: 34px; padding: 0; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #e67e22; border-radius: 10px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
+            <div class="zen-hide"
+                style="position: absolute; right: 12px; bottom: 12px; z-index: 25; pointer-events: auto;">
+                <button id="btn-open-inventory"
+                    style="width: 108px; height: 34px; padding: 0; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #e67e22; border-radius: 10px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
                     🎨 Скины
                 </button>
             </div>
 
-            <!-- ============================================== -->
-            <!--             МОДАЛЬНЫЕ ОКНА ИГРЫ                -->
-            <!-- ============================================== -->
+            <!-- МОДАЛЬНЫЕ ОКНА ИГРЫ -->
 
             <!-- Модальное окно Донат-Магазина -->
             <div id="donate-modal" class="modal-overlay hidden">
-                <div class="modal-card" style="max-width: 340px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border: 2px solid #f1c40f; border-radius: 16px;">
+                <div class="modal-card"
+                    style="max-width: 340px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border: 2px solid #f1c40f; border-radius: 16px;">
                     <div class="modal-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #f1c40f; font-size: 17px; margin: 0;">🟡 Золотой Банк</h2>
-                        <button id="btn-close-donate" class="modal-close-btn">&times;</button>
-                    </div>
-
-                    <div style="font-size: 11px; color: #bdc3c7; margin-bottom: 12px; text-align: center;">
-                        Любая покупка навсегда даёт статус <b style="color: #f1c40f;">VIP 👑</b> в лидерборде!
-                    </div>
-
-                    <div class="modal-scroll-list" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; padding: 10px; border-radius: 10px;">
-                            <div>
-                                <div style="font-weight: bold; color: #2ecc71; font-size: 13px;">🚫 Без рекламы</div>
-                                <div style="font-size: 10px; color: #bdc3c7;">Отключение баннеров навсегда</div>
-                            </div>
-                            <button class="mock-buy-btn" data-type="adfree" data-price="99" style="background: #2ecc71; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">99 ₽</button>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid #34495e; padding: 10px; border-radius: 10px;">
-                            <div>
-                                <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Горсть гаек</div>
-                                <div style="font-size: 11px; color: #fff;">+100 🟡</div>
-                            </div>
-                            <button class="mock-buy-btn" data-type="gold" data-amount="100" data-price="99" style="background: #f1c40f; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">99 ₽</button>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid #34495e; padding: 10px; border-radius: 10px;">
-                            <div>
-                                <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Мешочек гаек</div>
-                                <div style="font-size: 11px; color: #fff;">+300 🟡 <span style="font-size: 10px; color: #2ecc71;">(На кейс)</span></div>
-                            </div>
-                            <button class="mock-buy-btn" data-type="gold" data-amount="300" data-price="249" style="background: #f1c40f; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">249 ₽</button>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid #34495e; padding: 10px; border-radius: 10px;">
-                            <div>
-                                <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Ящик гаек <span style="color: #e67e22; font-size: 10px;">+20%</span></div>
-                                <div style="font-size: 11px; color: #fff;">+750 🟡</div>
-                            </div>
-                            <button class="mock-buy-btn" data-type="gold" data-amount="750" data-price="590" style="background: #f1c40f; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">590 ₽</button>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(241, 196, 15, 0.1); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px;">
-                            <div>
-                                <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Сейф магната <span style="color: #e67e22; font-size: 10px;">+40%</span></div>
-                                <div style="font-size: 11px; color: #fff;">+2 000 🟡</div>
-                            </div>
-                            <button class="mock-buy-btn" data-type="gold" data-amount="2000" data-price="1390" style="background: #e67e22; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">1 390 ₽</button>
-                        </div>
-                    </div>
+    <h2 style="color: #f1c40f; font-size: 17px; margin: 0;"><img src="assets/golden_nut.webp" class="ui-ico-title"> Золотой Банк</h2>
+    <button id="btn-close-donate" class="modal-close-btn">&times;</button>
+</div>
+<div style="font-size: 11px; color: #bdc3c7; margin-bottom: 12px; text-align: center;">
+    Любая покупка навсегда даёт статус <b style="color: #f1c40f;">VIP <img src="assets/crown.webp" class="ui-ico-sm"></b> в лидерборде!
+</div>
+<div class="modal-scroll-list" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; padding: 10px; border-radius: 10px;">
+        <div>
+            <div style="font-weight: bold; color: #2ecc71; font-size: 13px;"><img src="assets/ico_ad_tv.webp" class="ui-ico"> Без рекламы</div>
+            <div style="font-size: 10px; color: #bdc3c7;">Отключение баннеров навсегда</div>
+        </div>
+        <button class="mock-buy-btn" data-type="adfree" data-price="99" style="background: #2ecc71; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">99 ₽</button>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid #34495e; padding: 10px; border-radius: 10px;">
+        <div>
+            <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Горсть гаек</div>
+            <div style="font-size: 11px; color: #fff;">+100 <img src="assets/golden_nut.webp" class="ui-ico-sm"></div>
+        </div>
+        <button class="mock-buy-btn" data-type="gold" data-amount="100" data-price="99" style="background: #f1c40f; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">99 ₽</button>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid #34495e; padding: 10px; border-radius: 10px;">
+        <div>
+            <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Мешочек гаек</div>
+            <div style="font-size: 11px; color: #fff;">+300 <img src="assets/golden_nut.webp" class="ui-ico-sm"> <span style="font-size: 10px; color: #2ecc71;">(На кейс)</span></div>
+        </div>
+        <button class="mock-buy-btn" data-type="gold" data-amount="300" data-price="249" style="background: #f1c40f; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">249 ₽</button>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid #34495e; padding: 10px; border-radius: 10px;">
+        <div>
+            <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Ящик гаек <span style="color: #e67e22; font-size: 10px;">+20%</span></div>
+            <div style="font-size: 11px; color: #fff;">+750 <img src="assets/golden_nut.webp" class="ui-ico-sm"></div>
+        </div>
+        <button class="mock-buy-btn" data-type="gold" data-amount="750" data-price="590" style="background: #f1c40f; color: #111; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">590 ₽</button>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(241, 196, 15, 0.1); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px;">
+        <div>
+            <div style="font-weight: bold; color: #f1c40f; font-size: 13px;">Сейф магната <span style="color: #e67e22; font-size: 10px;">+40%</span></div>
+            <div style="font-size: 11px; color: #fff;">+2 000 <img src="assets/golden_nut.webp" class="ui-ico-sm"></div>
+        </div>
+        <button class="mock-buy-btn" data-type="gold" data-amount="2000" data-price="1390" style="background: #e67e22; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">1 390 ₽</button>
+    </div>
+</div>
                 </div>
             </div>
 
             <!-- Модальное окно Starter Pack (79₽) -->
             <div id="starter-modal" class="modal-overlay hidden">
-                <div class="modal-card" style="max-width: 320px; border: 2px solid #e74c3c; border-radius: 16px; padding: 18px; text-align: center; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 12px; color: #e74c3c; font-weight: bold; text-transform: uppercase;">🔥 Эксклюзив</span>
+                <div class="modal-card"
+                    style="max-width: 320px; border: 2px solid #e74c3c; border-radius: 16px; padding: 18px; text-align: center; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: #e74c3c; font-weight: bold; text-transform: uppercase;">🔥
+                            Эксклюзив</span>
                         <button id="btn-close-starter" class="modal-close-btn">&times;</button>
                     </div>
 
@@ -379,7 +608,8 @@
                         Исчезнет через: <b id="starter-modal-timer" style="color: #e74c3c;">48:00:00</b>
                     </div>
 
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 10px; text-align: left; font-size: 12px; margin-bottom: 16px; border: 1px solid #34495e;">
+                    <div
+                        style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 10px; text-align: left; font-size: 12px; margin-bottom: 16px; border: 1px solid #34495e;">
                         <div style="margin-bottom: 5px;">🟡 <b>179</b> золотых гаек</div>
                         <div style="margin-bottom: 5px;">🔩 <b>1 799</b> обычных гаек</div>
                         <div style="margin-bottom: 5px;">📦 <b>10</b> деревянных кейсов</div>
@@ -388,7 +618,8 @@
                         <div style="color: #f1c40f;">👑 <b>VIP-рамка</b> в лидерборде навсегда</div>
                     </div>
 
-                    <button id="btn-buy-starter" style="width: 100%; background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);">
+                    <button id="btn-buy-starter"
+                        style="width: 100%; background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);">
                         Забрать за 79 ₽
                     </button>
                 </div>
@@ -396,9 +627,13 @@
 
             <!-- Модальное окно Ежедневного календаря (7 дней) -->
             <div id="calendar-modal" class="modal-overlay hidden" style="z-index: 25000;">
-                <div class="modal-card" style="max-width: 330px; width: 92%; padding: 16px; border: 2px solid #e74c3c; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
-                    <div class="modal-header" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #e74c3c; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">📅 Награды за вход</h2>
+                <div class="modal-card"
+                    style="max-width: 330px; width: 92%; padding: 16px; border: 2px solid #e74c3c; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
+                    <div class="modal-header"
+                        style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="color: #e74c3c; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">
+    <img src="assets/ico_gift.webp" class="ui-ico-title"> Награды за вход
+</h2>
                         <button id="btn-close-calendar" class="modal-close-btn">&times;</button>
                     </div>
 
@@ -406,25 +641,32 @@
                         Заходи каждый день! На 7-й день — эксклюзивная лестница.
                     </div>
 
-                    <div id="calendar-missed-alert" class="hidden" style="background: rgba(231, 76, 60, 0.2); border: 1px dashed #e74c3c; border-radius: 10px; padding: 8px; margin-bottom: 12px; text-align: center;">
-                        <div style="color: #e74c3c; font-size: 11px; font-weight: bold; margin-bottom: 6px;">⚠️ Ты пропустил день!</div>
+                    <div id="calendar-missed-alert" class="hidden"
+                        style="background: rgba(231, 76, 60, 0.2); border: 1px dashed #e74c3c; border-radius: 10px; padding: 8px; margin-bottom: 12px; text-align: center;">
+                        <div style="color: #e74c3c; font-size: 11px; font-weight: bold; margin-bottom: 6px;">⚠️ Ты
+                            пропустил день!</div>
                         <div style="display: flex; gap: 6px;">
                             <button id="btn-restore-streak" style="flex: 2; background: #e67e22; color: #fff; border: none; padding: 6px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">
-                                📺 Восстановить стрик
-                            </button>
-                            <button id="btn-reset-streak" style="flex: 1; background: rgba(255,255,255,0.1); color: #bdc3c7; border: 1px solid #7f8c8d; padding: 6px; border-radius: 6px; font-size: 10px; cursor: pointer;">
+    <img src="assets/ico_ad_tv.webp" class="ui-ico"> Восстановить стрик
+</button>
+                            <button id="btn-reset-streak"
+                                style="flex: 1; background: rgba(255,255,255,0.1); color: #bdc3c7; border: 1px solid #7f8c8d; padding: 6px; border-radius: 6px; font-size: 10px; cursor: pointer;">
                                 День 1
                             </button>
                         </div>
                     </div>
 
-                    <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;"></div>
+                    <div id="calendar-grid"
+                        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
+                    </div>
 
-                    <div id="calendar-day-7" style="background: rgba(231, 76, 60, 0.15); border: 1px solid #e74c3c; border-radius: 10px; padding: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                    <div id="calendar-day-7"
+                        style="background: rgba(231, 76, 60, 0.15); border: 1px solid #e74c3c; border-radius: 10px; padding: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 24px;">🪜</span>
                             <div>
-                                <div style="font-size: 12px; font-weight: bold; color: #e74c3c;">День 7: Супер-приз</div>
+                                <div style="font-size: 12px; font-weight: bold; color: #e74c3c;">День 7: Супер-приз
+                                </div>
                                 <div style="font-size: 10px; color: #fff;">Скин «Календарь» (Epic)</div>
                             </div>
                         </div>
@@ -432,10 +674,12 @@
                     </div>
 
                     <div id="calendar-claim-actions" style="display: flex; flex-direction: column; gap: 8px;">
-                        <button id="btn-claim-calendar-x2" style="width: 100%; background: #2ecc71; color: #111; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);">
+                        <button id="btn-claim-calendar-x2"
+                            style="width: 100%; background: #2ecc71; color: #111; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);">
                             ▶ Удвоить за рекламу (x2)
                         </button>
-                        <button id="btn-claim-calendar-normal" style="width: 100%; background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 7px; border-radius: 8px; font-size: 11px; cursor: pointer;">
+                        <button id="btn-claim-calendar-normal"
+                            style="width: 100%; background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 7px; border-radius: 8px; font-size: 11px; cursor: pointer;">
                             Забрать обычную
                         </button>
                     </div>
@@ -444,17 +688,21 @@
 
             <!-- Модальное окно: Радар базы (Пуши за +25 🟡) -->
             <div id="radar-modal" class="modal-overlay hidden" style="z-index: 26000;">
-                <div class="modal-card" style="max-width: 310px; text-align: center; border: 2px solid #3498db; border-radius: 16px; padding: 20px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
+                <div class="modal-card"
+                    style="max-width: 310px; text-align: center; border: 2px solid #3498db; border-radius: 16px; padding: 20px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
                     <div style="font-size: 38px; margin-bottom: 8px;">📡</div>
                     <h2 style="color: #3498db; font-size: 18px; margin: 0 0 8px 0;">Включить радар базы?</h2>
                     <p style="font-size: 12px; color: #bdc3c7; line-height: 1.4; margin-bottom: 16px;">
-                        Мы сообщим, когда Колонка забьет склад оффлайна на 100% и откатится бесплатный сейф. За включение дарим бонус прямо сейчас!
+                        Мы сообщим, когда Колонка забьет склад оффлайна на 100% и откатится бесплатный сейф. За
+                        включение дарим бонус прямо сейчас!
                     </p>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button id="btn-enable-radar" style="background: #f1c40f; color: #111; border: none; padding: 11px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(241, 196, 15, 0.4);">
+                        <button id="btn-enable-radar"
+                            style="background: #f1c40f; color: #111; border: none; padding: 11px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(241, 196, 15, 0.4);">
                             Включить (+25 🟡)
                         </button>
-                        <button id="btn-skip-radar" style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 11px; cursor: pointer;">
+                        <button id="btn-skip-radar"
+                            style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 11px; cursor: pointer;">
                             Позже
                         </button>
                     </div>
@@ -465,7 +713,7 @@
             <div id="shop-modal" class="hidden">
                 <button id="btn-close-shop" class="close-btn">✕</button>
                 <h2>Черный Рынок</h2>
-                
+
                 <div class="shop-item">
                     <div class="item-info">
                         <h3>Удар</h3>
@@ -493,26 +741,33 @@
 
             <!-- Модальное окно кейсов -->
             <div id="cases-modal" class="modal-overlay hidden">
-                <div class="modal-card" style="max-width: 360px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 18px; border: 2px solid #9b59b6; border-radius: 16px; box-shadow: 0 0 25px rgba(155, 89, 182, 0.25);">
-                    <div class="modal-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #9b59b6; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">📦 Магазин и Склад Кейсов</h2>
+                <div class="modal-card"
+                    style="max-width: 360px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 18px; border: 2px solid #9b59b6; border-radius: 16px; box-shadow: 0 0 25px rgba(155, 89, 182, 0.25);">
+                    <div class="modal-header"
+                        style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2
+                            style="color: #9b59b6; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">
+                            <img src="assets/wooden_box.webp" class="ui-ico"> Магазин и Склад Кейсов</h2>
                         <button id="btn-close-cases" class="modal-close-btn">&times;</button>
                     </div>
-                    
+
                     <div class="modal-currency-bar" style="margin-bottom: 12px;">
-                        <span>🔩 Гайки: <b id="cases-modal-nuts" style="color: #3498db;">0</b></span>
-                        <span>🟡 Золотые: <b id="cases-modal-gold" style="color: #f1c40f;">0</b></span>
+                        <span><img src="assets/nut.webp" class="ui-ico"> Гайки: <b id="cases-modal-nuts" style="color: #3498db;">0</b></span>
+                        <span><img src="assets/golden_nut.webp" class="ui-ico"> Золотые: <b id="cases-modal-gold" style="color: #f1c40f;">0</b></span>
                     </div>
 
                     <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-                        <button id="btn-ad-free-safe" style="flex: 1; padding: 8px 6px; background: rgba(127, 140, 141, 0.2); border: 1px solid #7f8c8d; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer;">
-                            🧰 Сейф: <span id="ad-safe-timer">Готово</span>
+                        <button id="btn-ad-free-safe"
+                            style="flex: 1; padding: 8px 6px; background: rgba(127, 140, 141, 0.2); border: 1px solid #7f8c8d; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer;">
+                            <img src="assets/iron_box.webp" class="ui-ico"> Сейф: <span id="ad-safe-timer">Готово</span>
                         </button>
-                        <button id="btn-ad-free-nuts" style="flex: 1; padding: 8px 6px; background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer;">
-                            🔩 Гайки: <span id="ad-nuts-timer">Готово</span>
+                        <button id="btn-ad-free-nuts"
+                            style="flex: 1; padding: 8px 6px; background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer;">
+                            <img src="assets/nut.webp" class="ui-ico"> Гайки: <span id="ad-nuts-timer">Готово</span>
                         </button>
                     </div>
-                    <div id="cases-list-container" class="modal-scroll-list" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;"></div>
+                    <div id="cases-list-container" class="modal-scroll-list"
+                        style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;"></div>
                 </div>
             </div>
 
@@ -537,20 +792,27 @@
 
             <!-- Модальное окно Сделки дня -->
             <div id="daily-deal-modal" class="modal-overlay hidden">
-                <div class="modal-card" style="max-width: 290px; width: 90%; height: auto !important; min-height: auto !important; padding: 18px 20px; border: 2px solid #f1c40f; border-radius: 16px; box-shadow: 0 0 25px rgba(241, 196, 15, 0.2);">
-                    <div class="modal-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #f1c40f; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">🏷️ Предложение дня</h2>
-                        <button id="btn-close-deal" class="modal-close-btn" style="font-size: 22px; cursor: pointer; background: none; border: none; color: #aaa;">&times;</button>
+                <div class="modal-card"
+                    style="max-width: 290px; width: 90%; height: auto !important; min-height: auto !important; padding: 18px 20px; border: 2px solid #f1c40f; border-radius: 16px; box-shadow: 0 0 25px rgba(241, 196, 15, 0.2);">
+                    <div class="modal-header"
+                        style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="color: #f1c40f; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">
+    <img src="assets/ico_deal_coin.webp" class="ui-ico-title"> Предложение дня
+</h2>
+                        <button id="btn-close-deal" class="modal-close-btn"
+                            style="font-size: 22px; cursor: pointer; background: none; border: none; color: #aaa;">&times;</button>
                     </div>
 
                     <div style="text-align: center; margin-bottom: 14px; font-size: 12px; color: #bdc3c7;">
                         Смена через: <b id="daily-deal-timer" style="color: #f1c40f;">24:00:00</b>
                     </div>
 
-                    <div id="daily-deal-content" style="display: flex; flex-direction: column; align-items: center; gap: 10px;"></div>
+                    <div id="daily-deal-content"
+                        style="display: flex; flex-direction: column; align-items: center; gap: 10px;"></div>
 
                     <div style="margin-top: 14px; text-align: center;">
-                        <button id="btn-deal-reroll" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed #7f8c8d; color: #bdc3c7; padding: 8px 12px; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.2s;">
+                        <button id="btn-deal-reroll"
+                            style="background: rgba(255, 255, 255, 0.05); border: 1px dashed #7f8c8d; color: #bdc3c7; padding: 8px 12px; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.2s;">
                             🔄 Обновить (Реклама)
                         </button>
                     </div>
@@ -559,21 +821,29 @@
 
             <!-- Модальное окно Рекламного стрика -->
             <div id="ad-streak-modal" class="modal-overlay hidden">
-                <div class="modal-card" style="max-width: 330px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border: 2px solid #9b59b6; border-radius: 16px; box-shadow: 0 0 25px rgba(155, 89, 182, 0.25);">
-                    <div class="modal-header" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #9b59b6; font-size: 17px; margin: 0;">🎬 Рекламный стрик</h2>
-                        <button id="btn-close-streak" class="modal-close-btn" style="font-size: 22px; cursor: pointer; background: none; border: none; color: #aaa;">&times;</button>
+                <div class="modal-card"
+                    style="max-width: 330px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border: 2px solid #9b59b6; border-radius: 16px; box-shadow: 0 0 25px rgba(155, 89, 182, 0.25);">
+                    <div class="modal-header"
+                        style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="color: #9b59b6; font-size: 17px; margin: 0;"><img src="assets/ico_ad_streak.webp" class="ui-ico-title"> Рекламный стрик</h2>
+                        <button id="btn-close-streak" class="modal-close-btn"
+                            style="font-size: 22px; cursor: pointer; background: none; border: none; color: #aaa;">&times;</button>
                     </div>
 
                     <div style="text-align: center; font-size: 12px; color: #bdc3c7; margin-bottom: 10px;">
                         Сброс через: <b id="ad-streak-timer" style="color: #f1c40f;">24:00:00</b>
                     </div>
 
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 10px; height: 12px; overflow: hidden; margin-bottom: 12px; border: 1px solid #34495e;">
-                        <div id="ad-streak-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #9b59b6, #e056fd); transition: width 0.3s;"></div>
+                    <div
+                        style="background: rgba(0,0,0,0.4); border-radius: 10px; height: 12px; overflow: hidden; margin-bottom: 12px; border: 1px solid #34495e;">
+                        <div id="ad-streak-bar"
+                            style="width: 0%; height: 100%; background: linear-gradient(90deg, #9b59b6, #e056fd); transition: width 0.3s;">
+                        </div>
                     </div>
 
-                    <div id="ad-streak-list" class="modal-scroll-list" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; flex: 1;"></div>
+                    <div id="ad-streak-list" class="modal-scroll-list"
+                        style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; flex: 1;">
+                    </div>
 
                     <div style="margin-top: 10px; font-size: 11px; color: #7f8c8d; text-align: center;">
                         В зачет идет любая просмотренная реклама в игре.
@@ -583,7 +853,8 @@
 
             <!-- Модалка оффлайн-прогресса -->
             <div id="offline-modal" class="modal-overlay hidden">
-                <div class="modal-card" style="max-width: 310px; border: 2px solid #3498db; border-radius: 16px; padding: 20px; background: rgba(20, 25, 30, 0.95);">
+                <div class="modal-card"
+                    style="max-width: 310px; border: 2px solid #3498db; border-radius: 16px; padding: 20px; background: rgba(20, 25, 30, 0.95);">
                     <div style="text-align: center; margin-bottom: 15px;">
                         <h2 style="color: #3498db; font-size: 20px; margin: 0 0 5px 0;">💤 С возвращением!</h2>
                         <div style="font-size: 11px; color: #95a5a6;">
@@ -592,7 +863,8 @@
                         </div>
                     </div>
 
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 12px; margin-bottom: 15px; border: 1px solid #34495e; font-size: 13px; color: #bdc3c7;">
+                    <div
+                        style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 12px; margin-bottom: 15px; border: 1px solid #34495e; font-size: 13px; color: #bdc3c7;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                             <span style="font-size: 18px;">📻</span>
                             <span>Колонка настучала: <b id="off-speaker-txt" style="color:#fff;">+0 м</b></span>
@@ -613,21 +885,27 @@
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button id="btn-claim-offline-x2" style="background: #2ecc71; color: #111; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);">
+                        <button id="btn-claim-offline-x2"
+                            style="background: #2ecc71; color: #111; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);">
                             ▶ Удвоить за рекламу
                         </button>
-                        <button id="btn-claim-offline-normal" style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+                        <button id="btn-claim-offline-normal"
+                            style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer;">
                             Забрать обычную
                         </button>
                     </div>
                 </div>
             </div>
 
-<!-- Модальное окно Настроек -->
+            <!-- Модальное окно Настроек -->
             <div id="settings-modal" class="modal-overlay hidden" style="z-index: 29000;">
-                <div class="modal-card" style="max-width: 320px; width: 92%; height: auto !important; min-height: auto !important; padding: 18px; border: 2px solid #7f8c8d; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); box-shadow: 0 0 25px rgba(0,0,0,0.85);">
-                    <div class="modal-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #ecf0f1; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">⚙️ Настройки</h2>
+                <div class="modal-card"
+                    style="max-width: 320px; width: 92%; height: auto !important; min-height: auto !important; padding: 18px; border: 2px solid #7f8c8d; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); box-shadow: 0 0 25px rgba(0,0,0,0.85);">
+                    <div class="modal-header"
+                        style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2
+                            style="color: #ecf0f1; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">
+                            ⚙️ Настройки</h2>
                         <button id="btn-close-settings" class="modal-close-btn">&times;</button>
                     </div>
 
@@ -637,7 +915,8 @@
                                 <span>🎵 Музыка и фон</span>
                                 <b id="val-music" style="color: #fff;">30%</b>
                             </div>
-                            <input type="range" id="slider-music" min="0" max="1" step="0.05" value="0.3" style="width: 100%; accent-color: #3498db; cursor: pointer;">
+                            <input type="range" id="slider-music" min="0" max="1" step="0.05" value="0.3"
+                                style="width: 100%; accent-color: #3498db; cursor: pointer;">
                         </div>
 
                         <div>
@@ -645,7 +924,8 @@
                                 <span>🪜 Звуки тапа</span>
                                 <b id="val-tap" style="color: #fff;">80%</b>
                             </div>
-                            <input type="range" id="slider-tap" min="0" max="1" step="0.05" value="0.8" style="width: 100%; accent-color: #f1c40f; cursor: pointer;">
+                            <input type="range" id="slider-tap" min="0" max="1" step="0.05" value="0.8"
+                                style="width: 100%; accent-color: #f1c40f; cursor: pointer;">
                         </div>
 
                         <div>
@@ -653,7 +933,8 @@
                                 <span>📻 Бас колонки</span>
                                 <b id="val-speaker" style="color: #fff;">80%</b>
                             </div>
-                            <input type="range" id="slider-speaker" min="0" max="1" step="0.05" value="0.8" style="width: 100%; accent-color: #3498db; cursor: pointer;">
+                            <input type="range" id="slider-speaker" min="0" max="1" step="0.05" value="0.8"
+                                style="width: 100%; accent-color: #3498db; cursor: pointer;">
                         </div>
 
                         <div>
@@ -661,25 +942,33 @@
                                 <span>⚪ Удар шаров</span>
                                 <b id="val-newton" style="color: #fff;">80%</b>
                             </div>
-                                <input type="range" id="slider-newton" min="0" max="1" step="0.05" value="0.8" style="width: 100%; accent-color: #9b59b6; color-scheme: dark; cursor: pointer;">                        </div>
+                            <input type="range" id="slider-newton" min="0" max="1" step="0.05" value="0.8"
+                                style="width: 100%; accent-color: #9b59b6; color-scheme: dark; cursor: pointer;">
+                        </div>
 
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
                                 <span>🔔 Награды и эффекты</span>
                                 <b id="val-sfx" style="color: #fff;">90%</b>
                             </div>
-                            <input type="range" id="slider-sfx" min="0" max="1" step="0.05" value="0.9" style="width: 100%; accent-color: #2ecc71; cursor: pointer;">
+                            <input type="range" id="slider-sfx" min="0" max="1" step="0.05" value="0.9"
+                                style="width: 100%; accent-color: #2ecc71; cursor: pointer;">
                         </div>
 
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px solid #34495e;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px solid #34495e;">
                             <span>📳 Вибрация (телефон)</span>
-                            <input type="checkbox" id="toggle-vibrate" checked style="width: 18px; height: 18px; accent-color: #2ecc71; cursor: pointer;">
+                            <input type="checkbox" id="toggle-vibrate" checked
+                                style="width: 18px; height: 18px; accent-color: #2ecc71; cursor: pointer;">
                         </div>
                     </div>
 
-                    <div style="margin-top: 16px; text-align: center; border-top: 1px solid #34495e; padding-top: 10px;">
-                        <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 6px;">Космическая Стремянка v1.0.0</div>
-                        <button onclick="alert('Сообщество игры и поддержка: vk.com/your_game_group')" style="background: rgba(255,255,255,0.06); border: 1px solid #7f8c8d; color: #bdc3c7; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;">
+                    <div
+                        style="margin-top: 16px; text-align: center; border-top: 1px solid #34495e; padding-top: 10px;">
+                        <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 6px;">Космическая Стремянка v1.0.0
+                        </div>
+                        <button onclick="alert('Сообщество игры и поддержка: vk.com/your_game_group')"
+                            style="background: rgba(255,255,255,0.06); border: 1px solid #7f8c8d; color: #bdc3c7; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;">
                             💬 Поддержка / Сообщество
                         </button>
                     </div>
@@ -688,95 +977,142 @@
 
             <!-- Универсальное окно кастомизации (Шары / Колонки) -->
             <div id="customization-modal" class="modal-overlay hidden" style="z-index: 28000;">
-                <div class="modal-card" style="max-width: 340px; width: 92%; border: 2px solid #3498db; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); padding: 16px;">
-                    <div class="modal-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 id="cust-title" style="color: #3498db; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">Настройка</h2>
+                <div class="modal-card"
+                    style="max-width: 340px; width: 92%; border: 2px solid #3498db; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); padding: 16px;">
+                    <div class="modal-header"
+                        style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 id="cust-title"
+                            style="color: #3498db; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">
+                            Настройка</h2>
                         <button id="btn-close-cust" class="modal-close-btn">&times;</button>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid #34495e; margin-bottom: 12px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid #34495e; margin-bottom: 12px;">
                         <div>
-                            <div style="font-size: 11px; color: #bdc3c7;">Уровень базы: <b id="cust-base-lvl" style="color: #fff;">0</b></div>
-                            <div style="font-size: 12px; font-weight: bold; color: #3498db; margin-top: 2px;" id="cust-base-power">Мощь: 0</div>
+                            <div style="font-size: 11px; color: #bdc3c7;">Уровень базы: <b id="cust-base-lvl"
+                                    style="color: #fff;">0</b></div>
+                            <div style="font-size: 12px; font-weight: bold; color: #3498db; margin-top: 2px;"
+                                id="cust-base-power">Мощь: 0</div>
                         </div>
-                        <button id="btn-cust-upgrade" style="background: #3498db; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Улучшить</button>
+                        <button id="btn-cust-upgrade"
+                            style="background: #3498db; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Улучшить</button>
                     </div>
 
-                    <div style="width: 100%; height: 140px; background: rgba(0,0,0,0.4); border: 1px solid #34495e; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; position: relative;">
-                        <img id="cust-preview-img" src="" style="max-width: 80%; max-height: 80%; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));">
-                        <div id="cust-equipped-badge" class="hidden" style="position: absolute; top: 8px; right: 8px; background: #27ae60; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: bold;">НАДЕТО</div>
+                    <div
+                        style="width: 100%; height: 140px; background: rgba(0,0,0,0.4); border: 1px solid #34495e; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; position: relative;">
+                        <img id="cust-preview-img" src=""
+                            style="max-width: 80%; max-height: 80%; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));">
+                        <div id="cust-equipped-badge" class="hidden"
+                            style="position: absolute; top: 8px; right: 8px; background: #27ae60; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: bold;">
+                            НАДЕТО</div>
                     </div>
 
                     <div style="text-align: center; margin-bottom: 16px;">
-                        <div id="cust-item-name" style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 4px;">Название</div>
-                        <div id="cust-item-rarity" style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">RARE</div>
-                        <div id="cust-item-desc" style="font-size: 12px; color: #bdc3c7; line-height: 1.3; min-height: 32px;">Описание баффа...</div>
+                        <div id="cust-item-name"
+                            style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 4px;">Название</div>
+                        <div id="cust-item-rarity"
+                            style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+                            RARE</div>
+                        <div id="cust-item-desc"
+                            style="font-size: 12px; color: #bdc3c7; line-height: 1.3; min-height: 32px;">Описание
+                            баффа...</div>
                     </div>
 
                     <div style="margin-bottom: 16px;">
-                        <button id="btn-cust-action" style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></button>
+                        <button id="btn-cust-action"
+                            style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></button>
                     </div>
 
-                    <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 6px; text-transform: uppercase;">Доступные скины:</div>
-                    <div id="cust-items-list" style="display: flex; gap: 8px; justify-content: center; align-items: center; overflow-x: auto; overflow-y: hidden; padding: 4px 0; box-sizing: border-box; scrollbar-width: none;"></div>
+                    <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 6px; text-transform: uppercase;">
+                        Доступные скины:</div>
+                    <div id="cust-items-list"
+                        style="display: flex; gap: 8px; justify-content: center; align-items: center; overflow-x: auto; overflow-y: hidden; padding: 4px 0; box-sizing: border-box; scrollbar-width: none;">
+                    </div>
                 </div>
             </div>
 
             <!-- Окно Удачи и Талисманов -->
             <div id="luck-modal" class="modal-overlay hidden" style="z-index: 28000;">
-                <div class="modal-card" style="max-width: 320px; width: 92%; border: 2px solid #2ecc71; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); padding: 18px;">
-                    <div class="modal-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #2ecc71; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">🍀 Твоя Удача</h2>
+                <div class="modal-card"
+                    style="max-width: 320px; width: 92%; border: 2px solid #2ecc71; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); padding: 18px;">
+                    <div class="modal-header"
+                        style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2
+                            style="color: #2ecc71; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">
+                            🍀 Твоя Удача</h2>
                         <button id="btn-close-luck" class="modal-close-btn">&times;</button>
                     </div>
 
-                    <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    <div
+                        style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 16px;">
                         <div id="modal-luck-image-container" style="display: none; width: 46px; height: 46px;">
-                            <img id="modal-luck-image" src="" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));">
+                            <img id="modal-luck-image" src=""
+                                style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));">
                         </div>
                         <div style="text-align: center;">
-                            <div style="font-size: 54px; color: #2ecc71; font-weight: bold; text-shadow: 0 0 20px rgba(46,204,113,0.5); line-height: 1;" id="luck-total-val-modal">0</div>
-                            <div style="font-size: 11px; color: #bdc3c7; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">Общий показатель</div>
+                            <div style="font-size: 54px; color: #2ecc71; font-weight: bold; text-shadow: 0 0 20px rgba(46,204,113,0.5); line-height: 1;"
+                                id="luck-total-val-modal">0</div>
+                            <div
+                                style="font-size: 11px; color: #bdc3c7; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">
+                                Общий показатель</div>
                         </div>
                     </div>
 
-                    <div style="background: rgba(0,0,0,0.3); border: 1px solid #34495e; border-radius: 10px; padding: 12px; margin-bottom: 16px; font-size: 12px; color: #ecf0f1; line-height: 1.5;">
+                    <div
+                        style="background: rgba(0,0,0,0.3); border: 1px solid #34495e; border-radius: 10px; padding: 12px; margin-bottom: 16px; font-size: 12px; color: #ecf0f1; line-height: 1.5;">
                         <b style="color: #2ecc71;">На что влияет Удача:</b><br>
                         <span style="color: #f1c40f;">•</span> Увеличивает шанс дропа кейсов.<br>
                         <span style="color: #f1c40f;">•</span> Увеличивает количество гаек в кейсах.<br>
                         <span style="color: #f1c40f;">•</span> Повышает шанс на Epic и Leg скины.
                     </div>
 
-                    <h3 style="font-size: 13px; color: #fff; margin-bottom: 8px; border-bottom: 1px solid #34495e; padding-bottom: 4px;">Из чего складывается:</h3>
-                    <div id="luck-modifiers-list" style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; margin-bottom: 18px; color: #bdc3c7;"></div>
+                    <h3
+                        style="font-size: 13px; color: #fff; margin-bottom: 8px; border-bottom: 1px solid #34495e; padding-bottom: 4px;">
+                        Из чего складывается:</h3>
+                    <div id="luck-modifiers-list"
+                        style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; margin-bottom: 18px; color: #bdc3c7;">
+                    </div>
 
                     <h3 style="font-size: 13px; color: #fff; margin-bottom: 8px;">Коллекция талисманов:</h3>
-                    <div id="luck-talismans-list" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: #2ecc71 transparent;"></div>
+                    <div id="luck-talismans-list"
+                        style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: #2ecc71 transparent;">
+                    </div>
                 </div>
             </div>
 
             <!-- Модальное окно благодарности за покупку -->
             <div id="thank-you-modal" class="modal-overlay hidden" style="z-index: 30000;">
-                <div class="modal-card" style="max-width: 320px; width: 92%; height: auto !important; min-height: auto !important; text-align: center; border: 2px solid #f1c40f; border-radius: 20px; padding: 22px 18px 18px 18px; background: radial-gradient(circle, #2c3e50 0%, #151922 100%); box-shadow: 0 0 40px rgba(241, 196, 15, 0.45);">
-                    
-                    <!-- Блок маскота на максимум свободного пространства -->
-                    <div style="width: 100%; height: 185px; margin: 0 auto 10px auto; position: relative; display: flex; align-items: center; justify-content: center;">
-                        <img id="thank-img" src="assets/mascot.webp" style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(241, 196, 15, 0.4));" onerror="this.style.display='none'; document.getElementById('thank-fallback').style.display='flex';">
-                        <div id="thank-fallback" style="display: none; width: 90px; height: 90px; border-radius: 50%; background: rgba(241, 196, 15, 0.15); border: 2px solid #f1c40f; align-items: center; justify-content: center; font-size: 42px;">
+                <div class="modal-card"
+                    style="max-width: 320px; width: 92%; height: auto !important; min-height: auto !important; text-align: center; border: 2px solid #f1c40f; border-radius: 20px; padding: 22px 18px 18px 18px; background: radial-gradient(circle, #2c3e50 0%, #151922 100%); box-shadow: 0 0 40px rgba(241, 196, 15, 0.45);">
+
+                    <div
+                        style="width: 100%; height: 185px; margin: 0 auto 10px auto; position: relative; display: flex; align-items: center; justify-content: center;">
+                        <img id="thank-img" src="assets/mascot.webp"
+                            style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(241, 196, 15, 0.4));"
+                            onerror="this.style.display='none'; document.getElementById('thank-fallback').style.display='flex';">
+                        <div id="thank-fallback"
+                            style="display: none; width: 90px; height: 90px; border-radius: 50%; background: rgba(241, 196, 15, 0.15); border: 2px solid #f1c40f; align-items: center; justify-content: center; font-size: 42px;">
                             ⭐
                         </div>
                     </div>
 
-                    <h2 id="thank-title" style="color: #f1c40f; font-size: 19px; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">ЗОЛОТО ЗАЧИСЛЕНО!</h2>
-                    <div id="thank-desc" style="font-size: 12px; color: #ecf0f1; margin-bottom: 14px; line-height: 1.4;">
+                    <h2 id="thank-title"
+                        style="color: #f1c40f; font-size: 19px; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                        ЗОЛОТО ЗАЧИСЛЕНО!</h2>
+                    <div id="thank-desc"
+                        style="font-size: 12px; color: #ecf0f1; margin-bottom: 14px; line-height: 1.4;">
                         Покупка успешно совершена!
                     </div>
 
-                    <div style="background: rgba(241, 196, 15, 0.15); border: 1px dashed #f1c40f; border-radius: 10px; padding: 8px; margin-bottom: 16px;">
-                        <span style="font-size: 12px; color: #f1c40f; font-weight: bold;">👑 СТАТУС VIP АКТИВИРОВАН</span>
+                    <div
+                        style="background: rgba(241, 196, 15, 0.15); border: 1px dashed #f1c40f; border-radius: 10px; padding: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 12px; color: #f1c40f; font-weight: bold;">👑 СТАТУС VIP
+                            АКТИВИРОВАН</span>
                     </div>
 
-                    <button id="btn-close-thank" style="width: 100%; background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241, 196, 15, 0.35);">
+                    <button id="btn-close-thank"
+                        style="width: 100%; background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241, 196, 15, 0.35);">
                         ОТЛИЧНО!
                     </button>
                 </div>
@@ -784,26 +1120,34 @@
 
             <!-- Полноэкранная открытка покорения рубежа -->
             <div id="milestone-modal" class="modal-overlay hidden" style="z-index: 28000;">
-                <div class="modal-card" style="max-width: 320px; width: 92%; padding: 0; border: 2px solid #f1c40f; border-radius: 18px; overflow: hidden; background: #161a23; text-align: center; box-shadow: 0 0 35px rgba(241, 196, 15, 0.35);">
+                <div class="modal-card"
+                    style="max-width: 320px; width: 92%; padding: 0; border: 2px solid #f1c40f; border-radius: 18px; overflow: hidden; background: #161a23; text-align: center; box-shadow: 0 0 35px rgba(241, 196, 15, 0.35);">
                     <div style="width: 100%; height: 210px; position: relative; background: #0c0e14; overflow: hidden;">
                         <img id="ms-img" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
-                        <div id="ms-placeholder-icon" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 64px;">🚀</div>
-                        <div id="ms-stamp" style="position: absolute; bottom: 10px; right: 10px; background: rgba(231, 76, 60, 0.95); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; transform: rotate(-5deg); border: 1px dashed #fff; letter-spacing: 0.5px;">
+                        <div id="ms-placeholder-icon"
+                            style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 64px;">
+                            🚀</div>
+                        <div id="ms-stamp"
+                            style="position: absolute; bottom: 10px; right: 10px; background: rgba(231, 76, 60, 0.95); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; transform: rotate(-5deg); border: 1px dashed #fff; letter-spacing: 0.5px;">
                             ПОКОРЕНО
                         </div>
                     </div>
 
                     <div style="padding: 16px 18px 18px 18px;">
                         <h2 id="ms-title" style="color: #f1c40f; font-size: 19px; margin: 0 0 6px 0;">100 м — Крыши</h2>
-                        <p id="ms-desc" style="font-size: 12px; color: #bdc3c7; line-height: 1.4; margin: 0 0 16px 0; min-height: 34px;">
+                        <p id="ms-desc"
+                            style="font-size: 12px; color: #bdc3c7; line-height: 1.4; margin: 0 0 16px 0; min-height: 34px;">
                             Выше только птицы и цены на аренду.
                         </p>
 
-                        <div id="ms-buttons-box" style="display: flex; flex-direction: column; gap: 8px; pointer-events: none; opacity: 0.5; transition: opacity 0.3s ease;">
-                            <button id="btn-ms-claim-x2" style="background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241, 196, 15, 0.4);">
+                        <div id="ms-buttons-box"
+                            style="display: flex; flex-direction: column; gap: 8px; pointer-events: none; opacity: 0.5; transition: opacity 0.3s ease;">
+                            <button id="btn-ms-claim-x2"
+                                style="background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241, 196, 15, 0.4);">
                                 ▶ Удвоить за рекламу (+0 🟡)
                             </button>
-                            <button id="btn-ms-claim-normal" style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+                            <button id="btn-ms-claim-normal"
+                                style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer;">
                                 Забрать обычную (+0 🟡)
                             </button>
                         </div>
@@ -813,48 +1157,72 @@
 
             <!-- Модальное окно Лидерборда -->
             <div id="leaderboard-modal" class="modal-overlay hidden" style="z-index: 25000;">
-                <div class="modal-card" style="max-width: 330px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border: 2px solid #f1c40f; border-radius: 16px;">
-                    <div class="modal-header" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="color: #f1c40f; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">🏆 Зал Славы</h2>
+                <div class="modal-card"
+                    style="max-width: 330px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border: 2px solid #f1c40f; border-radius: 16px;">
+                    <div class="modal-header"
+                        style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="color: #f1c40f; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">
+    <img src="assets/cup1.webp" class="ui-ico-title"> Зал Славы
+</h2>
                         <button id="btn-close-leaderboard" class="modal-close-btn">&times;</button>
                     </div>
 
                     <div style="display: flex; gap: 6px; margin-bottom: 10px;">
-                        <button id="lb-tab-all" class="inv-tab active" style="flex: 1; padding: 6px; font-size: 11px;">За всё время</button>
-                        <button id="lb-tab-week" class="inv-tab" style="flex: 1; padding: 6px; font-size: 11px;">Сезон (Неделя)</button>
+                        <button id="lb-tab-all" class="inv-tab active"
+                            style="flex: 1; padding: 6px; font-size: 11px;">За всё время</button>
+                        <button id="lb-tab-week" class="inv-tab" style="flex: 1; padding: 6px; font-size: 11px;">Сезон
+                            (Неделя)</button>
                     </div>
 
                     <div style="font-size: 11px; color: #bdc3c7; text-align: center; margin-bottom: 10px;">
                         <span id="lb-season-desc">Общий рейтинг покорителей космоса</span>
                     </div>
 
-                    <div id="leaderboard-list" class="modal-scroll-list" style="display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; padding-right: 4px;"></div>
+                    <div id="leaderboard-list" class="modal-scroll-list"
+                        style="display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; padding-right: 4px;">
+                    </div>
 
-                    <div id="lb-player-card" style="margin-top: 10px; padding: 8px 10px; background: rgba(241, 196, 15, 0.15); border: 2px solid #f1c40f; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;"></div>
+                    <div id="lb-player-card"
+                        style="margin-top: 10px; padding: 8px 10px; background: rgba(241, 196, 15, 0.15); border: 2px solid #f1c40f; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+                    </div>
                 </div>
             </div>
-            
+
             <!-- Окно рулетки кейса -->
-            <div id="gachaModal" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 20000; justify-content: center; align-items: center; flex-direction: column;">
-                <h2 id="gachaTitle" style="color: white; font-family: sans-serif; margin-bottom: 20px;">Открытие кейса...</h2>
+            <div id="gachaModal"
+                style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 20000; justify-content: center; align-items: center; flex-direction: column;">
+                <h2 id="gachaTitle" style="color: white; font-family: sans-serif; margin-bottom: 20px;">Открытие
+                    кейса...</h2>
 
-                <div style="position: relative; width: 120px; height: 300px; background: #222; border: 4px solid #444; border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
-                    <div id="gachaTape" style="width: 100%; display: flex; flex-direction: column; align-items: center; transform: translateY(0px);"></div>
-                    <div style="position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: rgba(255,0,0,0.5); transform: translateY(-50%); pointer-events: none;"></div>
-                    <div style="position: absolute; top: 50%; left: -5px; width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 15px solid red; transform: translateY(-50%);"></div>
-                    <div style="position: absolute; top: 50%; right: -5px; width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 15px solid red; transform: translateY(-50%);"></div>
-                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #111 0%, transparent 20%, transparent 80%, #111 100%); pointer-events: none;"></div>
+                <div
+                    style="position: relative; width: 120px; height: 300px; background: #222; border: 4px solid #444; border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+                    <div id="gachaTape"
+                        style="width: 100%; display: flex; flex-direction: column; align-items: center; transform: translateY(0px);">
+                    </div>
+                    <div
+                        style="position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: rgba(255,0,0,0.5); transform: translateY(-50%); pointer-events: none;">
+                    </div>
+                    <div
+                        style="position: absolute; top: 50%; left: -5px; width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 15px solid red; transform: translateY(-50%);">
+                    </div>
+                    <div
+                        style="position: absolute; top: 50%; right: -5px; width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 15px solid red; transform: translateY(-50%);">
+                    </div>
+                    <div
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #111 0%, transparent 20%, transparent 80%, #111 100%); pointer-events: none;">
+                    </div>
                 </div>
 
-                <button id="gachaClaimBtn" style="display: none; margin-top: 20px; padding: 10px 30px; font-size: 18px; font-weight: bold; background: #f1c40f; border: none; border-radius: 5px; cursor: pointer;">Забрать</button>
+                <button id="gachaClaimBtn"
+                    style="display: none; margin-top: 20px; padding: 10px 30px; font-size: 18px; font-weight: bold; background: #f1c40f; border: none; border-radius: 5px; cursor: pointer;">Забрать</button>
             </div>
-
         </div>
     </div>
 
-<!-- Модальное окно настройки Киберпанка -->
+    <!-- Модальное окно настройки Киберпанка -->
     <div id="cyber-modal" class="modal-overlay hidden" style="z-index: 26000;">
-        <div class="modal-card" style="max-width: 350px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; border: 2px solid #00ffff;">
+        <div class="modal-card"
+            style="max-width: 350px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; border: 2px solid #00ffff;">
             <div class="modal-header" style="margin-bottom: 8px;">
                 <h2 style="font-size: 17px; margin: 0; color: #00ffff;">🦾 Слот Киберпанка</h2>
                 <button id="btn-close-cyber" class="modal-close-btn">&times;</button>
@@ -867,48 +1235,75 @@
                 <button class="cyber-tab" data-tab="newton">⚪ Шарики</button>
                 <button class="cyber-tab" data-tab="talismans">🧿 Брелоки</button>
             </div>
-            <div id="cyber-selection-list" style="overflow-y: auto; flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-right: 2px;"></div>
-            <button id="btn-confirm-cyber" style="margin-top: 10px; width: 100%; padding: 8px; background: #00ffff; color: #111; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">
+            <div id="cyber-selection-list"
+                style="overflow-y: auto; flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-right: 2px;">
+            </div>
+            <button id="btn-confirm-cyber"
+                style="margin-top: 10px; width: 100%; padding: 8px; background: #00ffff; color: #111; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">
                 Установить имплант
             </button>
         </div>
     </div>
 
     <!-- Модальное окно настройки Мимика -->
-<div id="mimic-modal" class="modal-overlay hidden" style="z-index: 26000;">
-    <div class="modal-card" style="max-width: 350px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; border: 2px solid #8c7ae6;">
-        <div class="modal-header" style="margin-bottom: 8px;">
-            <h2 style="font-size: 17px; margin: 0; color: #8c7ae6;">🎭 Способности Мимика</h2>
-            <button id="btn-close-mimic" class="modal-close-btn">&times;</button>
-        </div>
-
-        <div style="font-size: 11px; color: #bdc3c7; margin-bottom: 8px; text-align: center;">
-            Выберите 2 любые открытые лестницы для копирования их пассивок:
-        </div>
-
-        <!-- 2 активных слота -->
-        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <div id="mimic-slot-0" style="flex: 1; background: rgba(140, 122, 230, 0.15); border: 2px solid #8c7ae6; border-radius: 8px; padding: 6px; text-align: center; font-size: 11px;">
-                <div style="color: #8c7ae6; font-weight: bold; margin-bottom: 2px;">Слот 1</div>
-                <b class="slot-name" style="color: #fff;">—</b>
+    <div id="mimic-modal" class="modal-overlay hidden" style="z-index: 26000;">
+        <div class="modal-card"
+            style="max-width: 350px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; border: 2px solid #8c7ae6;">
+            <div class="modal-header" style="margin-bottom: 8px;">
+                <h2 style="font-size: 17px; margin: 0; color: #8c7ae6;">🎭 Способности Мимика</h2>
+                <button id="btn-close-mimic" class="modal-close-btn">&times;</button>
             </div>
-            <div id="mimic-slot-1" style="flex: 1; background: rgba(140, 122, 230, 0.15); border: 2px solid #8c7ae6; border-radius: 8px; padding: 6px; text-align: center; font-size: 11px;">
-                <div style="color: #8c7ae6; font-weight: bold; margin-bottom: 2px;">Слот 2</div>
-                <b class="slot-name" style="color: #fff;">—</b>
+
+            <div style="font-size: 11px; color: #bdc3c7; margin-bottom: 8px; text-align: center;">
+                Выберите 2 любые открытые лестницы для копирования их пассивок:
             </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                <div id="mimic-slot-0"
+                    style="flex: 1; background: rgba(140, 122, 230, 0.15); border: 2px solid #8c7ae6; border-radius: 8px; padding: 6px; text-align: center; font-size: 11px;">
+                    <div style="color: #8c7ae6; font-weight: bold; margin-bottom: 2px;">Слот 1</div>
+                    <b class="slot-name" style="color: #fff;">—</b>
+                </div>
+                <div id="mimic-slot-1"
+                    style="flex: 1; background: rgba(140, 122, 230, 0.15); border: 2px solid #8c7ae6; border-radius: 8px; padding: 6px; text-align: center; font-size: 11px;">
+                    <div style="color: #8c7ae6; font-weight: bold; margin-bottom: 2px;">Слот 2</div>
+                    <b class="slot-name" style="color: #fff;">—</b>
+                </div>
+            </div>
+
+            <div id="mimic-selection-list"
+                style="overflow-y: auto; flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-right: 2px;">
+            </div>
+
+            <button id="btn-confirm-mimic"
+                style="margin-top: 10px; width: 100%; padding: 8px; background: #8c7ae6; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">
+                Применить способности
+            </button>
         </div>
-
-        <!-- Сетка доступных способностей -->
-        <div id="mimic-selection-list" style="overflow-y: auto; flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-right: 2px;"></div>
-
-        <button id="btn-confirm-mimic" style="margin-top: 10px; width: 100%; padding: 8px; background: #8c7ae6; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">
-            Применить способности
-        </button>
     </div>
-</div>
+    <!-- Универсальное окно подтверждения покупки за золото -->
+    <div id="confirm-purchase-modal" class="modal-overlay hidden" style="z-index: 35000;">
+        <div class="modal-card"
+            style="max-width: 290px; width: 90%; height: auto !important; min-height: auto !important; padding: 18px; text-align: center; border: 2px solid #f1c40f; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #151922 100%); box-shadow: 0 0 25px rgba(241, 196, 15, 0.35);">
+            <h3 id="confirm-title"
+                style="color: #f1c40f; font-size: 16px; margin: 0 0 8px 0; text-transform: uppercase;">Подтверждение
+            </h3>
+            <p id="confirm-desc" style="color: #bdc3c7; font-size: 12px; margin: 0 0 14px 0; line-height: 1.4;">
+                Потратить золото?</p>
+            <div style="display: flex; gap: 8px;">
+                <button id="btn-confirm-cancel"
+                    style="flex: 1; background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;">
+                    Отмена
+                </button>
+                <button id="btn-confirm-yes"
+                    style="flex: 1; background: linear-gradient(135deg, #f1c40f, #e67e22); border: none; color: #111; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;">
+                    Купить (<span id="confirm-cost">39 <img src="assets/golden_nut.webp" class="ui-ico"></span>)
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="game.js"></script>
-
-
 </body>
+
 </html>

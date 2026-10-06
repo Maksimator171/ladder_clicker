@@ -5,6 +5,10 @@ let lastRenderedHeight = -1;
 let counterScale = 1.0;
 let dangerFlash = 0.0;
 
+let maxAltitudeReached = 0;
+let unlockedTrackerCheckpoints = [0];
+let markerBounce = 1.0;
+
 let settingsState = {
     musicVol: 0.3,
     tapVol: 0.8,
@@ -57,6 +61,41 @@ function showThankYouModal(title, desc) {
     if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
 }
 
+// Универсальное окно подтверждения покупки за золото
+let pendingConfirmAction = null;
+
+function showConfirmPurchase(title, desc, cost, onConfirm) {
+    const modal = document.getElementById('confirm-purchase-modal');
+    if (!modal) return;
+    document.getElementById('confirm-title').innerText = title;
+    document.getElementById('confirm-desc').innerText = desc;
+    document.getElementById('confirm-cost').innerHTML = `${cost} <img src="assets/golden_nut.webp" class="ui-ico">`;
+    pendingConfirmAction = onConfirm;
+    modal.classList.remove('hidden');
+    if (typeof AudioEngine !== 'undefined') AudioEngine.play('click', 0.5);
+}
+
+// Привязка кнопок окна подтверждения
+const btnConfirmYes = document.getElementById('btn-confirm-yes');
+const btnConfirmCancel = document.getElementById('btn-confirm-cancel');
+if (btnConfirmYes) {
+    btnConfirmYes.onclick = () => {
+        const modal = document.getElementById('confirm-purchase-modal');
+        if (modal) modal.classList.add('hidden');
+        if (typeof pendingConfirmAction === 'function') {
+            pendingConfirmAction();
+            pendingConfirmAction = null;
+        }
+    };
+}
+if (btnConfirmCancel) {
+    btnConfirmCancel.onclick = () => {
+        const modal = document.getElementById('confirm-purchase-modal');
+        if (modal) modal.classList.add('hidden');
+        pendingConfirmAction = null;
+    };
+}
+
 // === МОНЕТИЗАЦИЯ И ДОНАТ ===
 const donateModal = document.getElementById('donate-modal');
 const btnOpenDonate = document.getElementById('btn-open-donate');
@@ -101,7 +140,7 @@ if (btnBuyStarter) {
 
         particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: '👑 НАБОР НОВИЧКА ПОЛУЧЕН!', color: '#f1c40f', alpha: 2.5, speed: 2 });
 
-        uiNuts.innerText = `🔩 ${nuts}`;
+        uiNuts.innerText = `${nuts}`;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
         starterModal.classList.add('hidden');
         if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
@@ -376,6 +415,198 @@ function checkHeightMilestones() {
     }
 }
 
+// === КУСОЧНО-ЛИНЕЙНАЯ ЛОГИКА ШКАЛЫ (7 ТОЧЕК, 6 РАВНЫХ СЕГМЕНТОВ) ===
+const TRACKER_STAGES = [0, 250, 1000, 10000, 100000, 1000000, 10000000];
+
+// === ЛОР И ДАННЫЕ ЛОКАЦИЙ ДЛЯ КАРТОЧКИ «БОРТОВОЙ ЖУРНАЛ» ===
+const STAGES_LORE = [
+    {
+        id: 0, height: 0, name: 'Хрущевка', image: 'assets/loc_0.webp',
+        desc: 'Родной двор. Панельные джунгли и шуршание старых деревянных перекладин. Здесь начинается твой бесконечный путь.'
+    },
+    {
+        id: 1, height: 250, name: 'Крыши', image: 'assets/loc_250.webp',
+        desc: 'Выше антенн, голубей и городских пробок. Первая сотня метров за спиной, а воздух вокруг становится свежее.'
+    },
+    {
+        id: 2, height: 1000, name: 'Грозовой Фронт', image: 'assets/loc_1000.webp',
+        desc: 'Стены из плотных туч, ослепительные вспышки молний и запах озона. Перекладины мокрые и скользкие, держись крепче!'
+    },
+    {
+        id: 3, height: 10000, name: 'Стратосфера', image: 'assets/loc_10000.webp',
+        desc: 'Край атмосферы Земли. Небо темнеет до глубокого ультрамарина, а далеко внизу отчетливо виден синий изгиб планеты.'
+    },
+    {
+        id: 4, height: 100000, name: 'Открытый Космос', image: 'assets/loc_100000.webp',
+        desc: 'Орбита редких спутников и вечная молчаливая тишина. Гравитация сдалась — только лестница ведет все выше.'
+    },
+    {
+        id: 5, height: 1000000, name: 'Млечный Путь', image: 'assets/loc_1000000.webp',
+        desc: 'Спирали далеких галактик, мерцание туманностей и звездная пыль. Миллион метров над земными проблемами.'
+    },
+    {
+        id: 6, height: 10000000, name: 'Бескрайний простор', image: 'assets/loc_10000000.webp',
+        desc: 'Горизонт событий и край ведомой Вселенной. Абсолютная высота, где время сливается с космическим пространством.'
+    }
+];
+
+let activeLocationStageCard = null;
+
+function showLocationCard(stageIndex, checkpointEl) {
+    const card = document.getElementById('location-card');
+    if (!card) return;
+
+    if (activeLocationStageCard === stageIndex && !card.classList.contains('hidden')) {
+        hideLocationCard();
+        return;
+    }
+
+    activeLocationStageCard = stageIndex;
+    const lore = STAGES_LORE[stageIndex];
+    if (!lore) return;
+
+    const isUnlocked = maxAltitudeReached >= lore.height;
+
+    const imgEl = document.getElementById('loc-card-img');
+    const badgeEl = document.getElementById('loc-card-badge');
+    const titleEl = document.getElementById('loc-card-title');
+    const heightEl = document.getElementById('loc-card-height');
+    const descEl = document.getElementById('loc-card-desc');
+
+    if (isUnlocked) {
+        if (imgEl) {
+            imgEl.src = lore.image;
+            imgEl.style.filter = 'none';
+        }
+        if (badgeEl) {
+            badgeEl.innerText = 'ИССЛЕДОВАНО';
+            badgeEl.style.background = 'rgba(46, 204, 113, 0.85)';
+            badgeEl.style.color = '#fff';
+            badgeEl.style.border = '1px solid #2ecc71';
+        }
+        if (titleEl) {
+            titleEl.innerText = lore.name;
+            titleEl.style.color = '#00d2ff';
+        }
+        if (heightEl) {
+            heightEl.innerText = `Высота: ${lore.height.toLocaleString('ru-RU')} м`;
+            heightEl.style.color = '#f1c40f';
+        }
+        if (descEl) {
+            descEl.innerText = lore.desc;
+        }
+    } else {
+        if (imgEl) {
+            imgEl.src = lore.image;
+            imgEl.style.filter = 'brightness(0.12) grayscale(1) drop-shadow(0 0 5px rgba(231, 76, 60, 0.5))';
+        }
+        if (badgeEl) {
+            badgeEl.innerText = 'СИГНАЛ ПОТЕРЯН';
+            badgeEl.style.background = 'rgba(231, 76, 60, 0.85)';
+            badgeEl.style.color = '#fff';
+            badgeEl.style.border = '1px solid #e74c3c';
+        }
+        if (titleEl) {
+            titleEl.innerText = 'Неизвестный сектор';
+            titleEl.style.color = '#e74c3c';
+        }
+        const needed = Math.max(0, Math.ceil(lore.height - currentHeight));
+        if (heightEl) {
+            heightEl.innerText = `Цель: ${lore.height.toLocaleString('ru-RU')} м (Осталось: ${needed.toLocaleString('ru-RU')} м)`;
+            heightEl.style.color = '#e67e22';
+        }
+        if (descEl) {
+            descEl.innerText = 'Датчики фиксируют аномалии на этой высоте. Продолжайте подъем, чтобы расшифровать данные.';
+        }
+    }
+
+    if (checkpointEl) {
+        const cpRect = checkpointEl.getBoundingClientRect();
+        const centerY = cpRect.top + cpRect.height / 2;
+        card.style.top = `${centerY}px`;
+    }
+
+    card.classList.remove('hidden');
+    AudioEngine.play('click', 0.5);
+}
+
+function hideLocationCard() {
+    const card = document.getElementById('location-card');
+    if (card) card.classList.add('hidden');
+    activeLocationStageCard = null;
+}
+
+function getStageProgress(meters) {
+    if (!meters || meters <= 0) return 0;
+    const numSegments = TRACKER_STAGES.length - 1; // 6 сегментов
+    const segmentWeight = 100 / numSegments;
+
+    for (let i = 0; i < numSegments; i++) {
+        const start = TRACKER_STAGES[i];
+        const end = TRACKER_STAGES[i + 1];
+        if (meters < end) {
+            const localProgress = (meters - start) / (end - start);
+            return (i * segmentWeight) + (localProgress * segmentWeight);
+        }
+    }
+    return 100;
+}
+
+function updateAltitudeTrackerUI() {
+    maxAltitudeReached = Math.max(maxAltitudeReached, currentHeight);
+
+    // Заливка и ползунок привязаны к текущей высоте (currentHeight)
+    const currentPct = Math.min(100, Math.max(0, getStageProgress(currentHeight)));
+
+    const trackFill = document.getElementById('altitude-track-fill');
+    const marker = document.getElementById('altitude-marker');
+
+    if (trackFill) trackFill.style.height = `${currentPct}%`;
+    if (marker) {
+        marker.style.bottom = `${currentPct}%`;
+        if (Math.abs(markerBounce - 1.0) > 0.001) {
+            marker.style.transform = `translate(-50%, 50%) scale(${markerBounce.toFixed(3)})`;
+        } else {
+            marker.style.transform = `translate(-50%, 50%)`;
+        }
+    }
+
+    // Статус открытых иконок рассчитывается строго от maxAltitudeReached
+    let nextTargetStage = -1;
+    for (let i = 0; i < TRACKER_STAGES.length; i++) {
+        if (maxAltitudeReached < TRACKER_STAGES[i]) {
+            nextTargetStage = i;
+            break;
+        }
+    }
+
+    const checkpoints = document.querySelectorAll('.altitude-checkpoint');
+    checkpoints.forEach(cp => {
+        const stg = parseInt(cp.dataset.stage, 10);
+        if (isNaN(stg)) return;
+
+        const thresh = TRACKER_STAGES[stg];
+        if (maxAltitudeReached >= thresh) {
+            if (!unlockedTrackerCheckpoints.includes(stg)) {
+                unlockedTrackerCheckpoints.push(stg);
+                cp.classList.add('unlock-burst');
+                AudioEngine.play('win', 0.8);
+                setTimeout(() => cp.classList.remove('unlock-burst'), 650);
+            }
+            cp.classList.remove('locked', 'target-pulse');
+            cp.classList.add('unlocked');
+        } else {
+            cp.classList.remove('unlocked', 'unlock-burst');
+            cp.classList.add('locked');
+            if (stg === nextTargetStage) {
+                cp.classList.add('target-pulse');
+            } else {
+                cp.classList.remove('target-pulse');
+            }
+        }
+    });
+}
+
 function showMilestoneModal(m) {
     const modal = document.getElementById('milestone-modal');
     const title = document.getElementById('ms-title');
@@ -567,6 +798,45 @@ let isPointerDown = false;  // Для свайпов Ледяной
 const ufoGiftImg = new Image();
 ufoGiftImg.src = 'assets/ufo_gift.webp';
 
+function claimUfoGift(targetX, targetY) {
+    if (!ufoGift.active) return;
+    ufoGift.active = false;
+
+    let bonusTxt = "";
+    if (ufoGift.rewardType === 0) {
+        addNuts(250);
+        bonusTxt = "👽 +250 🔩";
+        AudioEngine.play('gaiki', 0.8);
+    } else if (ufoGift.rewardType === 1) {
+        userCases.wooden = (userCases.wooden || 0) + 1;
+        boxesOwned = userCases.wooden;
+        if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+        bonusTxt = "👽 +📦";
+        AudioEngine.play('case_drop_by_click', 0.9);
+    } else if (ufoGift.rewardType === 2) {
+        userCases.iron = (userCases.iron || 0) + 1;
+        bonusTxt = "👽 +🧰";
+        AudioEngine.play('win', 0.85);
+    } else {
+        goldenNuts += 25;
+        bonusTxt = "👽 +25 🟡";
+        AudioEngine.play('pickupCoin5', 1.0);
+    }
+
+    particles.push({
+        x: targetX,
+        y: targetY,
+        text: bonusTxt,
+        color: '#4cd137',
+        font: 'bold 28px sans-serif',
+        alpha: 2.2,
+        speed: 1.5
+    });
+
+    shakeTime = Math.max(shakeTime, 8);
+    saveGame();
+}
+
 let ufoGift = {
     active: false,
     x: 0, y: 0,
@@ -628,10 +898,10 @@ function addNuts(amount) {
     } else {
         nuts += amount;
     }
-    uiNuts.innerText = `🔩 ${nuts}`;
+    uiNuts.innerText = `${nuts}`;
 
     const topGoldDisplay = document.getElementById('gold-display');
-    if (topGoldDisplay) topGoldDisplay.innerText = `🟡 ${goldenNuts}`;
+    if (topGoldDisplay) topGoldDisplay.innerText = `${goldenNuts}`;
 }
 
 // Программный генератор идеального хромированного шара Ньютона
@@ -1294,7 +1564,7 @@ let bgSpawnTimer = 0;
 let lastFrameTime = Date.now();
 
 // DOM Элементы
-const canvas = document.getElementById('gameCanvas');
+const canvas = document.getElementById('canvas') || document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const heightDisplay = document.getElementById('height-display');
 const locationDisplay = document.getElementById('location-name');
@@ -2308,20 +2578,26 @@ function renderCustomizationModal() {
         actionBtn.disabled = !canAfford;
 
         actionBtn.onclick = () => {
+            const processPurchase = () => {
+                if (isGold) {
+                    goldenNuts -= skinData.price;
+                } else {
+                    nuts -= skinData.price;
+                }
+                ownedList.push(selectedCustSkin);
+                equipItem(currentCustType, selectedCustSkin);
+                AudioEngine.play('gaiki', 0.8);
+                uiNuts.innerText = `${nuts}`;
+                renderCustomizationModal();
+                updateFieldIcons();
+                saveGame();
+            };
+
             if (isGold && goldenNuts >= skinData.price) {
-                goldenNuts -= skinData.price;
+                showConfirmPurchase('Покупка обвеса', `Купить "${skinData.name}" за ${skinData.price} 🟡?`, skinData.price, processPurchase);
             } else if (!isGold && nuts >= skinData.price) {
-                nuts -= skinData.price;
-            } else return;
-
-            ownedList.push(selectedCustSkin);
-            equipItem(currentCustType, selectedCustSkin);
-            AudioEngine.play('gaiki', 0.8);
-
-            uiNuts.innerText = `🔩 ${nuts}`;
-            renderCustomizationModal();
-            updateFieldIcons();
-            saveGame();
+                processPurchase();
+            }
         };
     }
 
@@ -2445,13 +2721,15 @@ function renderLuckModal() {
             btn.disabled = !canAfford;
             btn.onclick = () => {
                 if (goldenNuts >= item.price) {
-                    goldenNuts -= item.price;
-                    ownedTalismans.push(id);
-                    equipItem('talismans', id);
-                    AudioEngine.play('gaiki', 0.8);
-                    renderLuckModal();
-                    updateFieldIcons();
-                    saveGame();
+                    showConfirmPurchase('Новый талисман', `Купить талисман "${item.name}" за ${item.price} 🟡?`, item.price, () => {
+                        goldenNuts -= item.price;
+                        ownedTalismans.push(id);
+                        equipItem('talismans', id);
+                        AudioEngine.play('gaiki', 0.8);
+                        renderLuckModal();
+                        updateFieldIcons();
+                        saveGame();
+                    });
                 }
             };
             card.appendChild(btn);
@@ -2847,36 +3125,12 @@ function gameLoop() {
         ufoGift.progress += dt / 2400;
 
         if (ufoGift.progress >= 1.0) {
-            // Контейнер достиг лестницы — открываем!
-            ufoGift.active = false;
-            let bonusTxt = "";
-
-            if (ufoGift.rewardType === 0) {
-                addNuts(250); bonusTxt = "👽 +250 🔩"; AudioEngine.play('gaiki', 0.8);
-            } else if (ufoGift.rewardType === 1) {
-                userCases.wooden++; boxesOwned++;
-                if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-                bonusTxt = "👽 +📦"; AudioEngine.play('case_drop_by_click', 0.9);
-            } else if (ufoGift.rewardType === 2) {
-                userCases.iron++; bonusTxt = "👽 +🧰"; AudioEngine.play('win', 0.85);
-            } else {
-                goldenNuts += 25; bonusTxt = "👽 +25 🟡"; AudioEngine.play('pickupCoin5', 1.0);
-            }
-
-            // Мощная вспышка текста при открытии
-            particles.push({
-                x: ufoGift.targetX, y: ufoGift.targetY,
-                text: bonusTxt, color: '#4cd137', font: 'bold 28px sans-serif', alpha: 2.2, speed: 1.5
-            });
-            // Эффект удара об лестницу
-            shakeTime = Math.max(shakeTime, 8);
-
+            // ВМЕСТО КУЧИ СТРОК С addNuts И particles ВЫЗЫВАЕМ ЕДИНУЮ ФУНКЦИЮ:
+            claimUfoGift(ufoGift.targetX, ufoGift.targetY);
         } else {
             // Плавное замедление скорости при приближении к лестнице (EaseOut)
             const p = 1 - Math.pow(1 - ufoGift.progress, 3);
 
-            // Тряска "живого" контейнера: он сопротивляется лучу.
-            // Сильнее в начале пути, успокаивается у центра.
             const shakeStr = (1 - p) * 12;
             const shakeX = (Math.random() - 0.5) * shakeStr;
             const shakeY = (Math.random() - 0.5) * shakeStr;
@@ -2998,15 +3252,15 @@ function gameLoop() {
             btnClaimTimedBox.style.color = "#f1c40f";
         }
         const topGoldDisplay = document.getElementById('gold-display');
-        if (topGoldDisplay) topGoldDisplay.innerText = `🟡 ${goldenNuts}`;
+        if (topGoldDisplay) topGoldDisplay.innerText = `${goldenNuts}`;
     }
 
     updateActiveBuffsDisplay();
 
     const uiNutsEl = document.getElementById('nuts-display');
     const uiGoldEl = document.getElementById('gold-display');
-    if (uiNutsEl) uiNutsEl.innerText = `🔩 ${nuts >= 10000 ? (nuts / 1000).toFixed(1) + 'K' : Math.floor(nuts)}`;
-    if (uiGoldEl) uiGoldEl.innerText = `🟡 ${goldenNuts >= 10000 ? (goldenNuts / 1000).toFixed(1) + 'K' : Math.floor(goldenNuts)}`;
+    if (uiNutsEl) uiNutsEl.innerText = `${nuts >= 10000 ? (nuts / 1000).toFixed(1) + 'K' : Math.floor(nuts)}`;
+    if (uiGoldEl) uiGoldEl.innerText = `${goldenNuts >= 10000 ? (goldenNuts / 1000).toFixed(1) + 'K' : Math.floor(goldenNuts)}`;
 
     // === ИСПЫТАНИЕ НА 20 МИНУТ (РЕТРО-СКИН) ===
     const timerContainer = document.getElementById('retro-timer-container');
@@ -3091,6 +3345,10 @@ function gameLoop() {
         }
     }
 
+    // === UI АНИМАЦИЯ ШКАЛЫ ВЫСОТЫ (ALTITUDE TRACKER) ===
+    markerBounce += (1.0 - markerBounce) * 0.2;
+    updateAltitudeTrackerUI();
+
     requestAnimationFrame(gameLoop);
 }
 
@@ -3154,7 +3412,7 @@ function drawBackground() {
             ctx.save();
             ctx.globalAlpha = moonAlpha; // Применяем прозрачность ко всей Луне
 
-            const moonX = canvas.width * 0.82;
+            const moonX = canvas.width * 0.28;
             const moonY = 90;
 
             // Мягкое неоновое свечение
@@ -3998,25 +4256,32 @@ function drawDebris() {
 }
 
 // Проверка наград за достижение высоты
+// Проверка наград за достижение высоты
 function checkHeightUnlocks() {
     const unlocks = [
         { h: 1000, id: 'storm', name: 'Грозовой фронт' },
         { h: 10000, id: 'strato', name: 'Стратосфера' },
-        { h: 100000, id: 'cosmo', name: 'Космос' }
+        { h: 100000, id: 'cosmo', name: 'Космос' },
+        { h: 1000000, id: 'milkyway', name: 'Млечный Путь' },
+        { h: 10000000, id: 'endless', name: 'Бескрайний простор' }
     ];
 
+    const alt = Math.max(maxAltitudeReached, currentHeight);
+
     unlocks.forEach(u => {
-        if (currentHeight >= u.h && !ownedSkins.includes(u.id)) {
+        if (alt >= u.h && !ownedSkins.includes(u.id)) {
             ownedSkins.push(u.id);
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.35,
-                text: `🎉 СКИН: ${u.name}!`,
-                color: `rgba(241, 196, 15, ALPHA)`,
+                text: `👑 ЛЕГЕНДАРНЫЙ СКИН: ${u.name}!`,
+                color: '#f1c40f',
                 font: 'bold 24px sans-serif',
-                alpha: 2.0,
+                alpha: 3.0,
                 speed: 1.2
             });
+            if (typeof AudioEngine !== 'undefined') AudioEngine.play('win', 1.0);
+            if (typeof saveGame === 'function') saveGame();
         }
     });
 }
@@ -4112,38 +4377,12 @@ function handleTap(clientX, clientY) {
         }
     }
 
-    // === ПОИМКА ПОДАРКА НЛО В ВОЗДУХЕ ===
-    if (hasMech('ufo') && typeof ufoGift !== 'undefined' && ufoGift.active) {
-        // Вычисляем расстояние от клика до центра летящего подарка
+    if (typeof ufoGift !== 'undefined' && ufoGift.active) {
         const dx = clickX - ufoGift.x;
         const dy = clickY - ufoGift.y;
 
-        // Радиус захвата 70px (делаем зону клика чуть больше самой картинки, чтобы было легко попасть)
-        if (Math.sqrt(dx * dx + dy * dy) < 70) {
-            ufoGift.active = false; // Скрываем и останавливаем анимацию притяжения
-
-            let bonusTxt = "";
-            if (ufoGift.rewardType === 0) {
-                addNuts(250); bonusTxt = "👽 +250 🔩"; AudioEngine.play('gaiki', 0.8);
-            } else if (ufoGift.rewardType === 1) {
-                userCases.wooden++; boxesOwned++;
-                if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-                bonusTxt = "👽 +📦"; AudioEngine.play('case_drop_by_click', 0.9);
-            } else if (ufoGift.rewardType === 2) {
-                userCases.iron++; bonusTxt = "👽 +🧰"; AudioEngine.play('win', 0.85);
-            } else {
-                goldenNuts += 25; bonusTxt = "👽 +25 🟡"; AudioEngine.play('pickupCoin5', 1.0);
-            }
-
-            // Спавним текст ровно в точке клика
-            particles.push({
-                x: clickX, y: clickY,
-                text: bonusTxt, color: '#4cd137', font: 'bold 28px sans-serif', alpha: 2.2, speed: 1.5
-            });
-
-            shakeTime = Math.max(shakeTime, 8); // Легкая тряска экрана от взрыва контейнера
-
-            // Прерываем функцию, чтобы этот клик не засчитался как удар по лестнице
+        if (Math.hypot(dx, dy) < 75) {
+            claimUfoGift(clickX, clickY); // <-- Выдаёт гайки/кейсы/золото, звук и частицы
             return;
         }
     }
@@ -4219,6 +4458,7 @@ function handleTap(clientX, clientY) {
     // Применяем высоту и импульс пружины UI
     currentHeight += currentClickPower;
     counterScale = Math.min(counterScale + 0.08, 1.4);
+    markerBounce = Math.min(markerBounce + 0.15, 1.45);
     checkHeightUnlocks();
 
     // Ржавая лестница: роллит шанс на каждый из тапов
@@ -4527,7 +4767,7 @@ function createGachaItemCard(item, caseId = 'wooden') {
 
     if (item.type === 'nuts') {
         content.innerHTML = `
-            <div style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">🔩</div>
+            <img src="assets/nut.webp" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
             <div style="color: #f1c40f; font-size: 11px; font-weight: bold; margin-top: 2px;">+${item.amount}</div>
         `;
     } else {
@@ -4728,8 +4968,8 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
 
         // Определение типа выигрыша
         if (pendingPrize.type === 'nuts') {
-            title.innerText = `ВЫИГРЫШ: +${pendingPrize.amount} ГАЕК!`;
-            title.style.color = '#f1c40f';
+            title.innerHTML = `ВЫИГРЫШ: +${pendingPrize.amount} <img src="assets/nut.webp" class="ui-ico-title">`;
+            title.style.color = '#54a0ff';
             AudioEngine.play('open_case_end', 0.8);
         } else {
             if (pendingPrize.type === 'skin') {
@@ -4757,7 +4997,7 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
             const goldReward = DUPLICATE_GOLD_REWARDS[prizeRarity] || 5;
 
             if (isDuplicate) {
-                title.innerText = `ПОВТОРКА: ${prizeName} (+${goldReward} 🟡)`;
+                title.innerHTML = `ПОВТОРКА: ${prizeName} (+${goldReward} <img src="assets/golden_nut.webp" class="ui-ico-title">)`;
                 title.style.color = '#e67e22';
                 AudioEngine.play('gaiki', 0.8);
             } else {
@@ -4914,7 +5154,7 @@ document.getElementById('gachaClaimBtn').onclick = () => {
         }
     }
 
-    uiNuts.innerText = `🔩 ${nuts}`;
+    uiNuts.innerText = `${nuts}`;
     document.getElementById('gachaModal').style.display = 'none';
     pendingPrize = null;
 
@@ -4959,17 +5199,24 @@ function renderCasesShop() {
         let canBuy = false;
 
         if (c.priceType === 'nuts') {
-            costLabel = `${actualPrice} 🔩`;
+            costLabel = `${actualPrice} <img src="assets/nut.webp" class="ui-ico-sm">`;
             canBuy = nuts >= actualPrice;
         } else if (c.priceType === 'goldenNuts') {
-            costLabel = `${actualPrice} 🟡`;
+            costLabel = `${actualPrice} <img src="assets/golden_nut.webp" class="ui-ico-sm">`;
             canBuy = goldenNuts >= actualPrice;
         }
 
+        let caseIcon = 'assets/wooden_box.webp';
+        if (caseId === 'iron') caseIcon = 'assets/iron_box.webp';
+        if (caseId === 'gold') caseIcon = 'assets/golden_box.webp';
+
         row.innerHTML = `
-            <div>
-                <div style="font-weight: bold; color: ${c.color}; font-size: 14px;">${c.name}</div>
-                <div style="font-size: 11px; color: #bdc3c7;">Цена: ${costLabel} | У тебя: <b style="color:#fff;">${count} шт.</b></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <img src="${caseIcon}" style="width: 32px; height: 32px; object-fit: contain;">
+                <div>
+                    <div style="font-weight: bold; color: ${c.color}; font-size: 14px;">${c.name}</div>
+                    <div style="font-size: 11px; color: #bdc3c7;">Цена: ${costLabel} | У тебя: <b style="color:#fff;">${count} шт.</b></div>
+                </div>
             </div>
             <div style="display: flex; gap: 6px;">
                 ${c.priceType !== 'free' ? `
@@ -4996,7 +5243,7 @@ function renderCasesShop() {
                     userCases[caseId] = (userCases[caseId] || 0) + 1;
                     AudioEngine.play('gaiki', 0.8);
                 }
-                uiNuts.innerText = `🔩 ${nuts}`;
+                uiNuts.innerText = `${nuts}`;
                 renderCasesShop();
             };
         }
@@ -5149,7 +5396,7 @@ const LADDER_DESC = {
     fire: '+7 к клику, -10 до ящика',
     fireman: '+15 к силе шаров',
     plastic: 'Шары бьют на 0.15с быстрее',
-    rusty: '65% шанс +1 🔩 за клик',
+    rusty: '65% шанс +1 <img src="assets/nut.webp" class="ui-ico"> за клик',
     tape: '-10% цены магазина за метры',
     book: '+7 к удаче',
     cactus: '+20 колонка, +10 шары',
@@ -5158,7 +5405,7 @@ const LADDER_DESC = {
     scratch: 'CPS > 4 включает комбо до x1.5',
     new_year: 'Подарки каждые 150-250 тапов',
     bone: 'Каждый клик считается за два',
-    crystal: '+3 🟡 за каждое открытие кейса',
+    crystal: '+3 <img src="assets/golden_nut.webp" class="ui-ico"> за каждое открытие кейса',
     cyber: '+1 слот под аксессуары',
     golden: 'Сейф каждые 100 кликов',
     goth: '-20% скидка на всё',
@@ -5168,12 +5415,12 @@ const LADDER_DESC = {
     quant: '20% гаек в золото, -50 до кейса',
     ufo: 'Дроп бонусов раз в 60 секунд',
     mimic: '2 слота способностей лестниц',
-    retro: 'Ловля монеток на 75–125 🔩',
-    add_stair: 'Баффы рекламы +50% времени. Каждый ролик дополнительно даёт +20 🔩 и +1 🟡',
+    retro: 'Ловля монеток на 75–125 <img src="assets/nut.webp" class="ui-ico">',
+    add_stair: 'Баффы рекламы +50% времени. Спонсор: +20 <img src="assets/nut.webp" class="ui-ico"> и +1 <img src="assets/golden_nut.webp" class="ui-ico">',
     storm: '+20 к клику (10% риск надлома)',
     strato: 'Колонка и шары на 30% быстрее',
     cosmo: 'Оффлайн-лимит до 3 часов',
-    calendar_stair: '+10 к Удаче. +5% на легу в Золотом кейсе и 1% шанс леги из Железного сейфа',
+    calendar_stair: '+10 к Удаче. Магия золотого и железного кейсов',
     absolute: 'Все способности одновременно'
 };
 
@@ -5181,13 +5428,13 @@ const SPEAKER_DESC = {
     old: 'Базовый пассивный бас',
     monster: '- 60 секунд к таймеру бесплатного ящика',
     cyber: 'Пассивно +25% к гайкам и золоту',
-    cool: ' Каждый 3-й бас дает +1 🟡'
+    cool: ' Каждый 3-й бас дает +1 <img src="assets/golden_nut.webp" class="ui-ico">'
 };
 
 const NEWTON_DESC = {
     steel: 'Базовый авто-удар',
-    billiard: 'Каждый 8-й удар: x2.5 высоты и +3-5 🔩',
-    plasma: 'Каждый удар 2-го шара дает +1 🔩 (x1.5)',
+    billiard: 'Каждый 8-й удар: x2.5 высоты и +3-5 <img src="assets/nut.webp" class="ui-ico">',
+    plasma: 'Каждый удар 2-го шара дает +1 <img src="assets/nut.webp" class="ui-ico"> (x1.5)',
     planet: 'Каждый удар дает +3 тапа в ящик (x2.0)'
 };
 
@@ -5428,23 +5675,28 @@ function renderInventory() {
 
                 const isGold = targetItem.priceType === 'goldenNuts';
 
+                const processPurchase = () => {
+                    if (isGold) goldenNuts -= targetItem.price;
+                    else nuts -= targetItem.price;
+
+                    if (bType === 'talismans') ownedTalismans.push(bId);
+                    else if (bType === 'speakers') ownedSpeakerSkins.push(bId);
+                    else if (bType === 'newton') ownedNewtonSkins.push(bId);
+
+                    AudioEngine.play('gaiki', 0.8);
+                    uiNuts.innerText = `${nuts}`;
+                    if (typeof modalNutsVal !== 'undefined' && modalNutsVal) modalNutsVal.innerText = nuts;
+                    if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
+
+                    saveGame();
+                    renderInventory();
+                };
+
                 if (isGold && goldenNuts >= targetItem.price) {
-                    goldenNuts -= targetItem.price;
+                    showConfirmPurchase('Покупка предмета', `Купить "${targetItem.name}" за ${targetItem.price} 🟡?`, targetItem.price, processPurchase);
                 } else if (!isGold && nuts >= targetItem.price) {
-                    nuts -= targetItem.price;
-                } else return;
-
-                if (bType === 'talismans') ownedTalismans.push(bId);
-                else if (bType === 'speakers') ownedSpeakerSkins.push(bId);
-                else if (bType === 'newton') ownedNewtonSkins.push(bId);
-
-                AudioEngine.play('gaiki', 0.8);
-                uiNuts.innerText = `🔩 ${nuts}`;
-                if (typeof modalNutsVal !== 'undefined' && modalNutsVal) modalNutsVal.innerText = nuts;
-                if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
-
-                saveGame();
-                renderInventory();
+                    processPurchase();
+                }
             };
         }
 
@@ -5576,7 +5828,7 @@ function saveGame() {
         adState,
         claimedMilestones, dailyDeal,
         activePlayBoxTimer, isTimedBoxReady,
-        currentHeight, nuts, goldenNuts, boxesOwned,
+        currentHeight, maxAltitudeReached, unlockedTrackerCheckpoints, nuts, goldenNuts, boxesOwned,
         clickLevel, speakerLevel, newtonLevel,
         clicksForBox, clicksNeeded, pityStage,
         userCases,
@@ -5622,6 +5874,9 @@ function loadGame() {
         if (data.starterPack) starterPack = data.starterPack;
 
         currentHeight = data.currentHeight || 0;
+        maxAltitudeReached = data.maxAltitudeReached || data.currentHeight || 0;
+        unlockedTrackerCheckpoints = data.unlockedTrackerCheckpoints || [0];
+
         displayedHeight = currentHeight;
         lastRenderedHeight = Math.floor(currentHeight);
         visualHouseHeight = currentHeight;
@@ -5676,7 +5931,7 @@ function loadGame() {
 
         // Обновляем UI
         if (heightDisplay) heightDisplay.textContent = `${Math.floor(currentHeight).toLocaleString('ru-RU')} м`;
-        uiNuts.innerText = `🔩 ${nuts}`;
+        uiNuts.innerText = `${nuts}`;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
         if (uiLvlSpeaker) uiLvlSpeaker.innerText = speakerLevel;
         if (lvlSpeakerDisplay) lvlSpeakerDisplay.innerText = speakerLevel;
@@ -5815,16 +6070,16 @@ function getActiveLadderBuffs() {
 
 // === КОНФИГУРАЦИЯ И ЛОГИКА РЕКЛАМНОГО СТРИКА (1-10) ===
 const AD_STREAK_REWARDS = [
-    { step: 1, title: '+300 🔩 Гаек', icon: '🔩', type: 'nuts', amount: 300 },
-    { step: 2, title: '+20 🍀 Удача (15 мин)', icon: '🍀', type: 'buff_luck', durationMin: 15, luckAmount: 20 },
-    { step: 3, title: '+5 🟡 Золотые гайки', icon: '🟡', type: 'gold', amount: 5 },
-    { step: 4, title: '+600 🔩 Гаек', icon: '🔩', type: 'nuts', amount: 600 },
-    { step: 5, title: '🧰 Железный сейф', icon: '🧰', type: 'case', caseId: 'iron', amount: 1 },
-    { step: 6, title: '🔥 Турбо x3 (3 мин)', icon: '🔥', type: 'buff_turbo', durationSec: 180 },
-    { step: 7, title: '+15 🟡 Золотые гайки', icon: '🟡', type: 'gold', amount: 15 },
-    { step: 8, title: '+1 000 🔩 Гаек', icon: '🔩', type: 'nuts', amount: 1000 },
-    { step: 9, title: '+25 🟡 Золотые гайки', icon: '🟡', type: 'gold', amount: 25 },
-    { step: 10, title: '🪜 Скин «Билборд» (Epic)', icon: '⭐', type: 'skin', skinId: 'add_stair' }
+    { step: 1, title: '+300 <img src="assets/nut.webp" class="ui-ico"> Гаек', type: 'nuts', amount: 300 },
+    { step: 2, title: '+20 <img src="assets/clover_lucky.webp" class="ui-ico"> (15 мин)', type: 'buff_luck', durationMin: 15, luckAmount: 20 },
+    { step: 3, title: '+5 <img src="assets/golden_nut.webp" class="ui-ico">', type: 'gold', amount: 5 },
+    { step: 4, title: '+600 <img src="assets/nut.webp" class="ui-ico"> Гаек', type: 'nuts', amount: 600 },
+    { step: 5, title: '1 <img src="assets/iron_box.webp" class="ui-ico"> Сейф', type: 'case', caseId: 'iron', amount: 1 },
+    { step: 6, title: '<img src="assets/x3_bust.webp" class="ui-ico"> Турбо x3 (3 мин)', type: 'buff_turbo', durationSec: 180 },
+    { step: 7, title: '+15 <img src="assets/golden_nut.webp" class="ui-ico">', type: 'gold', amount: 15 },
+    { step: 8, title: '+1 000 <img src="assets/nut.webp" class="ui-ico"> Гаек', type: 'nuts', amount: 1000 },
+    { step: 9, title: '+25 <img src="assets/golden_nut.webp" class="ui-ico">', type: 'gold', amount: 25 },
+    { step: 10, title: '<img src="assets/add_stair.webp" class="ui-ico"> Скин «Билборд»', type: 'skin', skinId: 'add_stair' }
 ];
 
 // Забор награды за шаг
@@ -6122,18 +6377,20 @@ function renderDailyDealUI() {
     if (buyBtn && !isOwned) {
         buyBtn.onclick = () => {
             if (goldenNuts >= dailyDeal.salePrice) {
-                goldenNuts -= dailyDeal.salePrice;
-                if (dailyDeal.type === 'skin') {
-                    ownedSkins.push(dailyDeal.id);
-                    if (itemData.rarity === 'legendary') dailyDeal.lastLegendaryBuy = Date.now();
-                } else {
-                    ownedTalismans.push(dailyDeal.id);
-                }
+                showConfirmPurchase('Сделка дня', `Купить "${itemData.name}" за ${dailyDeal.salePrice} 🟡?`, dailyDeal.salePrice, () => {
+                    goldenNuts -= dailyDeal.salePrice;
+                    if (dailyDeal.type === 'skin') {
+                        ownedSkins.push(dailyDeal.id);
+                        if (itemData.rarity === 'legendary') dailyDeal.lastLegendaryBuy = Date.now();
+                    } else {
+                        ownedTalismans.push(dailyDeal.id);
+                    }
 
-                AudioEngine.play('gaiki', 0.8);
-                saveGame();
-                renderDailyDealUI();
-                if (typeof renderInventory === 'function') renderInventory();
+                    AudioEngine.play('gaiki', 0.8);
+                    saveGame();
+                    renderDailyDealUI();
+                    if (typeof renderInventory === 'function') renderInventory();
+                });
             } else {
                 alert(`Вам не хватает ${dailyDeal.salePrice - goldenNuts} 🟡. Здесь откроется просмотр рекламы/магазин.`);
             }
@@ -6152,7 +6409,7 @@ function renderDailyDealUI() {
             rerollBtn.style.opacity = '0.4';
             rerollBtn.style.cursor = 'default';
         } else {
-            rerollBtn.innerText = '🔄 Обновить (Реклама)';
+            rerollBtn.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico"> Обновить (Реклама)';
             rerollBtn.disabled = false;
             rerollBtn.style.opacity = '1';
             rerollBtn.style.cursor = 'pointer';
@@ -6170,13 +6427,13 @@ function renderDailyDealUI() {
 
 // === ЕЖЕДНЕВНЫЙ КАЛЕНДАРЬ (7 ДНЕЙ) ===
 const CALENDAR_REWARDS = [
-    { day: 1, text: '+300 🔩', icon: '🔩', type: 'nuts', amount: 300 },
-    { day: 2, text: '2 📦 Кейса', icon: '📦', type: 'case', caseId: 'wooden', amount: 2 },
-    { day: 3, text: '+10 🟡', icon: '🟡', type: 'gold', amount: 10 },
-    { day: 4, text: '+800 🔩', icon: '🔩', type: 'nuts', amount: 800 },
-    { day: 5, text: '1 🧰 Сейф', icon: '🧰', type: 'case', caseId: 'iron', amount: 1 },
-    { day: 6, text: '+25 🟡', icon: '🟡', type: 'gold', amount: 25 },
-    { day: 7, text: 'Скин «Календарь»', icon: '🪜', type: 'skin', skinId: 'calendar_stair' }
+    { day: 1, text: '+300 <img src="assets/nut.webp" class="ui-ico-sm">', icon: '<img src="assets/nut.webp" class="ui-ico-lg">', type: 'nuts', amount: 300 },
+    { day: 2, text: '2 <img src="assets/wooden_box.webp" class="ui-ico-sm">', icon: '<img src="assets/wooden_box.webp" class="ui-ico-lg">', type: 'case', caseId: 'wooden', amount: 2 },
+    { day: 3, text: '+10 <img src="assets/golden_nut.webp" class="ui-ico-sm">', icon: '<img src="assets/golden_nut.webp" class="ui-ico-lg">', type: 'gold', amount: 10 },
+    { day: 4, text: '+800 <img src="assets/nut.webp" class="ui-ico-sm">', icon: '<img src="assets/nut.webp" class="ui-ico-lg">', type: 'nuts', amount: 800 },
+    { day: 5, text: '1 <img src="assets/iron_box.webp" class="ui-ico-sm">', icon: '<img src="assets/iron_box.webp" class="ui-ico-lg">', type: 'case', caseId: 'iron', amount: 1 },
+    { day: 6, text: '+25 <img src="assets/golden_nut.webp" class="ui-ico-sm">', icon: '<img src="assets/golden_nut.webp" class="ui-ico-lg">', type: 'gold', amount: 25 },
+    { day: 7, text: 'Скин «Календарь»', icon: '<img src="assets/wood_stair-removebg-preview.png" class="ui-ico-lg">', type: 'skin', skinId: 'calendar_stair' }
 ];
 
 let calendarState = {
@@ -6265,10 +6522,10 @@ function renderCalendarUI() {
     }
 
     // 3. Динамическая карточка 7-го дня (Скин на 1-й неделе, Золото+Сейф на 2-й+)
-    if (day7Box) {
+if (day7Box) {
         const day7Title = isLoopCycle ? 'День 7: Супер-награда' : 'День 7: Супер-приз';
-        const day7Desc = isLoopCycle ? '+75 🟡 и 1 🧰 Железный сейф' : 'Скин «Календарь» (Epic)';
-        const day7Icon = isLoopCycle ? '🧰' : '🪜';
+        const day7Desc = isLoopCycle ? '+75 <img src="assets/golden_nut.webp" class="ui-ico-sm"> и 1 <img src="assets/iron_box.webp" class="ui-ico-sm">' : 'Скин «Календарь» (Epic)';
+        const day7Icon = isLoopCycle ? '<img src="assets/iron_box.webp" class="ui-ico-lg">' : '<img src="assets/wood_stair-removebg-preview.png" class="ui-ico-lg">';
 
         day7Box.querySelector('div').innerHTML = `
             <span style="font-size: 24px;">${day7Icon}</span>
@@ -6540,7 +6797,13 @@ setInterval(() => submitScoreToLeaderboard(false), 60000);
 // Сохранение при закрытии вкладки или сворачивании на телефоне
 window.addEventListener('beforeunload', saveGame);
 window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') saveGame();
+    if (document.visibilityState === 'hidden') {
+        if (window.autoTapInterval) {
+            clearInterval(window.autoTapInterval);
+            window.autoTapInterval = null;
+        }
+        saveGame();
+    }
 });
 
 // === РАДАР БАЗЫ И DEEP LINKING ===
@@ -6706,7 +6969,7 @@ function renderLeaderboardUI() {
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-weight: bold; width: 24px; color: ${p.rank <= 3 ? '#f1c40f' : '#bdc3c7'};">#${p.rank}</span>
                 <span style="color: ${p.isPlayer ? '#2ecc71' : (p.isVip ? '#f1c40f' : '#fff')}; font-weight: bold;">
-                    ${p.isVip ? '👑 ' : ''}${p.name}
+                    ${p.isVip ? '<img src="assets/crown.webp" class="ui-ico-sm" style="margin-right: 3px;"> ' : ''}${p.name}
                 </span>
             </div>
             <b style="color: ${p.rank <= 3 ? '#f1c40f' : '#3498db'};">${p.score.toLocaleString('ru-RU')} м</b>
@@ -6723,7 +6986,7 @@ function renderLeaderboardUI() {
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-weight: bold; color: #f1c40f;">#${playerRank}</span>
                 <span style="color: ${isVip ? '#f1c40f' : '#fff'}; font-weight: bold;">
-                    ${isVip ? '👑 ' : ''}Ты ${isVip ? '(VIP)' : ''}
+                    ${isVip ? '<img src="assets/crown.webp" class="ui-ico-sm" style="margin-right: 3px;"> ' : ''}Ты ${isVip ? '(VIP)' : ''}
                 </span>
             </div>
             <b style="color: #f1c40f; font-size: 13px;">${myScore.toLocaleString('ru-RU')} м</b>
@@ -6934,38 +7197,197 @@ if (btnFieldLuck && modalLuck) {
 // ==========================================================
 // === АКТИВАЦИЯ БАФФОВ (В ЧЕСТНЫХ МИЛЛИСЕКУНДАХ) ===========
 // ==========================================================
+// ==========================================================
+// === АКТИВАЦИЯ БАФФОВ (В ЧЕСТНЫХ МИЛЛИСЕКУНДАХ) ===========
+// ==========================================================
+function triggerTimeWarp() {
+    const skin = LADDER_SKINS[currentSkinId] || LADDER_SKINS.wood;
+    const isVine = hasMech('vine');
+    const isStrato = hasMech('strato');
+    const timeMult = isStrato ? 1.42 : 1.0;
+    const turboMult = (adState.turboTimer > 0) ? 3 : 1;
+
+    let earnedMeters = 0;
+    let earnedNuts = 0;
+    let earnedGold = 0;
+    let earnedBoxClicks = 0;
+
+    // 1. КОЛОНКА (300 секунд)
+    if (speakerLevel > 0) {
+        const isCool = (currentSpeakerSkin === 'cool' || (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id === 'cool'));
+        const intervalSec = isCool ? 1.5 : 1.0;
+        const totalPulses = Math.floor((300 * timeMult) / intervalSec);
+
+        const speakerSkinData = SPEAKER_SKINS[currentSpeakerSkin] || SPEAKER_SKINS.old;
+        let spMult = speakerSkinData.buff?.mpsMult || 1.0;
+        if (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id) {
+            spMult *= (SPEAKER_SKINS[cyberExtraAccessory.id]?.buff?.mpsMult || 1.0);
+        }
+
+        let mps = Math.floor((speakerMPS + (skin.buffs?.speakerAdd || 0)) * spMult);
+        if (isVine) mps = Math.round(mps * 1.4);
+        mps *= turboMult;
+
+        earnedMeters += (totalPulses * mps);
+
+        // Абсолютный динамик: каждый 3-й бас даёт +1 🟡
+        if (isCool) {
+            earnedGold += Math.floor(totalPulses / 3);
+        }
+    }
+
+    // 2. ШАРИКИ НЬЮТОНА (300 секунд)
+    if (newtonLevel > 0) {
+        let actualNSpeed = Math.max(500, 3000 - (newtonLevel * 130));
+        if (hasMech('plastic')) actualNSpeed = Math.max(200, actualNSpeed - 150);
+        if (hasMech('cement') && (currentEffectId || currentSkinId) !== 'absolute') actualNSpeed += 300;
+
+        const effectiveMs = 300000 * timeMult;
+        const cycles = Math.floor(effectiveMs / actualNSpeed);
+        const totalHits = cycles * 2; // Левый и правый шары
+
+        let nwMult = (NEWTON_SKINS[currentNewtonSkin]?.buff?.powerMult) || 1.0;
+        if (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id) {
+            nwMult *= (NEWTON_SKINS[cyberExtraAccessory.id]?.buff?.powerMult || 1.0);
+        }
+
+        const cementMult = skin.buffs?.newtonMult || 1.0;
+        let baseHit = Math.floor((newtonPower + (skin.buffs?.newtonAdd || 0)) * nwMult * cementMult);
+        if (isVine) baseHit = Math.round(baseHit * 1.4);
+        baseHit *= turboMult;
+
+        earnedMeters += (totalHits * baseHit);
+
+        const isBilliard = currentNewtonSkin === 'billiard' || (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'billiard');
+        const isPlasma = currentNewtonSkin === 'plasma' || (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'plasma');
+        const isPlanet = currentNewtonSkin === 'planet' || (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'planet');
+
+        // Бильярдный #8: каждый 8-й удар даёт +150% урона и 3–5 🔩
+        if (isBilliard) {
+            const billiardProcs = Math.floor(totalHits / 8);
+            earnedMeters += billiardProcs * Math.floor(baseHit * 1.5);
+            earnedNuts += billiardProcs * 4;
+        }
+
+        // Плазма: правый шар даёт +1 🔩 за цикл
+        if (isPlasma) {
+            earnedNuts += cycles;
+        }
+
+        // Земля: каждый удар даёт +3 прогресса в ящик
+        if (isPlanet) {
+            earnedBoxClicks += (totalHits * 3);
+        }
+    }
+
+    // Если прокачек нет — даём минимальный старт
+    earnedMeters = Math.max(150, earnedMeters);
+
+    // Применяем высоту
+    currentHeight += earnedMeters;
+
+    // Честно начисляем гайки через addNuts (учитывает квантовое расщепление и кибер-колонку)
+    if (earnedNuts > 0) addNuts(earnedNuts);
+    if (earnedGold > 0) goldenNuts += earnedGold;
+
+    // Начисляем прогресс кейсов для шаров Земли
+    if (earnedBoxClicks > 0) {
+        clicksForBox += earnedBoxClicks;
+        let actualNeeded = clicksNeeded;
+        if (skin.buffs?.caseLimitMinus) actualNeeded -= skin.buffs.caseLimitMinus;
+        actualNeeded = Math.max(10, actualNeeded);
+
+        while (clicksForBox >= actualNeeded) {
+            clicksForBox -= actualNeeded;
+            boxesOwned++;
+            userCases.wooden = boxesOwned;
+            pityStage++;
+            clicksNeeded = getClicksNeeded(pityStage);
+            actualNeeded = clicksNeeded;
+            if (skin.buffs?.caseLimitMinus) actualNeeded -= skin.buffs.caseLimitMinus;
+            actualNeeded = Math.max(10, actualNeeded);
+        }
+        if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+        if (uiBoxText) uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
+        if (uiBoxProgress) uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
+    }
+
+    let report = `⏩ +${earnedMeters.toLocaleString('ru-RU')} м`;
+    if (earnedNuts > 0) report += `, +${earnedNuts} 🔩`;
+    if (earnedGold > 0) report += `, +${earnedGold} 🟡`;
+
+    particles.push({
+        x: canvas.width / 2,
+        y: canvas.height * 0.38,
+        text: report,
+        color: '#9b59b6',
+        font: 'bold 20px sans-serif',
+        alpha: 3.0,
+        speed: 1.6
+    });
+
+    if (typeof AudioEngine !== 'undefined') AudioEngine.play('win', 1.0);
+    checkHeightMilestones();
+    if (typeof saveGame === 'function') saveGame();
+}
+
 function activateBuffDirectly(type, durationMs) {
     if (typeof adState === 'undefined') window.adState = {};
 
     if (type === 'fortune') adState.fortuneTimer = durationMs;
     if (type === 'turbo') adState.turboTimer = durationMs;
     if (type === 'frenzy') adState.frenzyTimer = durationMs;
+    if (type === 'autotap') {
+        adState.autotapTimer = durationMs;
+        if (window.autoTapInterval) {
+            clearInterval(window.autoTapInterval);
+            window.autoTapInterval = null;
+        }
+        window.autoTapInterval = setInterval(() => {
+            // 1. Уменьшаем таймер прямо здесь, независимо от того, спит ли окно:
+            adState.autotapTimer = Math.max(0, (adState.autotapTimer || 0) - 66);
 
-    // БЫЛО: AudioEngine.play('jacpot', 1.0);
-    // СТАЛО:
-    AudioEngine.play('whoosh_air', 0.7);
+            // 2. Если время вышло — гарантированно выключаем интервал:
+            if (adState.autotapTimer <= 0) {
+                clearInterval(window.autoTapInterval);
+                window.autoTapInterval = null;
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            handleTap(rect.left + rect.width / 2, rect.top + rect.height * 0.45);
+        }, 66);
+    }
+    if (type === 'timewarp') {
+        triggerTimeWarp();
+    }
+
+    if (typeof AudioEngine !== 'undefined') AudioEngine.play('whoosh_air', 0.7);
 
     if (typeof saveGame === 'function') saveGame();
     if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
 }
 
-// Покупка за ЗОЛОТО (10 мин = 600 000 мс, 1 мин = 60 000 мс, 30 сек = 30 000 мс)
+// Покупка за ЗОЛОТО (базовая стоимость 39 🟡)
 const bindBuffGoldAction = (btnId, cost, durationMs, type) => {
     const btn = document.getElementById(btnId);
     if (!btn) return;
     btn.onclick = (e) => {
         e.stopPropagation();
         if (goldenNuts >= cost) {
-            goldenNuts -= cost;
-            activateBuffDirectly(type, durationMs);
+            showConfirmPurchase('Активация усиления', `Потратить ${cost} 🟡 на активацию эффекта?`, cost, () => {
+                goldenNuts -= cost;
+                activateBuffDirectly(type, durationMs);
+            });
         } else {
             alert('Недостаточно золотых гаек 🟡');
         }
     };
 };
-bindBuffGoldAction('btn-buy-buff-fortune-gold', 15, 600000, 'fortune');
-bindBuffGoldAction('btn-buy-buff-turbo-gold', 15, 60000, 'turbo');
-bindBuffGoldAction('btn-buy-buff-frenzy-gold', 15, 30000, 'frenzy');
+bindBuffGoldAction('btn-buy-buff-fortune-gold', 39, 600000, 'fortune');
+bindBuffGoldAction('btn-buy-buff-turbo-gold', 39, 60000, 'turbo');
+bindBuffGoldAction('btn-buy-buff-frenzy-gold', 39, 30000, 'frenzy');
+bindBuffGoldAction('btn-buy-buff-autotap-gold', 39, 40000, 'autotap');
+bindBuffGoldAction('btn-buy-buff-timewarp-gold', 39, 0, 'timewarp');
 
 // Покупка за РЕКЛАМУ
 const bindBuffAdAction = (btnId, durationMs, type, fallbackBtnId) => {
@@ -6973,7 +7395,7 @@ const bindBuffAdAction = (btnId, durationMs, type, fallbackBtnId) => {
     if (!btn) return;
     btn.onclick = (e) => {
         e.stopPropagation();
-        const oldBtn = document.getElementById(fallbackBtnId);
+        const oldBtn = fallbackBtnId ? document.getElementById(fallbackBtnId) : null;
         if (oldBtn) {
             oldBtn.click();
         } else {
@@ -6987,6 +7409,8 @@ const bindBuffAdAction = (btnId, durationMs, type, fallbackBtnId) => {
 bindBuffAdAction('btn-buy-buff-fortune-ad', 600000, 'fortune', 'btn-boost-fortune');
 bindBuffAdAction('btn-buy-buff-turbo-ad', 60000, 'turbo', 'btn-boost-turbo');
 bindBuffAdAction('btn-buy-buff-frenzy-ad', 30000, 'frenzy', 'btn-boost-frenzy');
+bindBuffAdAction('btn-buy-buff-autotap-ad', 40000, 'autotap', null);
+bindBuffAdAction('btn-buy-buff-timewarp-ad', 0, 'timewarp', null);
 
 // ==========================================================
 // === КРУГЛЫЕ ЗНАЧКИ (ЧЕСТНЫЕ СЕКУНДЫ) И СТРИК =============
@@ -7012,11 +7436,11 @@ function updateActiveBuffsDisplay() {
     const dock = document.getElementById('active-buffs-dock');
     if (!dock) return;
 
-    // Конфиг в миллисекундах (max: 600 000, 60 000, 30 000)
     const buffs = [
-        { type: 'fortune', timer: adState.fortuneTimer || 0, max: 600000, icon: '🍀', color: '#2ecc71' },
-        { type: 'turbo', timer: adState.turboTimer || 0, max: 60000, icon: '🔥', color: '#e67e22' },
-        { type: 'frenzy', timer: adState.frenzyTimer || 0, max: 30000, icon: '⚡', color: '#f1c40f' }
+        { type: 'fortune', timer: adState.fortuneTimer || 0, max: 600000, icon: 'assets/clover_lucky.webp', color: '#2ecc71' },
+        { type: 'turbo', timer: adState.turboTimer || 0, max: 60000, icon: 'assets/x3_bust.webp', color: '#e67e22' },
+        { type: 'frenzy', timer: adState.frenzyTimer || 0, max: 30000, icon: 'assets/nut_rain.webp', color: '#f1c40f' },
+        { type: 'autotap', timer: adState.autotapTimer || 0, max: 40000, icon: 'assets/robot_hand.webp', color: '#00d2ff' }
     ];
 
     dock.innerHTML = '';
@@ -7047,7 +7471,7 @@ function updateActiveBuffsDisplay() {
 
             badge.innerHTML = `
                 <div class="buff-clock-wipe" style="background: conic-gradient(rgba(0, 0, 0, 0.75) ${darkAngle}deg, transparent 0deg);"></div>
-                <span class="buff-badge-emoji">${b.icon}</span>
+                <img src="${b.icon}" class="buff-badge-emoji" style="width: 22px; height: 22px; object-fit: contain; z-index: 2;">
                 <span class="buff-badge-time">${timeTxt}</span>
             `;
             dock.appendChild(badge);
@@ -7366,3 +7790,89 @@ enableDragScroll(document.getElementById('cust-items-list'));
 // --- ИНИЦИАЛИЗАЦИЯ ИГРЫ ПРИ СТАРТЕ ---
 loadGame();      // Сначала грузим сейв
 updateShopUI();  // Затем пересчитываем и рисуем цены в магазине
+updateAltitudeTrackerUI(); // Первичное обновление шкалы высоты
+
+// Кнопка переключения Zen-режима (Скрытие UI)
+const btnToggleZen = document.getElementById('btn-toggle-zen');
+const uiLayer = document.getElementById('ui-layer');
+
+if (btnToggleZen && uiLayer) {
+    btnToggleZen.addEventListener('click', (e) => {
+        e.stopPropagation();
+        uiLayer.classList.toggle('zen-mode');
+        AudioEngine.play('click', 0.5);
+    });
+}
+
+// Клик по контрольным точкам шкалы высоты (показ карточки «Бортовой журнал»)
+document.querySelectorAll('.altitude-checkpoint').forEach(cp => {
+    cp.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const stg = parseInt(cp.dataset.stage, 10);
+        if (isNaN(stg)) return;
+        showLocationCard(stg, cp);
+    });
+});
+
+// Кнопка закрытия карточки локации
+const btnCloseLocCard = document.getElementById('btn-close-location-card');
+if (btnCloseLocCard) {
+    btnCloseLocCard.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hideLocationCard();
+        AudioEngine.play('click', 0.5);
+    });
+}
+
+// Закрытие карточки при клике в свободное пространство
+document.addEventListener('click', (e) => {
+    const card = document.getElementById('location-card');
+    if (!card || card.classList.contains('hidden')) return;
+    if (e.target.closest('#location-card') || e.target.closest('.altitude-checkpoint')) return;
+    hideLocationCard();
+});
+
+function triggerUfoBeacon() {
+    ufoGift.active = true;
+    ufoGift.progress = 0;
+    ufoGift.targetX = canvas.width / 2;
+    ufoGift.targetY = canvas.height * 0.45;
+
+    const isLeft = Math.random() > 0.5;
+    ufoGift.startX = isLeft ? -90 : canvas.width + 90;
+    ufoGift.startY = canvas.height * (0.2 + Math.random() * 0.5);
+
+    const r = Math.random();
+    if (r < 0.4) ufoGift.rewardType = 0;       // Гайки
+    else if (r < 0.7) ufoGift.rewardType = 1;  // Деревянный ящик
+    else if (r < 0.9) ufoGift.rewardType = 2;  // Железный сейф
+    else ufoGift.rewardType = 3;               // Золото
+
+    if (typeof AudioEngine !== 'undefined') AudioEngine.play('ufo_tap', 0.8);
+    if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
+}
+
+// Привязка кнопок:
+const btnUfoAd = document.getElementById('btn-buy-buff-ufo-ad');
+if (btnUfoAd) {
+    btnUfoAd.onclick = (e) => {
+        e.stopPropagation();
+        watchRewardedAd('ufo_beacon', () => triggerUfoBeacon());
+    };
+}
+
+const btnUfoGold = document.getElementById('btn-buy-buff-ufo-gold');
+if (btnUfoGold) {
+    btnUfoGold.onclick = (e) => {
+        e.stopPropagation();
+        if (goldenNuts >= 39) {
+            showConfirmPurchase('Активация усиления', 'Потратить 39 🟡 на призыв НЛО?', 39, () => {
+                goldenNuts -= 39;
+                triggerUfoBeacon();
+                saveGame();
+            });
+        } else {
+            alert('Недостаточно золотых гаек 🟡');
+        }
+    };
+}

@@ -3,7 +3,8 @@
     padding: 0;
     box-sizing: border-box;
     touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent; /* Убирает вспышку фокуса на тачскринах */
+    -webkit-tap-highlight-color: transparent;
+    /* Убирает вспышку фокуса на тачскринах */
 }
 
 body {
@@ -11,9 +12,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 0;               /* Убирает скрытый системный отступ браузера в 8px */
-    height: 100vh;           /* Базовый размер для старых браузеров */
-    height: 100dvh;          /* Точный размер с учётом мобильной адресной строки */
+    margin: 0;
+    /* Убирает скрытый системный отступ браузера в 8px */
+    height: 100vh;
+    /* Базовый размер для старых браузеров */
+    height: 100dvh;
+    /* Точный размер с учётом мобильной адресной строки */
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     user-select: none;
@@ -138,8 +142,13 @@ canvas {
     pointer-events: auto;
 }
 
-.slots.left { left: 15px; }
-.slots.right { right: 15px; }
+.slots.left {
+    left: 15px;
+}
+
+.slots.right {
+    right: 15px;
+}
 
 .slot {
     width: 52px;
@@ -197,9 +206,19 @@ canvas {
     box-shadow: none;
 }
 
-#btn-open-cases { background: #9b59b6; }
-#btn-open-shop { background: #f1c40f; color: #222; text-shadow: none; }
-#btn-open-inventory { background: #e67e22; }
+#btn-open-cases {
+    background: #9b59b6;
+}
+
+#btn-open-shop {
+    background: #f1c40f;
+    color: #222;
+    text-shadow: none;
+}
+
+#btn-open-inventory {
+    background: #e67e22;
+}
 
 /* МАГАЗИН */
 #shop-modal {
@@ -240,8 +259,17 @@ canvas {
     text-align: center;
 }
 
-.item-info h3 { font-size: 11px; color: #f1c40f; margin: 0; }
-.item-info p { font-size: 10px; color: #bdc3c7; margin: 0; }
+.item-info h3 {
+    font-size: 11px;
+    color: #f1c40f;
+    margin: 0;
+}
+
+.item-info p {
+    font-size: 10px;
+    color: #bdc3c7;
+    margin: 0;
+}
 
 .buy-btn {
     background: #2ecc71;
@@ -255,8 +283,16 @@ canvas {
     cursor: pointer;
 }
 
-.buy-btn:active { transform: translateY(2px); border-bottom: 0; }
-.buy-btn.disabled { background: #566573; border-bottom: 2px solid #414b55; cursor: not-allowed; }
+.buy-btn:active {
+    transform: translateY(2px);
+    border-bottom: 0;
+}
+
+.buy-btn.disabled {
+    background: #566573;
+    border-bottom: 2px solid #414b55;
+    cursor: not-allowed;
+}
 
 .close-btn {
     position: absolute;
@@ -297,7 +333,8 @@ canvas {
     position: relative;
     width: 92%;
     max-width: 440px;
-    height: 520px; /* Фиксированная высота предотвращает прыжки вкладок */
+    height: 520px;
+    /* Фиксированная высота предотвращает прыжки вкладок */
     max-height: 86vh;
     background: #1e272e;
     border-radius: 14px;
@@ -333,6 +370,7 @@ canvas {
     cursor: pointer;
     padding: 0 4px;
 }
+
 .modal-close-btn:hover {
     color: #e74c3c;
 }
@@ -382,19 +420,23 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    flex: 1; /* Занимает оставшееся пространство карточки */
+    flex: 1;
+    /* Занимает оставшееся пространство карточки */
     overflow-y: auto !important;
     padding-right: 4px;
-    scrollbar-gutter: stable; /* Резервирует ширину под скроллбар */
+    scrollbar-gutter: stable;
+    /* Резервирует ширину под скроллбар */
 }
 
 .modal-scroll-list::-webkit-scrollbar {
     width: 6px;
 }
+
 .modal-scroll-list::-webkit-scrollbar-thumb {
     background: #4b6584;
     border-radius: 3px;
 }
+
 .modal-scroll-list::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);
 }
@@ -496,11 +538,13 @@ canvas {
         box-shadow: 0 0 10px rgba(241, 196, 15, 0.6), 0 0 20px rgba(231, 76, 60, 0.4);
         border-color: #f1c40f;
     }
+
     50% {
         transform: scale(1.06);
         box-shadow: 0 0 18px rgba(241, 196, 15, 0.95), 0 0 30px rgba(231, 76, 60, 0.8);
         border-color: #ffffff;
     }
+
     100% {
         transform: scale(1);
         box-shadow: 0 0 10px rgba(241, 196, 15, 0.6), 0 0 20px rgba(231, 76, 60, 0.4);
@@ -517,14 +561,17 @@ canvas {
         opacity: 0;
         transform: translateY(6px) scale(0.8);
     }
+
     20% {
         opacity: 1;
         transform: translateY(0) scale(1.1);
     }
+
     70% {
         opacity: 1;
         transform: translateY(-16px) scale(1);
     }
+
     100% {
         opacity: 0;
         transform: translateY(-28px) scale(0.9);
@@ -546,9 +593,20 @@ canvas {
 
 /* Мягкое свечение кнопки стрика при готовой награде */
 @keyframes streakGlowAnim {
-    0% { box-shadow: 0 0 8px rgba(155, 89, 182, 0.4); border-color: #9b59b6; }
-    50% { box-shadow: 0 0 18px rgba(241, 196, 15, 0.9), 0 0 25px rgba(155, 89, 182, 0.7); border-color: #f1c40f; }
-    100% { box-shadow: 0 0 8px rgba(155, 89, 182, 0.4); border-color: #9b59b6; }
+    0% {
+        box-shadow: 0 0 8px rgba(155, 89, 182, 0.4);
+        border-color: #9b59b6;
+    }
+
+    50% {
+        box-shadow: 0 0 18px rgba(241, 196, 15, 0.9), 0 0 25px rgba(155, 89, 182, 0.7);
+        border-color: #f1c40f;
+    }
+
+    100% {
+        box-shadow: 0 0 8px rgba(155, 89, 182, 0.4);
+        border-color: #9b59b6;
+    }
 }
 
 .streak-ready-pulse {
@@ -601,3 +659,214 @@ canvas {
     -webkit-overflow-scrolling: touch;
     user-select: none;
 }
+
+/* === ВЕРТИКАЛЬНАЯ ШКАЛА ВЫСОТЫ (ALTITUDE TRACKER / SCI-FI РЕЛЬС) === */
+.altitude-checkpoint {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #0a0f19;
+    border: 2px solid #334;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    overflow: hidden;
+    box-sizing: border-box;
+    transition: transform 0.2s ease, filter 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.checkpoint-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+.altitude-checkpoint.locked {
+    border: 2px solid #334;
+}
+
+.altitude-checkpoint.locked .checkpoint-img {
+    filter: brightness(0.2) grayscale(1);
+    opacity: 0.5;
+}
+
+.altitude-checkpoint.unlocked {
+    border: 2px solid #00d2ff;
+    box-shadow: 0 0 8px rgba(0, 210, 255, 0.6);
+    background: #101d28;
+}
+
+.altitude-checkpoint.unlocked .checkpoint-img {
+    filter: none;
+    opacity: 1;
+}
+
+@keyframes checkpointPulse {
+    0% {
+        transform: translate(-50%, 50%) scale(1);
+        box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+        border-color: #ffffff !important;
+    }
+
+    50% {
+        transform: translate(-50%, 50%) scale(1.25);
+        box-shadow: 0 0 14px rgba(0, 210, 255, 0.95);
+        border-color: #00d2ff !important;
+    }
+
+    100% {
+        transform: translate(-50%, 50%) scale(1);
+        box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+        border-color: #ffffff !important;
+    }
+}
+
+.altitude-checkpoint.target-pulse {
+    border-color: #ffffff !important;
+    animation: checkpointPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes unlockBurstAnim {
+    0% {
+        transform: translate(-50%, 50%) scale(1);
+        filter: brightness(2) drop-shadow(0 0 15px #fff);
+    }
+
+    50% {
+        transform: translate(-50%, 50%) scale(1.45);
+        filter: brightness(3) drop-shadow(0 0 25px #00d2ff);
+    }
+
+    100% {
+        transform: translate(-50%, 50%) scale(1);
+        filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.8));
+    }
+}
+
+.altitude-checkpoint.unlock-burst {
+    animation: unlockBurstAnim 0.6s ease-out forwards;
+}
+
+/* === ДЗЕН-РЕЖИМ (СКРЫТИЕ UI ИНТЕРФЕЙСА) === */
+.zen-hide {
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease !important;
+}
+
+#ui-layer.zen-mode .zen-hide {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
+#btn-toggle-zen {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#ui-layer.zen-mode #btn-toggle-zen {
+    opacity: 0.6;
+}
+
+#ui-layer.zen-mode #btn-toggle-zen:hover {
+    opacity: 1;
+}
+
+/* === КАРТОЧКА ЛОКАЦИИ «БОРТОВОЙ ЖУРНАЛ» === */
+#location-card {
+    animation: cardFadeIn 0.2s ease-out forwards;
+}
+
+#location-card::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -8px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 8px solid #00d2ff;
+}
+
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(12px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0) scale(1);
+    }
+}
+
+/* Прозрачный пропуск кликов сквозь контейнер верхних правых кнопок */
+#top-bar-right,
+#top-bar-right div {
+    pointer-events: none !important;
+}
+
+#top-bar-right button {
+    pointer-events: auto;
+}
+
+/* Универсальные иконки вместо системных эмодзи */
+.ui-ico {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    vertical-align: -2px;
+    display: inline-block;
+    pointer-events: none;
+}
+
+.ui-ico-sm {
+    width: 13px;
+    height: 13px;
+    vertical-align: -1px;
+}
+
+.ui-ico-lg {
+    width: 22px;
+    height: 22px;
+    vertical-align: -4px;
+}
+
+.ui-ico-badge {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+/* Крупные иконки для заголовков (Зал славы, Сделка дня и т.д.) */
+.ui-ico-title {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    vertical-align: -4px;
+    display: inline-block;
+}
+
+/* Иконки баффов в боковой шторке */
+.drawer-buff-ico {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    vertical-align: -4px;
+    margin-right: 6px;
+}
+
+/* Иконка кубка в самой кнопке ТОПа */
+#btn-open-leaderboard .ui-ico {
+    width: 22px !important;
+    height: 22px !important;
+    vertical-align: -5px;
+}
+
+.ui-ico-title { width: 26px; height: 26px; object-fit: contain; vertical-align: -5px; display: inline-block; }
+.drawer-buff-ico { width: 32px; height: 32px; object-fit: contain; vertical-align: -6px; margin-right: 8px; }
