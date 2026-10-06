@@ -2857,30 +2857,29 @@ function updateAutoClickers(dt) {
                     particles.push({ x: ballX, y: canvas.height * 0.24, text: '+1 🔩', color: '#00ffff', font: 'bold 18px sans-serif', alpha: 1.2, speed: 1.8 });
                 }
 
-                if (isPlanet) {
-                    clicksForBox += 3;
-                    shakeTime = Math.max(shakeTime, 10);
-                    let actualNeeded = clicksNeeded;
-                    if (skin.buffs.caseLimitMinus) actualNeeded -= skin.buffs.caseLimitMinus;
-                    actualNeeded = Math.max(10, actualNeeded);
+                const boxAdd = isPlanet ? 3 : 1;
+        clicksForBox += boxAdd;
+        if (isPlanet) shakeTime = Math.max(shakeTime, 10);
 
-                    if (clicksForBox >= actualNeeded) {
-                        clicksForBox = 0;
-                        boxesOwned++;
-                        userCases.wooden = boxesOwned;
-                        if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-                        pityStage++;
-                        clicksNeeded = getClicksNeeded(pityStage);
-                        triggerCaseGainedPopup(); // Теперь всплывает "+📦 КЕЙС!"
-                    }
-                    if (uiBoxText) {
-                        uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
-                    }
-                    if (uiBoxProgress) {
-                        uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
-                    }
-                }
+        let actualNeeded = clicksNeeded;
+        if (skin.buffs.caseLimitMinus) actualNeeded -= skin.buffs.caseLimitMinus;
+        actualNeeded = Math.max(10, actualNeeded);
 
+        if (clicksForBox >= actualNeeded) {
+            clicksForBox -= actualNeeded;
+            boxesOwned++;
+            userCases.wooden = boxesOwned;
+            if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+            pityStage++;
+            clicksNeeded = getClicksNeeded(pityStage);
+            triggerCaseGainedPopup();
+        }
+        if (uiBoxText) {
+            uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
+        }
+        if (uiBoxProgress) {
+            uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
+        }
                 // Турбо x3 для шаров Ньютона
                 if (adState.turboTimer > 0) hitDamage *= 3;
 
@@ -2909,18 +2908,18 @@ function updateAutoClickers(dt) {
     }
 }
 
-// Отрисовка горизонтального пояса космического мусора (350 000м - 850 000м)
-// Отрисовка пояса космического мусора (350 000м - 850 000м)
+// Отрисовка пояса космического мусора (250 000м - 850 000м)
 function drawCosmicDebris() {
-    if (visualHouseHeight < 350000 || visualHouseHeight > 850000) return;
+    // 1. Расширили диапазон: теперь от 250 000 до 850 000
+    if (visualHouseHeight < 250000 || visualHouseHeight > 850000) return;
 
-    // Защита от краша: если переменной нет или картинка ещё не загрузилась — выходим без падения игры
     if (typeof cosmicDebrisImg === 'undefined') return;
     if (!cosmicDebrisImg.complete || !cosmicDebrisImg.naturalWidth || cosmicDebrisImg.naturalHeight === 0) return;
 
     let alpha = 1.0;
-    if (visualHouseHeight < 400000) {
-        alpha = (visualHouseHeight - 350000) / 50000;
+    // 2. Плавный вход с 250k до 300k (50 000 метров мягкого появления)
+    if (visualHouseHeight < 300000) {
+        alpha = (visualHouseHeight - 250000) / 50000;
     } else if (visualHouseHeight > 800000) {
         alpha = 1.0 - (visualHouseHeight - 800000) / 50000;
     }
@@ -2943,7 +2942,8 @@ function drawCosmicDebris() {
             return;
         }
 
-        const flightProgress = (visualHouseHeight - 350000) / 500000;
+        // 3. Дистанция теперь 600 000 м (от 250k до 850k), чтобы он плавно шел сквозь всю зону
+        const flightProgress = (visualHouseHeight - 250000) / 600000;
         const worldY = -imgH + (canvas.height + imgH * 2) * flightProgress;
 
         const drawLayer = (speedMult, scaleYMult, alphaMult, driftSpeed) => {
@@ -2969,7 +2969,7 @@ function drawCosmicDebris() {
         drawLayer(0.4, 0.75, 0.35, 0.8);
         drawLayer(1.2, 1.0, 1.0, 1.3);
     } finally {
-        ctx.restore(); // Гарантированно возвращает стандартные настройки Canvas для лестницы
+        ctx.restore();
     }
 }
 
@@ -3470,8 +3470,9 @@ function drawBackground() {
 
             // БЕСШОВНЫЙ ШАГ: шаг равен 75% экрана
             const stepY = canvas.height * 0.75;
-            const scrollY = (currentHeight * 0.035) % stepY;
-            const blockIndex = Math.floor((currentHeight * 0.035) / stepY); // Глобальный счетчик высоты
+const nebulaSpeedFactor = 0.015; // Было 0.035 (уменьшили в 2.3 раза)
+const scrollY = (visualHouseHeight * nebulaSpeedFactor) % stepY;
+const blockIndex = Math.floor((visualHouseHeight * nebulaSpeedFactor) / stepY);
 
             const drawNebulaArm = (posX, posY, rotDeg, flip = false) => {
                 ctx.save();
@@ -7277,6 +7278,8 @@ function triggerTimeWarp() {
         // Земля: каждый удар даёт +3 прогресса в ящик
         if (isPlanet) {
             earnedBoxClicks += (totalHits * 3);
+        }else {
+            earnedBoxClicks += (totalHits * 1);
         }
     }
 
