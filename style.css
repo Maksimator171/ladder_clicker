@@ -868,5 +868,26 @@ canvas {
     vertical-align: -5px;
 }
 
-.ui-ico-title { width: 26px; height: 26px; object-fit: contain; vertical-align: -5px; display: inline-block; }
-.drawer-buff-ico { width: 32px; height: 32px; object-fit: contain; vertical-align: -6px; margin-right: 8px; }
+
+/* Переливающаяся анимация для Стартер-пака */
+@keyframes starterShine {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 6px rgba(243, 156, 18, 0.6);
+        border-color: #f1c40f;
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 16px rgba(241, 196, 15, 0.95);
+        border-color: #ffffff;
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 6px rgba(243, 156, 18, 0.6);
+        border-color: #f1c40f;
+    }
+}
+
+.starter-pulse-glow {
+    animation: starterShine 1.8s infinite ease-in-out !important;
+}

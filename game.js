@@ -18,6 +18,8 @@ let settingsState = {
     vibrate: true
 };
 
+let starfieldBackCanvas = null;
+let starfieldFrontCanvas = null;
 let lastPlaneSoundTime = 0; // Таймер кулдауна звука самолёта
 let ufoGlowCanvas = null; // Кэш световой маски НЛО
 let lastThunderTime = 0; // Кулдаун грома для грозового фронта
@@ -144,8 +146,7 @@ if (btnBuyStarter) {
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
         starterModal.classList.add('hidden');
         if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
-        starterModal.classList.add('hidden');
-        if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
+        showThankYouModal('НАБОР НОВИЧКА!', 'Гора ресурсов и легендарный скин «Кибер» твои! Спасибо за поддержку 👑');
         showThankYouModal('НАБОР НОВИЧКА!', 'Гора ресурсов и легендарный скин «Кибер» твои! Спасибо за поддержку 👑');
         saveGame();
     };
@@ -247,12 +248,12 @@ function watchRewardedAd(placementName, onSuccess) {
 
         // 3. Пассивка лестницы «Билборд» (Спонсорский контракт)
         if (hasMech('billboard')) {
-            addNuts(20);
-            goldenNuts += 1;
+            const bNuts = addNuts(20);
+            const bGold = addGoldenNuts(1);
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.4,
-                text: '📺 Спонсор: +20 🔩 и +1 🟡!',
+                text: `📺 Спонсор: +${bNuts} 🔩 и +${bGold} 🟡!`,
                 color: '#00d2d3',
                 font: 'bold 20px sans-serif',
                 alpha: 2.0,
@@ -657,15 +658,14 @@ function claimMilestoneReward(isDouble = false) {
     if (!pendingMilestone) return;
 
     const mult = isDouble ? 2 : 1;
-    const finalGold = pendingMilestone.reward * mult;
+    const awardedMilestoneGold = addGoldenNuts(pendingMilestone.reward * mult);
 
-    goldenNuts += finalGold;
     AudioEngine.play('pickupCoin5', 1.0);
 
     particles.push({
         x: canvas.width / 2,
         y: canvas.height * 0.4,
-        text: `+${finalGold} 🟡!`,
+        text: `+${awardedMilestoneGold} 🟡!`,
         color: '#f1c40f',
         font: 'bold 26px sans-serif',
         alpha: 2.2,
@@ -753,6 +753,20 @@ let ownedSpeakerSkins = ['old'];
 let ownedNewtonSkins = ['steel'];
 let ownedTalismans = []; //строка 123
 
+const moonImg = new Image();
+moonImg.src = 'assets/moon.webp';
+
+// === КЭШ АССЕТОВ ДЛЯ ПАРТИКЛОВ КАНВАСА ===
+const canvasIcoNut = new Image(); canvasIcoNut.src = 'assets/nut.webp';
+const canvasIcoGold = new Image(); canvasIcoGold.src = 'assets/golden_nut.webp';
+const canvasIcoWoodenBox = new Image(); canvasIcoWoodenBox.src = 'assets/wooden_box.webp';
+const canvasIcoIronBox = new Image(); canvasIcoIronBox.src = 'assets/iron_box.webp';
+const canvasIcoGoldBox = new Image(); canvasIcoGoldBox.src = 'assets/golden_box.webp';
+
+// === АССЕТ МОЛНИИ (ДЛЯ ПЛАЗМЫ И ЭФФЕКТОВ) ===
+const lightningImg = new Image();
+lightningImg.src = 'assets/lighting.webp';
+
 // === КОСМИЧЕСКИЙ МУСОР ===
 const cosmicDebrisImg = new Image();
 cosmicDebrisImg.src = 'assets/cosmic_debris.webp'; // Проверь правильность пути и расширения файла
@@ -777,6 +791,32 @@ const speakerSprite = new Image();
 
 const newtonSprite = new Image();
 // Для шариков подгрузится при выборе скина
+
+// === ПЛАЗМЕННЫЕ ШАРЫ И ЗЕМЛЯ: НОВЫЕ СОСТОЯНИЯ ===
+let plasmaHeat = 0.0;           // Степень раскала плазмы (от 0.0 до 1.0)
+let lastPlayerTapTime = Date.now(); // Время последнего ручного тапа
+let plasmaBurstTimer = null;    // Интервал очереди кликов
+let plasmaBurstRemaining = 0;   // Счётчик оставшихся кликов в очереди
+
+// Подсчёт количества активных временных баффов для скина «Земля»
+function getActiveTemporaryBuffsCount() {
+    let count = 0;
+    if (typeof adState !== 'undefined') {
+        if (adState.turboTimer > 0) count++;
+        if (adState.fortuneTimer > 0) count++;
+        if (adState.frenzyTimer > 0) count++;
+        if (adState.autotapTimer > 0) count++;
+    }
+    return count;
+}
+
+// Множитель +25% за каждый бафф для шаров «Земля»
+function getPlanetBuffMultiplier() {
+    const isPlanet = currentNewtonSkin === 'planet' || 
+        (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'planet');
+    if (!isPlanet) return 1.0;
+    return 1.0 + (getActiveTemporaryBuffsCount() * 0.25);
+}
 
 // --- ТАЙМЕРЫ И ПЕРЕМЕННЫЕ ДЛЯ МЕХАНИК ЛЕСТНИЦ ---
 let newtonHitCount = 0;       // Счётчик ударов шаров (для Бильярдного #8)
@@ -803,34 +843,42 @@ function claimUfoGift(targetX, targetY) {
     ufoGift.active = false;
 
     let bonusTxt = "";
+    let bonusImg = null;
+
     if (ufoGift.rewardType === 0) {
-        addNuts(250);
-        bonusTxt = "👽 +250 🔩";
+        const n = addNuts(250);
+        bonusTxt = `+${n}`;
+        bonusImg = canvasIcoNut;
         AudioEngine.play('gaiki', 0.8);
     } else if (ufoGift.rewardType === 1) {
         userCases.wooden = (userCases.wooden || 0) + 1;
         boxesOwned = userCases.wooden;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-        bonusTxt = "👽 +📦";
+        bonusTxt = "+1 КЕЙС!";
+        bonusImg = canvasIcoWoodenBox;
         AudioEngine.play('case_drop_by_click', 0.9);
     } else if (ufoGift.rewardType === 2) {
         userCases.iron = (userCases.iron || 0) + 1;
-        bonusTxt = "👽 +🧰";
+        bonusTxt = "+1 СЕЙФ!";
+        bonusImg = canvasIcoIronBox;
         AudioEngine.play('win', 0.85);
     } else {
-        goldenNuts += 25;
-        bonusTxt = "👽 +25 🟡";
+        const ufoGold = addGoldenNuts(25);
+        bonusTxt = `+${ufoGold}`;
+        bonusImg = canvasIcoGold;
         AudioEngine.play('pickupCoin5', 1.0);
     }
 
     particles.push({
         x: targetX,
         y: targetY,
+        img: bonusImg,
+        imgSize: 28,
         text: bonusTxt,
         color: '#4cd137',
         font: 'bold 28px sans-serif',
         alpha: 2.2,
-        speed: 1.5
+        speed: 1.8
     });
 
     shakeTime = Math.max(shakeTime, 8);
@@ -880,29 +928,58 @@ function getTotalLuck() {
 }
 
 // Умное начисление гаек (Квантовое расщепление: 20% в золото)
-function addNuts(amount) {
-    if (amount <= 0) return;
-
-    // Кибер-спикер: +25% ко всем получаемым гайкам (проверка оригинала или слота Киберпанка)
-    const hasCyberSpeaker = currentSpeakerSkin === 'cyber' || (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id === 'cyber');
-    if (hasCyberSpeaker) {
-        amount = Math.round(amount * 1.25);
+// Подсчет множителя Кибер-колонки (учитывает стаки от слота Киберпанка/Мимика)
+function getCyberSpeakerMultiplier() {
+    let count = 0;
+    // 1. Надет как основной скин колонки
+    if (currentSpeakerSkin === 'cyber') count++;
+    // 2. Установлен дополнительно в слот Киберпанка
+    if (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id === 'cyber') {
+        count++;
     }
+    if (count === 0) return 1.0;
+    return 1.0 + (count * 0.25); // 1 шт = 1.25x (+25%), 2 шт = 1.50x (+50%)
+}
+
+// Умное начисление обычных гаек
+function addNuts(amount) {
+    if (amount <= 0) return 0;
+
+    const mult = getCyberSpeakerMultiplier();
+    const finalAmount = mult > 1.0 ? Math.round(amount * mult) : amount;
 
     if (hasMech('quant')) {
-        const goldShare = Math.floor(amount * 0.2);
-        const regShare = amount - goldShare;
+        const goldShare = Math.floor(finalAmount * 0.2);
+        const regShare = finalAmount - goldShare;
         nuts += regShare;
         goldenNuts += goldShare;
         if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
     } else {
-        nuts += amount;
+        nuts += finalAmount;
     }
     uiNuts.innerText = `${nuts}`;
 
     const topGoldDisplay = document.getElementById('gold-display');
     if (topGoldDisplay) topGoldDisplay.innerText = `${goldenNuts}`;
+
+    return finalAmount;
 }
+
+// Умное начисление золотых гаек (учитывает Кибер-колонку на ВСЕ источники)
+function addGoldenNuts(amount) {
+    if (amount <= 0) return 0;
+
+    const mult = getCyberSpeakerMultiplier();
+    const finalAmount = mult > 1.0 ? Math.round(amount * mult) : amount;
+
+    goldenNuts += finalAmount;
+
+    if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
+    const topGoldDisplay = document.getElementById('gold-display');
+    if (topGoldDisplay) topGoldDisplay.innerText = `${goldenNuts}`;
+
+    return finalAmount;
+}   
 
 // Программный генератор идеального хромированного шара Ньютона
 function getSteelBallSprite() {
@@ -1610,6 +1687,8 @@ function resizeCanvas() {
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    starfieldBackCanvas = null;
+starfieldFrontCanvas = null;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -1627,28 +1706,43 @@ function spawnBGObject() {
     let color = `rgba(255, 255, 255, ${speedMult * 0.4})`;
     let vx = (fromLeft ? 1 : -1) * (20 + Math.random() * 30);
 
+    // Флаги активных объектов на экране
     const hasSatellite = bgObjects.some(o => o.type === 'satellite');
     const hasUfo = bgObjects.some(o => o.type === 'ufo');
+    const hasShutle = bgObjects.some(o => o.type === 'shutle');
+    const hasTruck = bgObjects.some(o => o.type === 'cosmo_track');
+    const hasCube = bgObjects.some(o => o.type === 'cube');
+    const hasGuard = bgObjects.some(o => o.type === 'guard');
+    const hasCr1 = bgObjects.some(o => o.type === 'creature1');
+    const hasCr2 = bgObjects.some(o => o.type === 'cr2');
+    const hasAsteroid = bgObjects.some(o => o.type === 'asteroid_creature');
     const hasEvent = bgObjects.some(o => o.type === 'rocket_event');
     const hasRocket = bgObjects.some(o => o.type === 'solo_rocket');
     const hasMeteor = bgObjects.some(o => o.type === 'solo_meteor');
     const hasBalloon = bgObjects.some(o => o.type === 'balloon');
 
-    // Считаем текущее количество звезд, чтобы они не забивали память
-    const currentStars = bgObjects.filter(o => o.type === 'star').length;
+    // Проверка соседства монументов (Куб / Страж)
+    const activeMonolith = bgObjects.find(o => o.type === 'cube' || o.type === 'guard');
+    const hasNearMonolith = bgObjects.some(o => (o.type === 'cube' || o.type === 'guard') && o.y < 350);
+
+    // Функция выбора стороны для Стража (не перекрывает лестницу и другой монумент)
+    const setupGuardSpawn = () => {
+        type = 'guard';
+        const isLeft = activeMonolith ? (activeMonolith.x > canvas.width / 2) : (Math.random() > 0.5);
+        x = isLeft
+            ? canvas.width * (0.14 + Math.random() * 0.08)
+            : canvas.width * (0.78 + Math.random() * 0.08);
+        y = -180;
+        vx = 0;
+    };
 
     // --- 0. БЕСКРАЙНИЙ ПРОСТОР (>= 10 000 000 м) ---
     if (currentHeight >= 10000000) {
         const roll = Math.random();
 
-        // Проверяем наличие любого крупного монумента на экране
-        const activeMonolith = bgObjects.find(o => o.type === 'cube' || o.type === 'guard');
-        const hasNearMonolith = bgObjects.some(o => (o.type === 'cube' || o.type === 'guard') && o.y < 350);
-
-        // 1. КУБ (не спавнится, если рядом Страж или другой Куб)
-        if (roll < 0.05 && !bgObjects.some(o => o.type === 'cube') && !hasNearMonolith) {
+        // 1. Куб
+        if (roll < 0.04 && !hasCube && !hasNearMonolith) {
             type = 'cube';
-            // Если на экране уже есть Страж, встаем строго на противоположную сторону
             const isLeft = activeMonolith ? (activeMonolith.x > canvas.width / 2) : (Math.random() > 0.5);
             x = isLeft
                 ? canvas.width * (0.12 + Math.random() * 0.08)
@@ -1656,50 +1750,115 @@ function spawnBGObject() {
             y = -180;
             vx = 0;
         }
-        // 2. СТРАЖ (не спавнится в Кубе)
-        else if (roll < 0.1 && !bgObjects.some(o => o.type === 'guard') && !hasNearMonolith) {
-            type = 'guard';
-            // Если на экране уже есть Куб, встаем строго на противоположную сторону
-            const isLeft = activeMonolith ? (activeMonolith.x > canvas.width / 2) : (Math.random() > 0.5);
-            x = isLeft
-                ? canvas.width * (0.14 + Math.random() * 0.08)
-                : canvas.width * (0.78 + Math.random() * 0.08);
-            y = -180;
-            vx = 0;
-        } else if (roll < 0.25 && !bgObjects.some(o => o.type === 'cr2')) {
+        // 2. Страж
+        else if (roll < 0.08 && !hasGuard && !hasNearMonolith) {
+            setupGuardSpawn();
+        }
+        // 3. Космо-грузовик (появляется везде >= 1 000 000 м)
+        else if (roll < 0.16 && !hasTruck) {
+            type = 'cosmo_track';
+            vx = (fromLeft ? 1 : -1) * (80 + Math.random() * 50);
+        }
+        // 4. Редкий шаттл на краю вселенной
+        else if (roll < 0.20 && !hasShutle) {
+            type = 'shutle';
+            vx = (fromLeft ? 1 : -1) * (120 + Math.random() * 50);
+        }
+        // 5. Космические змеи
+        else if (roll < 0.32 && !hasCr2) {
             type = 'cr2';
             vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 40);
-        } else if (roll < 0.4 && !bgObjects.some(o => o.type === 'creature1')) {
+        } else if (roll < 0.44 && !hasCr1) {
             type = 'creature1';
             vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 40);
         } else {
-            if (Math.random() < 0.5 && currentStars < 70) {
-                type = 'star'; x = Math.random() * canvas.width; y = ladderSpeed > 1 ? -10 : Math.random() * canvas.height; vx = 0; size = 0.5 + Math.random();
-            } else return;
+            return;
         }
     }
-    // --- 0.5 МЛЕЧНЫЙ ПУТЬ (>= 1 000 000 м) ---
+    // --- 1. МЛЕЧНЫЙ ПУТЬ (>= 1 000 000 м) ---
     else if (currentHeight >= 1000000) {
         const roll = Math.random();
-        if (roll < 0.08 && !bgObjects.some(o => o.type === 'asteroid_creature')) {
-            type = 'asteroid_creature';
-            vx = (fromLeft ? 1 : -1) * (40 + Math.random() * 30);
-        } else if (roll < 0.16 && !bgObjects.some(o => o.type === 'cosmo_track')) {
+
+        // 1. Страж (продолжает встречаться)
+        if (roll < 0.05 && !hasGuard && !hasNearMonolith) {
+            setupGuardSpawn();
+        }
+        // 2. Космо-грузовик
+        else if (roll < 0.15 && !hasTruck) {
             type = 'cosmo_track';
             vx = (fromLeft ? 1 : -1) * (80 + Math.random() * 50);
-        } else if (roll < 0.3 && !bgObjects.some(o => o.type === 'cr2')) {
+        }
+        // 3. Редкий шаттл
+        else if (roll < 0.20 && !hasShutle) {
+            type = 'shutle';
+            vx = (fromLeft ? 1 : -1) * (110 + Math.random() * 50);
+        }
+        // 4. Астероид и змеи
+        else if (roll < 0.28 && !hasAsteroid) {
+            type = 'asteroid_creature';
+            vx = (fromLeft ? 1 : -1) * (40 + Math.random() * 30);
+        } else if (roll < 0.38 && !hasCr2) {
             type = 'cr2';
             vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 40);
+        } else if (roll < 0.48 && !hasCr1) {
+            type = 'creature1';
+            vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 40);
         } else {
-            if (Math.random() < 0.4 && currentStars < 60) {
-                type = 'star'; x = Math.random() * canvas.width; y = ladderSpeed > 1 ? -10 : Math.random() * canvas.height; vx = 0; size = 0.4 + Math.random() * 0.8;
-            } else return;
+            return;
         }
     }
-    // --- 1. КОСМОС (>= 100 000 м) ---
+    // --- 2. ГЛУБОКИЙ КОСМОС (>= 500 000 м): СТАРТ СТРАЖА ---
+    else if (currentHeight >= 500000) {
+        const roll = Math.random();
+
+        // Первое появление Стража
+        if (roll < 0.05 && !hasGuard && !hasNearMonolith) {
+            setupGuardSpawn();
+        }
+        // Первое существо creature1
+        else if (roll < 0.14 && !hasCr1) {
+            type = 'creature1';
+            vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 40);
+        }
+        // Шаттлы, НЛО и спутники
+        else if (roll < 0.20 && !hasShutle) {
+            type = 'shutle';
+            vx = (fromLeft ? 1 : -1) * (110 + Math.random() * 60);
+        } else if (roll < 0.26 && !hasUfo) {
+            type = 'ufo';
+            vx = (fromLeft ? 1 : -1) * (90 + Math.random() * 40);
+        } else if (roll < 0.32 && !hasSatellite) {
+            type = 'satellite';
+            vx = (fromLeft ? 1 : -1) * 20;
+        } else {
+            return;
+        }
+    }
+    // --- 3. ПОЯС СУЩЕСТВ (>= 400 000 м): СТАРТ ПЕРВОГО СУЩЕСТВА ---
+    else if (currentHeight >= 400000) {
+        const roll = Math.random();
+
+        // Первое появление creature1
+        if (roll < 0.08 && !hasCr1) {
+            type = 'creature1';
+            vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 40);
+        } else if (roll < 0.14 && !hasShutle) {
+            type = 'shutle';
+            vx = (fromLeft ? 1 : -1) * (110 + Math.random() * 60);
+        } else if (roll < 0.20 && !hasUfo) {
+            type = 'ufo';
+            vx = (fromLeft ? 1 : -1) * (90 + Math.random() * 40);
+        } else if (roll < 0.26 && !hasSatellite) {
+            type = 'satellite';
+            vx = (fromLeft ? 1 : -1) * 20;
+        } else {
+            return;
+        }
+    }
+    // --- 4. КОСМОС (>= 100 000 м) ---
     else if (currentHeight >= 100000) {
         const roll = Math.random();
-        if (roll < 0.04 && !bgObjects.some(o => o.type === 'shutle')) {
+        if (roll < 0.04 && !hasShutle) {
             type = 'shutle';
             vx = (fromLeft ? 1 : -1) * (110 + Math.random() * 60);
         } else if (roll < 0.08 && !hasUfo) {
@@ -1709,12 +1868,10 @@ function spawnBGObject() {
             type = 'satellite';
             vx = (fromLeft ? 1 : -1) * 20;
         } else {
-            if (Math.random() < 0.4 && currentStars < 50) {
-                type = 'star'; x = Math.random() * canvas.width; y = ladderSpeed > 1 ? -10 : Math.random() * canvas.height; vx = 0; size = 0.4 + Math.random() * 0.8;
-            } else return;
+            return;
         }
     }
-    // --- 2. СТРАТОСФЕРА (10 000 - 100 000 м) ---
+    // --- 5. СТРАТОСФЕРА (10 000 - 100 000 м) ---
     else if (currentHeight >= 10000) {
         const roll = Math.random();
 
@@ -1748,43 +1905,37 @@ function spawnBGObject() {
         }
         else if (roll < 0.02 && !bgObjects.some(o => o.type === 'obelisk')) {
             type = 'obelisk';
-            // Строго слева или справа от лестницы (лестница в центре не перекрывается)
             const isLeft = Math.random() > 0.5;
             x = isLeft
                 ? canvas.width * (0.08 + Math.random() * 0.14)
                 : canvas.width * (0.78 + Math.random() * 0.14);
-            y = -180; // Спавнится чуть выше экрана
-            vx = 0;   // Не дрейфует в стороны
+            y = -180;
+            vx = 0;
         }
         else if (roll < 0.035 && !hasBalloon) {
             type = 'balloon'; vx = (fromLeft ? 1 : -1) * 10;
-        }
-        else if (roll < 0.055 && !hasSatellite) {
+        } else if (roll < 0.055 && !hasSatellite) {
             type = 'satellite'; vx = (fromLeft ? 1 : -1) * 22;
-        }
-        else {
-            if (Math.random() < 0.25 && currentStars < 35) {
-                type = 'star'; x = Math.random() * canvas.width; y = ladderSpeed > 1 ? -10 : Math.random() * canvas.height; vx = 0; size = 0.6 + Math.random() * 1.2;
-            } else return;
+        } else {
+            return;
         }
     }
-    // --- 3. ГРОЗОВОЙ ФРОНТ (1 000 - 10 000 м) ---
+    // --- 6. ГРОЗОВОЙ ФРОНТ (1 000 - 10 000 м) ---
     else if (currentHeight >= 1000) {
         if (Math.random() < 0.2) {
             type = 'airplane';
             vx = (fromLeft ? 1 : -1) * (70 + Math.random() * 30);
 
-            // Звук играет не чаще чем раз в 18 секунд и с 50% шансом
             const now = Date.now();
             if (now - lastPlaneSoundTime > 14000 && Math.random() < 0.8) {
                 lastPlaneSoundTime = now;
-                AudioEngine.play('airplane', 0.45); // 0.45 — комфортная фоновая громкость
+                AudioEngine.play('airplane', 0.45);
             }
         } else {
             type = 'cloud'; size = 35 + Math.random() * 30; color = `rgba(85, 95, 105, ${speedMult * 0.5})`; vx *= 0.5;
         }
     }
-    // --- 4. КРЫШИ / НЕБО (100 - 1 000 м) ---
+    // --- 7. КРЫШИ / НЕБО (100 - 1 000 м) ---
     else if (currentHeight >= 200) {
         if (Math.random() < 0.35) {
             type = 'seagull'; vx = (fromLeft ? 1 : -1) * (45 + Math.random() * 25);
@@ -2254,7 +2405,6 @@ function drawBGObjects() {
                 ctx.fill();
                 ctx.restore();
 
-                // СТАЛО:
                 // Метеорит (поворот строго по направлению к ракете)
                 const meteorAngle = Math.atan2(obj.targetY - obj.startY_m, obj.targetX - obj.startX_m);
 
@@ -2271,89 +2421,20 @@ function drawBGObjects() {
                 ctx.fill();
                 if (meteorImg.complete) ctx.drawImage(meteorImg, -22, -22, 45, 45);
                 ctx.restore();
-                tg.addColorStop(0, 'rgba(255,220,120,0.95)');
-                tg.addColorStop(1, 'rgba(231,76,60,0)');
-                ctx.fillStyle = tg;
-                ctx.beginPath();
-                ctx.ellipse(-15, -15, 45 + Math.random() * 8, 16 + Math.random() * 6, Math.PI / 4, 0, Math.PI * 2);
-                ctx.fill();
-                if (meteorImg.complete) ctx.drawImage(meteorImg, -22, -22, 45, 45);
-                ctx.restore();
             } else if (!obj.exploded) {
                 obj.exploded = true;
                 shakeTime = 16;
+                AudioEngine.play('explosion_2', 0.8);
                 for (let k = 0; k < 14; k++) debrisArray.push({ x: obj.targetX, y: obj.targetY, vx: (Math.random() - 0.5) * 24, vy: (Math.random() - 0.5) * 24, rot: Math.random() * Math.PI, rotSpeed: 0.35, width: 10 + Math.random() * 8, height: 10 + Math.random() * 8 });
             }
             if (obj.t >= 1.0) { obj.x = -999; obj.y = -999; }
         }
         else {
             ctx.save();
-            if (obj.type === 'star') {
-                const now = Date.now();
-                const twinkle = 0.15 + 0.85 * Math.abs(Math.sin(obj.animTimer * 8.5));
-
-                // === ГРАВИТАЦИОННОЕ ЛИНЗИРОВАНИЕ (Только для Чёрной дыры и Абсолюта) ===
-                let renderX = obj.x;
-                let renderY = obj.y;
-                let stretch = 1.0;
-                let angle = 0;
-
-                const hasBlackHole = (currentSkinId === 'endless' || currentSkinId === 'absolute');
-                if (hasBlackHole && blackHoleBonus > 0) {
-                    // Координаты центра гравитационной аномалии на экране
-                    const bhCenterX = canvas.width / 2;
-                    const bhCenterY = canvas.height * 0.48;
-
-                    const dx = obj.x - bhCenterX;
-                    const dy = obj.y - bhCenterY;
-                    const dist = Math.hypot(dx, dy);
-
-                    // Масса растет вместе с бонусом (+1000% дает максимальное искривление)
-                    const bhMass = (2500 + blackHoleBonus * 600) * (canvas.width / 400);
-                    const horizonR = 25 * (canvas.width / 400);
-
-                    // Звезда поглощена горизонтом событий
-                    if (dist < horizonR) {
-                        ctx.restore();
-                        continue;
-                    }
-
-                    // Формула гравитационного смещения света: гиперболическое отталкивание видимого луча
-                    if (dist < 260) {
-                        const displacement = bhMass / (dist * 1.4);
-                        renderX += (dx / dist) * displacement;
-                        renderY += (dy / dist) * displacement;
-
-                        // Звезда сплющивается в дугу по касательной к окружности дыры
-                        stretch = Math.min(4.5, 1.0 + displacement / 12);
-                        angle = Math.atan2(dy, dx) + Math.PI / 2; // Перпендикулярно лучу
-                    }
-                }
-
-                ctx.fillStyle = `rgba(255, 255, 255, ${twinkle})`;
-
-                if (stretch > 1.2) {
-                    // Рисуем искривленную звезду-дугу (Гравитационная линза)
-                    ctx.beginPath();
-                    ctx.ellipse(renderX, renderY, obj.size * stretch, Math.max(0.6, obj.size * 0.6), angle, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (obj.size > 1.1 && twinkle > 0.4) {
-                    const rl = obj.size * 3.2, rt = obj.size * 0.45;
-                    ctx.beginPath();
-                    ctx.moveTo(renderX, renderY - rl); ctx.lineTo(renderX + rt, renderY); ctx.lineTo(renderX, renderY + rl); ctx.lineTo(renderX - rt, renderY);
-                    ctx.moveTo(renderX - rl, renderY); ctx.lineTo(renderX, renderY + rt); ctx.lineTo(renderX + rl, renderY); ctx.lineTo(renderX - rt, renderY);
-                    ctx.fill();
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(renderX, renderY, obj.size * 0.8, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            } else {
-                ctx.fillStyle = obj.color;
-                ctx.beginPath();
-                ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            ctx.fillStyle = obj.color;
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI * 2);
+            ctx.fill();
             ctx.restore();
         }
 
@@ -2363,7 +2444,6 @@ function drawBGObjects() {
         }
     }
 }
-
 // === АНИМАЦИЯ РЕТРО-МОНЕТКИ ===
 const coinFrames = [];
 for (let i = 1; i <= 4; i++) {
@@ -2716,7 +2796,7 @@ function renderLuckModal() {
         } else if (id === nextTalismanToBuy) {
             const canAfford = goldenNuts >= item.price;
             const btn = document.createElement('button');
-            btn.innerText = `${item.price} 🟡`;
+            btn.innerHTML = `${item.price} <img src="assets/golden_nut.webp" class="ui-ico-sm">`;
             btn.style.cssText = `width: 100%; margin-top: 4px; padding: 4px; font-size: 9px; font-weight: bold; background: ${canAfford ? '#f1c40f' : '#555'}; color: #111; border: none; border-radius: 4px; cursor: pointer;`;
             btn.disabled = !canAfford;
             btn.onclick = () => {
@@ -2772,9 +2852,12 @@ function updateAutoClickers(dt) {
             let finalMPS = Math.floor((speakerMPS + speakerAdd) * speakerMult * cyberSpeakerMult);
             if (hasMech('vine')) finalMPS = Math.round(finalMPS * 1.4);
 
+            // МЕХАНИКА 3 (ЗЕМЛЯ): +25% MPS за каждый активный бафф
+            finalMPS = Math.floor(finalMPS * getPlanetBuffMultiplier());
+
             if (adState.turboTimer > 0) finalMPS *= 3;
 
-            currentHeight += finalMPS;
+            currentHeight += Math.round(finalMPS * getGlobalMultiplier());
             checkHeightMilestones();
 
             // Безопасный звук колонки
@@ -2789,15 +2872,15 @@ function updateAutoClickers(dt) {
             }
 
             if (isCoolSpeaker && speakerPulseCount % 3 === 0) {
-                goldenNuts += 1;
-                if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
+                const spGold = addGoldenNuts(1);
                 if (slotSpeaker) {
                     particles.push({
                         x: slotSpeaker.getBoundingClientRect().left + 25,
                         y: slotSpeaker.getBoundingClientRect().top,
-                        text: '+1 🟡', color: '#f1c40f', font: 'bold 22px sans-serif', alpha: 1.5, speed: 2
+                        text: `+${spGold} 🟡`, color: '#f1c40f', font: 'bold 22px sans-serif', alpha: 1.5, speed: 2
                     });
                 }
+                if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
             }
         }
     }
@@ -2837,6 +2920,9 @@ function updateAutoClickers(dt) {
             let baseHit = Math.floor((newtonPower + newtonAdd) * newtonMult * cementMult * cyberNewtonMult);
             if (hasMech('vine')) baseHit = Math.round(baseHit * 1.4);
 
+            // МЕХАНИКА 3 (ЗЕМЛЯ): +25% силы шаров за каждый активный бафф
+            baseHit = Math.floor(baseHit * getPlanetBuffMultiplier());
+
             const processBallHit = (isRightBall, ballX) => {
                 newtonHitCount++;
                 let hitDamage = baseHit;
@@ -2852,14 +2938,27 @@ function updateAutoClickers(dt) {
                     particles.push({ x: ballX, y: canvas.height * 0.22, text: `🎱 x2.5! +${bNuts} 🔩`, color: '#ffffff', font: 'bold 20px sans-serif', alpha: 1.6, speed: 2 });
                 }
 
-                if (isPlasma && isRightBall) {
-                    addNuts(1);
-                    particles.push({ x: ballX, y: canvas.height * 0.24, text: '+1 🔩', color: '#00ffff', font: 'bold 18px sans-serif', alpha: 1.2, speed: 1.8 });
+                // МЕХАНИКА 3 (ЗЕМЛЯ): 1% шанс на активацию случайного бонуса
+                if (isPlanet && Math.random() < 0.01) {
+                    const bonuses = ['turbo', 'fortune', 'frenzy'];
+                    const picked = bonuses[Math.floor(Math.random() * bonuses.length)];
+
+                    if (picked === 'turbo') {
+                        adState.turboTimer = Math.max(adState.turboTimer, 0) + 20000;
+                        particles.push({ x: ballX, y: canvas.height * 0.22, text: '🌍 ТУРБО x3 (20с)!', color: '#e67e22', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
+                    } else if (picked === 'fortune') {
+                        adState.fortuneTimer = Math.max(adState.fortuneTimer, 0) + 60000;
+                        particles.push({ x: ballX, y: canvas.height * 0.22, text: '🌍 УДАЧА +15 (60с)!', color: '#2ecc71', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
+                    } else if (picked === 'frenzy') {
+                        adState.frenzyTimer = Math.max(adState.frenzyTimer, 0) + 15000;
+                        particles.push({ x: ballX, y: canvas.height * 0.22, text: '🌍 ГАЙКОПАД (15с)!', color: '#f1c40f', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
+                    }
+                    AudioEngine.play('win', 0.85);
                 }
 
                 const boxAdd = isPlanet ? 3 : 1;
-        clicksForBox += boxAdd;
-        if (isPlanet) shakeTime = Math.max(shakeTime, 10);
+                clicksForBox += boxAdd;
+                if (isPlanet) shakeTime = Math.max(shakeTime, 10);
 
         let actualNeeded = clicksNeeded;
         if (skin.buffs.caseLimitMinus) actualNeeded -= skin.buffs.caseLimitMinus;
@@ -2883,7 +2982,7 @@ function updateAutoClickers(dt) {
                 // Турбо x3 для шаров Ньютона
                 if (adState.turboTimer > 0) hitDamage *= 3;
 
-                currentHeight += hitDamage;
+                currentHeight += Math.round(hitDamage * getGlobalMultiplier());
                 checkHeightMilestones();
                 ladderScaleX = 1.06; ladderScaleY = 0.92; ladderSpeed = 16;
                 shakeTime = Math.max(shakeTime, 7);
@@ -3053,6 +3152,8 @@ function gameLoop() {
     drawBackground();
     drawFirstLocationBG();
 
+    drawStarfield();
+
     drawMountain();
     drawEarthAtmosphere();
     drawCosmicDebris();     // Рисуется под лестницей
@@ -3088,11 +3189,64 @@ function gameLoop() {
     if (adState.fortuneTimer > 0) adState.fortuneTimer = Math.max(0, adState.fortuneTimer - dt);
     if (adState.frenzyTimer > 0) adState.frenzyTimer = Math.max(0, adState.frenzyTimer - dt);
 
+// === ПЛАЗМЕННЫЕ ШАРЫ: НАГРЕВ / ОСТЫВАНИЕ И ЗАЛП ПРИ БЕЗДЕЙСТВИИ ===
+    const isPlasmaActive = currentNewtonSkin === 'plasma' || 
+        (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'plasma');
+
+    if (isPlasmaActive) {
+        const tapNow = Date.now();
+        clickTimestamps = clickTimestamps.filter(t => tapNow - t <= 1000);
+        const currentCps = clickTimestamps.length;
+
+        // Плавный нагрев при CPS >= 6, иначе остывание
+        if (currentCps >= 6) {
+            plasmaHeat = Math.min(1.0, plasmaHeat + (dt / 350));
+        } else {
+            plasmaHeat = Math.max(0.0, plasmaHeat - (dt / 700));
+        }
+
+        // МЕХАНИКА 2: Бездействие 5 секунд -> залп из 10 кликов за 0.5с
+        if (plasmaBurstRemaining === 0 && (tapNow - lastPlayerTapTime >= 5000)) {
+            lastPlayerTapTime = tapNow; // сбрасываем таймер
+            plasmaBurstRemaining = 10;
+            plasmaHeat = 1.0; // шар мгновенно вспыхивает на разряде
+
+            AudioEngine.play('neon_newton', 0.9, 'newton');
+            particles.push({
+                x: canvas.width / 2,
+                y: canvas.height * 0.28,
+                img: lightningImg,
+                imgSize: 28,
+                text: 'РАЗРЯД (x10)!',
+                color: '#00ffff',
+                font: 'bold 22px sans-serif',
+                alpha: 2.2,
+                speed: 2
+            });
+
+            if (plasmaBurstTimer) clearInterval(plasmaBurstTimer);
+            plasmaBurstTimer = setInterval(() => {
+                if (plasmaBurstRemaining <= 0) {
+                    clearInterval(plasmaBurstTimer);
+                    plasmaBurstTimer = null;
+                    return;
+                }
+                plasmaBurstRemaining--;
+                const rect = canvas.getBoundingClientRect();
+                const tapX = rect.left + rect.width / 2 + (Math.random() - 0.5) * 40;
+                const tapY = rect.top + rect.height * 0.45 + (Math.random() - 0.5) * 40;
+                handleTap(tapX, tapY, true); // true = флаг авто-клика
+            }, 50); // 10 кликов каждые 50мс = 500мс (полсекунды)
+        }
+    } else {
+        plasmaHeat = 0.0;
+    }
+
     updateAutoClickers(dt);
     updateShopUI();
     updateBoostsUI();
 
-    // === НЛО (Каждые 40 сек спавн инопланетного контейнера) ===
+    // === НЛО (Каждые 30 сек спавн инопланетного контейнера) ===
     if (hasMech('ufo')) {
         ufoBonusTimer += dt;
         if (ufoBonusTimer >= 30000 && !ufoGift.active) {
@@ -3222,8 +3376,7 @@ function gameLoop() {
 
     // Таймер ящика
     const isMonster = currentSpeakerSkin === 'monster' || (hasMech('cyber') && cyberExtraAccessory.type === 'speakers' && cyberExtraAccessory.id === 'monster');
-    const activeBoxTarget = isMonster ? 120000 : 180000;
-
+    const activeBoxTarget = isMonster ? 60000 : 180000;
     if (!isTimedBoxReady) {
         activePlayBoxTimer += dt;
         if (activePlayBoxTimer >= activeBoxTarget) {
@@ -3369,6 +3522,155 @@ function closeRetroInfo() {
     }
 }
 
+// === КЭШИРОВАННОЕ ЗВЁЗДНОЕ НЕБО (OFFSCREEN CANVAS) ===
+
+
+// === КЭШИРОВАННОЕ ЗВЁЗДНОЕ НЕБО (2 СЛОЯ ДЛЯ ПАРАЛЛАКСА) ===
+function initStarfield() {
+    if (!canvas || !canvas.width || !canvas.height) return;
+
+    const w = canvas.width;
+    const h = Math.round(canvas.height * 2.5);
+
+    // -------------------------------------------------------------
+    // СЛОЙ 1: ДАЛЬНИЙ ФОН (Мелкая пыль и средние звёзды)
+    // -------------------------------------------------------------
+    const offBack = document.createElement('canvas');
+    offBack.width = w;
+    offBack.height = h;
+    const bCtx = offBack.getContext('2d');
+
+    // 1. Мелкая фоновая пыль (320 шт.)
+    for (let i = 0; i < 320; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 0.5 + Math.random() * 0.8;
+        const alpha = 0.2 + Math.random() * 0.55;
+
+        bCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        bCtx.beginPath();
+        bCtx.arc(x, y, r, 0, Math.PI * 2);
+        bCtx.fill();
+    }
+
+    // 2. Средние чёткие звёзды (90 шт.)
+    const palette = ['#ffffff', '#e0f7fa', '#fff9c4', '#f3e5f5'];
+    for (let i = 0; i < 90; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 1.1 + Math.random() * 1.0;
+        const col = palette[Math.floor(Math.random() * palette.length)];
+        const alpha = 0.5 + Math.random() * 0.45;
+
+        bCtx.save();
+        bCtx.globalAlpha = alpha;
+        bCtx.fillStyle = col;
+        bCtx.beginPath();
+        bCtx.arc(x, y, r, 0, Math.PI * 2);
+        bCtx.fill();
+        bCtx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // СЛОЙ 2: БЛИЖНИЙ ПЛАН (Крупные ромбовидные сияющие звёзды)
+    // -------------------------------------------------------------
+    const offFront = document.createElement('canvas');
+    offFront.width = w;
+    offFront.height = h;
+    const fCtx = offFront.getContext('2d');
+
+    const flareHues = [
+        { core: '#ffffff', glow: 'rgba(255, 255, 255,' },
+        { core: '#e0f7fa', glow: 'rgba(0, 225, 255,' },
+        { core: '#fff8e1', glow: 'rgba(255, 220, 140,' }
+    ];
+
+    for (let i = 0; i < 28; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const starSize = 1.3 + Math.random() * 1.6;
+        const theme = flareHues[Math.floor(Math.random() * flareHues.length)];
+        const alpha = 0.75 + Math.random() * 0.25;
+
+        fCtx.save();
+        fCtx.globalAlpha = alpha;
+
+        // А) Ореол
+        const glowR = starSize * 3.6;
+        const glow = fCtx.createRadialGradient(x, y, 0, x, y, glowR);
+        glow.addColorStop(0, `${theme.glow} 0.6)`);
+        glow.addColorStop(0.35, `${theme.glow} 0.18)`);
+        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        fCtx.fillStyle = glow;
+        fCtx.beginPath();
+        fCtx.arc(x, y, glowR, 0, Math.PI * 2);
+        fCtx.fill();
+
+        // Б) Ромбовидные лучи
+        const rayLen = starSize * 4.2;
+        const rayThick = starSize * 0.48;
+
+        fCtx.fillStyle = '#ffffff';
+        fCtx.beginPath();
+        fCtx.moveTo(x, y - rayLen);
+        fCtx.lineTo(x + rayThick, y);
+        fCtx.lineTo(x, y + rayLen);
+        fCtx.lineTo(x - rayThick, y);
+
+        fCtx.moveTo(x - rayLen, y);
+        fCtx.lineTo(x, y + rayThick);
+        fCtx.lineTo(x + rayLen, y);
+        fCtx.lineTo(x, y - rayThick);
+        fCtx.closePath();
+        fCtx.fill();
+
+        // В) Ядро
+        fCtx.fillStyle = theme.core;
+        fCtx.beginPath();
+        fCtx.arc(x, y, starSize * 0.65, 0, Math.PI * 2);
+        fCtx.fill();
+
+        fCtx.restore();
+    }
+
+    starfieldBackCanvas = offBack;
+    starfieldFrontCanvas = offFront;
+}
+
+function drawStarfield() {
+    if (visualHouseHeight < 2500) return;
+
+    if (!starfieldBackCanvas || !starfieldFrontCanvas) initStarfield();
+    if (!starfieldBackCanvas || !starfieldFrontCanvas) return;
+
+    let alpha = 1.0;
+    if (visualHouseHeight < 12000) {
+        alpha = (visualHouseHeight - 2500) / 9500;
+    }
+
+    const h = starfieldBackCanvas.height;
+
+    // ПАРАЛЛАКС:
+    // Дальние звёзды плывут не спеша (фактор 0.02)
+    // Крупные передние звёзды летят навстречу почти в 3 раза быстрее (фактор 0.055)
+    const scrollYBack = (visualHouseHeight * 0.02) % h;
+    const scrollYFront = (visualHouseHeight * 0.055) % h;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+    // 1. Отрисовка дальнего слоя (бесшовный тайлинг)
+    ctx.drawImage(starfieldBackCanvas, 0, scrollYBack);
+    ctx.drawImage(starfieldBackCanvas, 0, scrollYBack - h);
+
+    // 2. Отрисовка ближнего слоя с крупными звёздами
+    ctx.drawImage(starfieldFrontCanvas, 0, scrollYFront);
+    ctx.drawImage(starfieldFrontCanvas, 0, scrollYFront - h);
+
+    ctx.restore();
+}
+
 function drawBackground() {
     let currentLocIndex = 0;
     for (let i = 0; i < LOCATIONS.length; i++) {
@@ -3396,11 +3698,11 @@ function drawBackground() {
     if (currentHeight >= 7000 && currentHeight < 1000000) {
         let moonAlpha = 1;
 
-        // Появление (7 000 - 13 000 м)
+        // Появление (7 000 - 13 000 м) — ТВОЙ ОРИГИНАЛ
         if (currentHeight < 13000) {
             moonAlpha = (currentHeight - 7000) / 6000;
         }
-        // Растворение перед Млечным Путем (900 000 - 1 000 000 м)
+        // Растворение перед Млечным Путем (384 000 - 500 000 м) — ТВОЙ ОРИГИНАЛ
         else if (currentHeight > 384000) {
             moonAlpha = Math.max(0, 1 - ((currentHeight - 384000) / 116000));
         }
@@ -3410,12 +3712,15 @@ function drawBackground() {
 
         if (moonAlpha > 0) {
             ctx.save();
-            ctx.globalAlpha = moonAlpha; // Применяем прозрачность ко всей Луне
+            ctx.globalAlpha = moonAlpha;
 
             const moonX = canvas.width * 0.28;
-            const moonY = 90;
 
-            // Мягкое неоновое свечение
+            // Начальная позиция 90px. Плавный параллакс-спуск вниз от сглаженной камеры
+            const moonY = 90 + Math.max(0, visualHouseHeight - 7000) * 0.00025;
+            const moonSize = 48; // Родной диаметр (в коде был радиус 24)
+
+            // Мягкое неоновое свечение — ТВОЙ ОРИГИНАЛ
             const glow = ctx.createRadialGradient(moonX, moonY, 15, moonX, moonY, 55);
             glow.addColorStop(0, 'rgba(245, 246, 250, 0.35)');
             glow.addColorStop(1, 'rgba(245, 246, 250, 0)');
@@ -3424,19 +3729,15 @@ function drawBackground() {
             ctx.arc(moonX, moonY, 55, 0, Math.PI * 2);
             ctx.fill();
 
-            // Тело Луны
-            ctx.fillStyle = '#f5f6fa';
-            ctx.beginPath();
-            ctx.arc(moonX, moonY, 24, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Кратеры
-            ctx.fillStyle = '#dcdde1';
-            ctx.beginPath();
-            ctx.arc(moonX - 7, moonY - 6, 5, 0, Math.PI * 2);
-            ctx.arc(moonX + 8, moonY + 4, 4, 0, Math.PI * 2);
-            ctx.arc(moonX - 2, moonY + 9, 3, 0, Math.PI * 2);
-            ctx.fill();
+            // Отрисовка ассета Луны (с безопасным фолбэком на случай отсутствия файла)
+            if (moonImg.complete && moonImg.naturalWidth !== 0) {
+                ctx.drawImage(moonImg, moonX - moonSize / 2, moonY - moonSize / 2, moonSize, moonSize);
+            } else {
+                ctx.fillStyle = '#f5f6fa';
+                ctx.beginPath();
+                ctx.arc(moonX, moonY, moonSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
             ctx.restore();
         }
@@ -4101,6 +4402,65 @@ function drawHangingSpeaker() {
     ctx.restore();
 }
 
+// Легковесная процедурная электризация шаров
+function drawBallElectricity(targetCtx, x, y, radius, heat) {
+    if (heat <= 0.05) return;
+
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = 'lighter';
+
+    // 1. Быстрые мерцающие дуги молний (2-3 зигзага)
+    const arcCount = Math.floor(2 + heat * 3);
+    targetCtx.strokeStyle = Math.random() > 0.35 ? '#00ffff' : '#ffffff';
+    targetCtx.lineWidth = 1.2 + Math.random() * 0.8;
+    targetCtx.shadowColor = '#00ffff';
+    targetCtx.shadowBlur = 6;
+
+    for (let a = 0; a < arcCount; a++) {
+        const angle = Math.random() * Math.PI * 2;
+        const startR = radius * (0.85 + Math.random() * 0.2);
+        const startX = x + Math.cos(angle) * startR;
+        const startY = y + Math.sin(angle) * startR;
+
+        const arcLen = (8 + Math.random() * 12) * heat;
+        const midAngle = angle + (Math.random() - 0.5) * 0.6;
+        const endAngle = angle + (Math.random() - 0.5) * 0.8;
+
+        const midX = x + Math.cos(midAngle) * (startR + arcLen * 0.5) + (Math.random() - 0.5) * 4;
+        const midY = y + Math.sin(midAngle) * (startR + arcLen * 0.5) + (Math.random() - 0.5) * 4;
+
+        const endX = x + Math.cos(endAngle) * (startR + arcLen);
+        const endY = y + Math.sin(endAngle) * (startR + arcLen);
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(startX, startY);
+        targetCtx.lineTo(midX, midY);
+        targetCtx.lineTo(endX, endY);
+        targetCtx.stroke();
+    }
+
+    // 2. Слабая анимация спрайта lighting.webp вокруг шара
+    if (lightningImg.complete && lightningImg.naturalWidth !== 0) {
+        const now = Date.now();
+        const flicker = 0.4 + Math.sin(now * 0.02) * 0.6;
+        if (flicker > 0.15) {
+            targetCtx.globalAlpha = flicker * heat * 0.85;
+            const sprSize = 18 + Math.sin(now * 0.01) * 3;
+            const sprAngle = Math.sin(now * 0.005) * 0.4;
+            const offsetX = Math.cos(now * 0.003) * (radius * 1.15);
+            const offsetY = Math.sin(now * 0.003) * (radius * 1.15);
+
+            targetCtx.save();
+            targetCtx.translate(x + offsetX, y + offsetY);
+            targetCtx.rotate(sprAngle);
+            targetCtx.drawImage(lightningImg, -sprSize / 2, -sprSize / 2, sprSize, sprSize);
+            targetCtx.restore();
+        }
+    }
+
+    targetCtx.restore();
+}
+
 // === 2. УВЕЛИЧЕННЫЕ ШАРЫ НЬЮТОНА (РАДИУС 22px ВМЕСТО 13px) ===
 function drawNewtonCradle() {
     const targetWidth = canvas.width * 0.27;
@@ -4145,6 +4505,38 @@ function drawNewtonCradle() {
 
     if (newtonSprite.src && newtonSprite.complete && newtonSprite.naturalWidth !== 0) {
         ctx.drawImage(newtonSprite, leftBallX - r, leftBallY - r, r * 2, r * 2);
+       // Визуал Плазмы (раскал до белого и голубого)
+        if (plasmaHeat > 0.05 && (currentNewtonSkin === 'plasma' || (hasMech('cyber') && cyberExtraAccessory.id === 'plasma'))) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            const heatGrad = ctx.createRadialGradient(leftBallX, leftBallY, 0, leftBallX, leftBallY, r * 1.5);
+            heatGrad.addColorStop(0, `rgba(255, 255, 255, ${0.95 * plasmaHeat})`);
+            heatGrad.addColorStop(0.35, `rgba(160, 245, 255, ${0.8 * plasmaHeat})`);
+            heatGrad.addColorStop(0.7, `rgba(0, 210, 255, ${0.4 * plasmaHeat})`);
+            heatGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = heatGrad;
+            ctx.beginPath();
+            ctx.arc(leftBallX, leftBallY, r * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            drawBallElectricity(ctx, leftBallX, leftBallY, r, plasmaHeat);
+        }
+
+        // Визуал Земли (яркая атмосфера при активных баффах)
+        const earthBuffs = getActiveTemporaryBuffsCount();
+        if (earthBuffs > 0 && (currentNewtonSkin === 'planet' || (hasMech('cyber') && cyberExtraAccessory.id === 'planet'))) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            const auraGrad = ctx.createRadialGradient(leftBallX, leftBallY, r * 0.7, leftBallX, leftBallY, r * 1.4);
+            auraGrad.addColorStop(0, 'rgba(0, 220, 255, 0.5)');
+            auraGrad.addColorStop(0.6, 'rgba(46, 204, 113, 0.3)');
+            auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = auraGrad;
+            ctx.beginPath();
+            ctx.arc(leftBallX, leftBallY, r * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
     } else {
         ctx.fillStyle = '#bdc3c7';
         ctx.beginPath();
@@ -4167,6 +4559,38 @@ function drawNewtonCradle() {
 
     if (newtonSprite.src && newtonSprite.complete && newtonSprite.naturalWidth !== 0) {
         ctx.drawImage(newtonSprite, rightBallX - r, rightBallY - r, r * 2, r * 2);
+        // Визуал Плазмы (раскал до белого и голубого)
+        if (plasmaHeat > 0.05 && (currentNewtonSkin === 'plasma' || (hasMech('cyber') && cyberExtraAccessory.id === 'plasma'))) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            const heatGrad = ctx.createRadialGradient(rightBallX, rightBallY, 0, rightBallX, rightBallY, r * 1.5);
+            heatGrad.addColorStop(0, `rgba(255, 255, 255, ${0.95 * plasmaHeat})`);
+            heatGrad.addColorStop(0.35, `rgba(160, 245, 255, ${0.8 * plasmaHeat})`);
+            heatGrad.addColorStop(0.7, `rgba(0, 210, 255, ${0.4 * plasmaHeat})`);
+            heatGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = heatGrad;
+            ctx.beginPath();
+            ctx.arc(rightBallX, rightBallY, r * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            drawBallElectricity(ctx, rightBallX, rightBallY, r, plasmaHeat);
+        }
+
+        // Визуал Земли (яркая атмосфера при активных баффах)
+        const earthBuffs = getActiveTemporaryBuffsCount();
+        if (earthBuffs > 0 && (currentNewtonSkin === 'planet' || (hasMech('cyber') && cyberExtraAccessory.id === 'planet'))) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            const auraGrad = ctx.createRadialGradient(rightBallX, rightBallY, r * 0.7, rightBallX, rightBallY, r * 1.4);
+            auraGrad.addColorStop(0, 'rgba(0, 220, 255, 0.5)');
+            auraGrad.addColorStop(0.6, 'rgba(46, 204, 113, 0.3)');
+            auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = auraGrad;
+            ctx.beginPath();
+            ctx.arc(rightBallX, rightBallY, r * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
     } else {
         ctx.fillStyle = '#bdc3c7';
         ctx.beginPath();
@@ -4181,7 +4605,6 @@ function drawNewtonCradle() {
 }
 
 function drawParticles() {
-    // 1. Ограничиваем массив: не больше 25 частиц на экране
     if (particles.length > 25) {
         particles.splice(0, particles.length - 25);
     }
@@ -4189,7 +4612,7 @@ function drawParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
 
-        // Гравитационное притяжение частиц к центру лестницы при надетой Чёрной дыре
+        // Гравитационное притяжение Чёрной дыры
         if ((currentSkinId === 'endless' || currentSkinId === 'absolute') && blackHoleBonus > 0) {
             const pullForce = (0.8 + (blackHoleBonus / 10.0) * 2.2);
             const dx = (canvas.width / 2) - p.x;
@@ -4199,13 +4622,41 @@ function drawParticles() {
         p.y -= p.speed;
         p.alpha -= 0.02;
 
-        ctx.fillStyle = p.color ? p.color.replace('ALPHA', p.alpha) : `rgba(255, 255, 255, ${p.alpha})`;
-        ctx.font = p.font || 'bold 28px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.lineWidth = 3;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+
+        // Крупный базовый размер (30px)
+        ctx.font = p.font || 'bold 30px sans-serif';
+        ctx.lineWidth = 3.5;
+        ctx.textBaseline = 'middle'; // Центрирует текст по вертикали с иконкой
         ctx.strokeStyle = `rgba(0, 0, 0, ${p.alpha})`;
-        ctx.strokeText(p.text, p.x, p.y);
-        ctx.fillText(p.text, p.x, p.y);
+        ctx.fillStyle = p.color ? p.color.replace('ALPHA', p.alpha) : `rgba(255, 255, 255, ${p.alpha})`;
+
+        // Если есть и иконка, и текст (связка молния + цифры)
+        if (p.img && p.img.complete && p.img.naturalWidth !== 0 && p.text) {
+            const s = p.imgSize || 26;
+            const textW = ctx.measureText(p.text).width;
+            const gap = 8;
+            const totalW = s + gap + textW;
+            const startX = p.x - totalW / 2;
+
+            // Молния
+            ctx.drawImage(p.img, startX, p.y - s / 2, s, s);
+
+            // Текст очков
+            ctx.textAlign = 'left';
+            ctx.strokeText(p.text, startX + s + gap, p.y);
+            ctx.fillText(p.text, startX + s + gap, p.y);
+        } else if (p.img && p.img.complete && p.img.naturalWidth !== 0) {
+            const s = p.imgSize || 26;
+            ctx.drawImage(p.img, p.x - s / 2, p.y - s / 2, s, s);
+        } else if (p.text) {
+            ctx.textAlign = 'center';
+            ctx.strokeText(p.text, p.x, p.y);
+            ctx.fillText(p.text, p.x, p.y);
+        }
+
+        ctx.restore();
 
         if (p.alpha <= 0) particles.splice(i, 1);
     }
@@ -4310,7 +4761,11 @@ canvas.addEventListener('pointermove', (e) => {
     }
 });
 
-function handleTap(clientX, clientY) {
+function handleTap(clientX, clientY, isAutoBurst = false) {
+    if (!isAutoBurst) {
+        lastPlayerTapTime = Date.now();
+    }
+
     if (settingsState.vibrate && navigator.vibrate) {
         navigator.vibrate(15);
     }
@@ -4358,19 +4813,20 @@ function handleTap(clientX, clientY) {
         if (Math.sqrt(dx * dx + dy * dy) < retroCoin.size * 1.5) {
             retroCoin.active = false;
 
-            // Награда: Обычные гайки + Золотые гайки (5-15)
+           // Награда: Обычные гайки + Золотые гайки (5-15)
             const coinReward = Math.floor(75 + Math.random() * 50);
             const goldReward = Math.floor(5 + Math.random() * 11);
 
-            addNuts(coinReward);
-            goldenNuts += goldReward;
+            const finalCoinNuts = addNuts(coinReward);
+            const finalCoinGold = addGoldenNuts(goldReward);
 
             AudioEngine.play('pickupCoin5', 1.0);
             particles.push({
                 x: clickX,
                 y: clickY,
-                text: `+${coinReward} 🔩 и +${goldReward} 🟡!`,
+                text: `+${finalCoinNuts} 🔩 и +${finalCoinGold} 🟡!`,
                 color: '#f1c40f',
+                font: 'bold 22px sans-serif',
                 speed: 3,
                 alpha: 1.6
             });
@@ -4394,6 +4850,18 @@ function handleTap(clientX, clientY) {
 
     // Умножаем урон клика на количество тапов (Кость x2, Банан на 5-й тап x2)
     currentClickPower *= tapsNum;
+
+    // === МЕХАНИКА 1 (ПЛАЗМА): CPS > 6 ДАЁТ x2 К ВЫСОТЕ ===
+    let isPlasmaX2 = false;
+    const isPlasmaEquipped = currentNewtonSkin === 'plasma' || 
+        (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'plasma');
+    if (isPlasmaEquipped && liveCps >= 6) {
+        currentClickPower *= 2;
+        isPlasmaX2 = true;
+    }
+
+    // === МЕХАНИКА 3 (ЗЕМЛЯ): +25% СИЛЫ КЛИКА ЗА КАЖДЫЙ АКТИВНЫЙ БАФФ ===
+    currentClickPower = Math.round(currentClickPower * getPlanetBuffMultiplier());
 
     // Накачиваем инерцию Млечного пути (теперь переменная объявлена и не крашит игру!)
     if (hasMech('milkyway')) {
@@ -4457,7 +4925,7 @@ function handleTap(clientX, clientY) {
     }
 
     // Применяем высоту и импульс пружины UI
-    currentHeight += currentClickPower;
+    currentHeight += Math.round(currentClickPower * getGlobalMultiplier());
     counterScale = Math.min(counterScale + 0.08, 1.4);
     markerBounce = Math.min(markerBounce + 0.15, 1.45);
     checkHeightUnlocks();
@@ -4479,24 +4947,52 @@ function handleTap(clientX, clientY) {
     const dropChance = 0.012 + (totalLuck * 0.0005);
     const ironUpgradeChance = (totalLuck * 0.15) / 100;
 
-    for (let i = 0; i < tapsNum; i++) {
+for (let i = 0; i < tapsNum; i++) {
         if (Math.random() < dropChance) {
-            if (Math.random() < ironUpgradeChance) {
-                userCases.iron++;
+            let caseType = (Math.random() < ironUpgradeChance) ? 'iron' : 'wooden';
+
+            // МЛЕЧНЫЙ ПУТЬ: 25% шанс повысить редкость кейса на уровень выше
+            let wasUpgraded = false;
+            if (hasMech('milkyway') && Math.random() < 0.25) {
+                if (caseType === 'wooden') { caseType = 'iron'; wasUpgraded = true; }
+                else if (caseType === 'iron') { caseType = 'gold'; wasUpgraded = true; }
+            }
+
+            if (caseType === 'gold') {
+                userCases.gold = (userCases.gold || 0) + 1;
+                AudioEngine.play('jacpot', 1.0);
+                particles.push({
+                    x: clickX, y: clickY - 50,
+                    img: canvasIcoGoldBox, imgSize: 30,
+                    text: wasUpgraded ? 'ЗОЛОТОЙ КЕЙС (МЛЕЧНЫЙ ПУТЬ)!' : 'ЗОЛОТОЙ КЕЙС!',
+                    color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 2.2, speed: 3.5
+                });
+            } else if (caseType === 'iron') {
+                userCases.iron = (userCases.iron || 0) + 1;
                 AudioEngine.play('win', 0.85);
-                particles.push({ x: clickX, y: clickY - 50, text: '🧰 ЖЕЛЕЗНЫЙ СЕЙФ (УДАЧА)!', color: '#7f8c8d', font: 'bold 22px sans-serif', alpha: 1.8, speed: 3.5 });
+                particles.push({
+                    x: clickX, y: clickY - 50,
+                    img: canvasIcoIronBox, imgSize: 28,
+                    text: wasUpgraded ? 'СЕЙФ (МЛЕЧНЫЙ ПУТЬ)!' : 'СЕЙФ (УДАЧА)!',
+                    color: '#7f8c8d', font: 'bold 24px sans-serif', alpha: 2.0, speed: 3.5
+                });
             } else {
                 boxesOwned++;
                 userCases.wooden = boxesOwned;
                 if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
                 AudioEngine.play('case_drop_by_click', 0.9);
-                particles.push({ x: clickX, y: clickY - 45, text: '+ 📦!', color: '#f1c40f', alpha: 1.4, speed: 3.5 });
+                particles.push({
+                    x: clickX, y: clickY - 45,
+                    img: canvasIcoWoodenBox, imgSize: 28,
+                    text: '+1 КЕЙС!',
+                    color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 1.8, speed: 3.5
+                });
             }
             break;
         }
     }
 
-    // === ПРОГРЕСС-БАР КЕЙСА И ВЫДАЧА НАГРАД (С УЧЕТОМ ЗОЛОТОЙ И МРАМОРНОЙ) ===
+// === ПРОГРЕСС-БАР КЕЙСА И ВЫДАЧА НАГРАД ===
     clicksForBox += tapsNum;
     if (clicksForBox >= actualClicksNeeded) {
         clicksForBox = clicksForBox - actualClicksNeeded;
@@ -4504,36 +5000,38 @@ function handleTap(clientX, clientY) {
         pityStage++;
         clicksNeeded = getClicksNeeded(pityStage);
 
-        // 1. Золотая лестница: 100% замена на Железный сейф
+        let awardedCase = 'wooden';
         if (hasMech('golden')) {
-            userCases.iron = (userCases.iron || 0) + 1;
-            AudioEngine.play('win', 0.85);
-            particles.push({
-                x: clickX,
-                y: clickY - 50,
-                text: '🧰 ЖЕЛЕЗНЫЙ СЕЙФ!',
-                color: '#7f8c8d',
-                font: 'bold 22px sans-serif',
-                alpha: 1.8,
-                speed: 3.5
-            });
+            awardedCase = 'iron';
+        } else if (hasMech('marble') && Math.random() < 0.25) {
+            awardedCase = 'gold';
         }
-        // 2. Мраморная лестница: 25% шанс получить Золотой ящик вместо деревянного
-        else if (hasMech('marble') && Math.random() < 0.25) {
+
+        // МЛЕЧНЫЙ ПУТЬ: 25% шанс повысить ящик за шкалу на уровень выше
+        if (hasMech('milkyway') && Math.random() < 0.25) {
+            if (awardedCase === 'wooden') awardedCase = 'iron';
+            else if (awardedCase === 'iron') awardedCase = 'gold';
+        }
+
+        if (awardedCase === 'gold') {
             userCases.gold = (userCases.gold || 0) + 1;
             AudioEngine.play('jacpot', 1.0);
             particles.push({
-                x: clickX,
-                y: clickY - 50,
-                text: '🟡 ЗОЛОТОЙ КЕЙС!',
-                color: '#f1c40f',
-                font: 'bold 24px sans-serif',
-                alpha: 2.0,
-                speed: 3.5
+                x: clickX, y: clickY - 50,
+                img: canvasIcoGoldBox, imgSize: 30,
+                text: 'ЗОЛОТОЙ КЕЙС!',
+                color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 2.2, speed: 3.5
             });
-        }
-        // 3. Обычная выдача Деревянного ящика (если нет Золотой или Мраморной)
-        else {
+        } else if (awardedCase === 'iron') {
+            userCases.iron = (userCases.iron || 0) + 1;
+            AudioEngine.play('win', 0.85);
+            particles.push({
+                x: clickX, y: clickY - 50,
+                img: canvasIcoIronBox, imgSize: 28,
+                text: 'ЖЕЛЕЗНЫЙ СЕЙФ!',
+                color: '#7f8c8d', font: 'bold 24px sans-serif', alpha: 2.0, speed: 3.5
+            });
+        } else {
             boxesOwned++;
             userCases.wooden = boxesOwned;
             if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
@@ -4572,11 +5070,35 @@ function handleTap(clientX, clientY) {
         }
     }
 
-    // Визуал и физика
+// Визуал и физика
     ladderScaleX = 1.1;
     ladderScaleY = 0.85;
     ladderSpeed = 25;
-    particles.push({ x: clickX + (Math.random() * 40 - 20), y: clickY - 20, text: `+${currentClickPower}`, alpha: 1, speed: 3 + Math.random() * 2 });
+
+    if (isPlasmaX2) {
+        // Увеличенный сочный партикл для телефонов: 30px + молния 26px
+        particles.push({
+            x: clickX + (Math.random() * 30 - 15),
+            y: clickY - 20,
+            img: lightningImg,
+            imgSize: 26,
+            text: `+${currentClickPower} (x2)`,
+            color: '#00ffff',
+            font: 'bold 30px sans-serif',
+            alpha: 1.5,
+            speed: 3.5
+        });
+    } else {
+        // Базовый крупный шрифт (30px, как и было)
+        particles.push({
+            x: clickX + (Math.random() * 40 - 20),
+            y: clickY - 20,
+            text: `+${currentClickPower}`,
+            font: 'bold 30px sans-serif',
+            alpha: 1,
+            speed: 3 + Math.random() * 2
+        });
+    }
 
     // Проверка офферов на 500 м
     if (currentHeight >= 500 && !starterPack.unlocked && !starterPack.purchased) {
@@ -4880,14 +5402,16 @@ if (btnClaimTimedBox) {
             userCases.wooden = boxesOwned;
             if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
 
-            AudioEngine.play('win', 0.8);
+           AudioEngine.play('win', 0.8);
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.4,
-                text: '+1 📦 ПОЛУЧЕН!',
+                img: canvasIcoWoodenBox,
+                imgSize: 28,
+                text: '+1 ЯЩИК ПОЛУЧЕН!',
                 color: '#2ecc71',
-                font: 'bold 24px sans-serif',
-                alpha: 1.8,
+                font: 'bold 26px sans-serif',
+                alpha: 2.0,
                 speed: 2
             });
             saveGame();
@@ -5105,11 +5629,11 @@ document.getElementById('gachaClaimBtn').onclick = () => {
 
     // === ПАССИВКА КРИСТАЛЬНОЙ ЛЕСТНИЦЫ (+3 ЗОЛОТА ЗА ЛЮБОЙ КЕЙС) ===
     if (hasMech('crystal')) {
-        goldenNuts += 3;
+        const actualCrystalGold = addGoldenNuts(3); // С 1 колонкой даст 4, с 2 колонками даст 5
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.32,
-            text: '💎 +3 🟡 (Кристалл)!',
+            text: `💎 +${actualCrystalGold} 🟡 (Кристалл)!`,
             color: '#00ffff',
             font: 'bold 22px sans-serif',
             alpha: 2.2,
@@ -5123,28 +5647,28 @@ document.getElementById('gachaClaimBtn').onclick = () => {
         const id = pendingPrize.id;
         if (ownedSkins.includes(id)) {
             const rarity = LADDER_SKINS[id]?.rarity || 'common';
-            goldenNuts += (DUPLICATE_GOLD_REWARDS[rarity] || 5);
+            addGoldenNuts(DUPLICATE_GOLD_REWARDS[rarity] || 5);
         } else {
             ownedSkins.push(id);
         }
     } else if (pendingPrize.type === 'speaker') {
         const id = pendingPrize.id;
         if (ownedSpeakerSkins.includes(id)) {
-            goldenNuts += 80;
+            addGoldenNuts(80);
         } else {
             ownedSpeakerSkins.push(id);
         }
     } else if (pendingPrize.type === 'newton') {
         const id = pendingPrize.id;
         if (ownedNewtonSkins.includes(id)) {
-            goldenNuts += 80;
+            addGoldenNuts(80);
         } else {
             ownedNewtonSkins.push(id);
         }
     } else if (pendingPrize.type === 'talisman') {
         const id = pendingPrize.id;
         if (ownedTalismans.includes(id)) {
-            goldenNuts += 60;
+            addGoldenNuts(60);
         } else {
             ownedTalismans.push(id);
             const regular = ['clover', 'horseshoe', 'paw', 'coin', 'star', 'key'];
@@ -5391,52 +5915,63 @@ function equipItem(type, id, silent = false) {
 
 // Генерация описания баффов
 const LADDER_DESC = {
-    wood: 'Стартовая стремянка',
-    banana: 'Каждый 5-й клик работает дважды',
-    beer: '+5 к удаче',
-    fire: '+7 к клику, -10 до ящика',
-    fireman: '+15 к силе шаров',
-    plastic: 'Шары бьют на 0.15с быстрее',
-    rusty: '65% шанс +1 <img src="assets/nut.webp" class="ui-ico"> за клик',
-    tape: '-10% цены магазина за метры',
-    book: '+7 к удаче',
-    cactus: '+20 колонка, +10 шары',
-    cement: '+50% урон шаров (+0.3с пауза)',
-    neon: 'Бесплатный реролл кейса',
-    scratch: 'CPS > 4 включает комбо до x1.5',
-    new_year: 'Подарки каждые 150-250 тапов',
-    bone: 'Каждый клик считается за два',
-    crystal: '+3 <img src="assets/golden_nut.webp" class="ui-ico"> за каждое открытие кейса',
-    cyber: '+1 слот под аксессуары',
-    golden: 'Сейф каждые 100 кликов',
-    goth: '-20% скидка на всё',
-    ice: 'Скольжение свайпом вверх',
-    vine: '+40% ко всем доходам',
-    marble: '25% шанс золотого кейса на 100 тапов',
-    quant: '20% гаек в золото, -50 до кейса',
-    ufo: 'Дроп бонусов раз в 60 секунд',
-    mimic: '2 слота способностей лестниц',
-    retro: 'Ловля монеток на 75–125 <img src="assets/nut.webp" class="ui-ico">',
-    add_stair: 'Баффы рекламы +50% времени. Спонсор: +20 <img src="assets/nut.webp" class="ui-ico"> и +1 <img src="assets/golden_nut.webp" class="ui-ico">',
-    storm: '+20 к клику (10% риск надлома)',
-    strato: 'Колонка и шары на 30% быстрее',
-    cosmo: 'Оффлайн-лимит до 3 часов',
-    calendar_stair: '+10 к Удаче. Магия золотого и железного кейсов',
-    absolute: 'Все способности одновременно'
+    // === ОБЫЧНЫЕ ===
+    wood: 'Стартовая классика. Пахнет началом бесконечного пути.',
+    banana: 'Удваивает каждый 5-й тап.',
+    beer: '+5 к показателю Удачи.',
+    fire: '+7 м за тап, -10 тапов до ящика.',
+    fireman: 'Колыбель Ньютона: +15 м за удар',
+    plastic: 'Шары Ньютона бьют быстрее на 0.15 c',
+    rusty: '65% шанс получить <img src="assets/nut.webp" class="ui-ico"> за каждый тап.',
+    tape: 'Скидка 10% в магазине улучшений.',
+
+    // === РЕДКИЕ ===
+    book: '+7 к показателю Удачи.',
+    cactus: 'Сабвуфер: +20 м/c. Колыбель Ньютона: +10 м за удар',
+    cement: 'Колыбель Ньютона: +50%, но удары на 0.3c реже.',
+    neon: 'Бесплатный реролл при открытии каждого кейса',
+    scratch: 'При 5+ тапах/сек высота за тап x1.5',
+    new_year: 'Подарок за каждые 150-250 тапов.',
+
+    // === ЭПИЧЕСКИЕ ===
+    bone: 'Удваивает каждый тап',
+    crystal: 'Каждое открытие кейса дополнительно приносит +3 <img src="assets/golden_nut.webp" class="ui-ico">.',
+    cyber: 'Открывает дополнительный слот под аксессуар.',
+    golden: 'Заполнение шкалы тапов даёт Железный сейф вместо деревяного ящика',
+    goth: 'Скидка 20% в магазине улучшений и кейсов',
+    ice: 'Скольжение: тапать можно свайпом по экрану',
+    vine: 'Увеличивает силу тапа, сабвуфера и шаров на +40%.',
+    add_stair: 'Баффы длятся на 50% дольше; каждый просмотр рекламы дополнительно приносит 20 <img src="assets/nut.webp" class="ui-ico"> и 3 <img src="assets/golden_nut.webp" class="ui-ico">.',
+    calendar_stair: '+10 к показателю Удачи; доп. шанс на легендарные скины из сейфа.',
+
+    // === ЛЕГЕНДАРНЫЕ ===
+    marble: '25% шанс на Золотой контейнер за шкалу тапов.',
+    quant: 'Расщепление материи: 20% получаемых гаек становятся золотыми, -50 тапов до ящика.',
+    ufo: 'Каждые 30 секунд притягивает инопланетный контейнер',
+    mimic: 'Мимикрия: копирует способности 2 выбранных лестниц.',
+
+    // === ОСОБЕННЫЕ ===
+    retro: 'Поймай летящую монетку (приз: до 125 <img src="assets/nut.webp" class="ui-ico"> и 15 <img src="assets/golden_nut.webp" class="ui-ico">).',
+    storm: '+20 м к подъёму за тап, но 5% шанс сломаться при клике.',
+    strato: 'Разреженный воздух: ускоряет работу сабвуфера и Колыбели Ньютона на 40%.',
+    cosmo: 'Увеличивает лимит оффлайн-накопления ресурсов до 3 часов.',
+    milkyway: 'Инерционный разгон лестницы. Шанс 25% повысить редкость любого выпадающего кейса на один уровень выше.',
+    endless: 'Каждую минуту увеличивает бонус получаемой высоты (тапы, колонка, колыбель) на +50% (максимум +1 000%). Смена лестницы сбрасывает накопленный бонус',
+    absolute: 'Венец эволюции: пассивные эффекты всех лестниц сразу'
 };
 
 const SPEAKER_DESC = {
-    old: 'Базовый пассивный бас',
-    monster: '- 60 секунд к таймеру бесплатного ящика',
-    cyber: 'Пассивно +25% к гайкам и золоту',
-    cool: ' Каждый 3-й бас дает +1 <img src="assets/golden_nut.webp" class="ui-ico">'
+    old: 'Базовый ритм Сабвуфера.',
+    monster: '+20% к мощности Сабвуфера. -2 минуты от таймера бесплатного ящика.',
+    cyber: '+40% к мощности Сабвуфера. Получайте на 25% больше <img src="assets/nut.webp" class="ui-ico"> и <img src="assets/golden_nut.webp" class="ui-ico">!',
+    cool: '×2 к мощности Сабвуфера. Каждый 3-й бас приносит +1 <img src="assets/golden_nut.webp" class="ui-ico">.'
 };
 
 const NEWTON_DESC = {
-    steel: 'Базовый авто-удар',
-    billiard: 'Каждый 8-й удар: x2.5 высоты и +3-5 <img src="assets/nut.webp" class="ui-ico">',
-    plasma: 'Каждый удар 2-го шара дает +1 <img src="assets/nut.webp" class="ui-ico"> (x1.5)',
-    planet: 'Каждый удар дает +3 тапа в ящик (x2.0)'
+    steel: 'Базовый авто-удар Колыбели Ньютона.',
+    billiard: '+25% к урону шаров. Каждый 8-й удар даёт x2.5 высоты и 3–5 <img src="assets/nut.webp" class="ui-ico">.',
+    plasma: '+50% к урону шаров. Наэлектризованность: при 6+ тапах/сек удваивает высоту за каждый тап. После 5 сек бездействия — автоклик 10 тапов.',
+    planet: '×2 к урону шаров, +3 тапа к ящику за удар. +25% к силе тапа, Сабвуфера и шаров за каждый активный бафф. 1% шанс, что удар включит случайный бонус.'
 };
 
 function getItemBuffText(type, item) {
@@ -5556,14 +6091,15 @@ function renderInventory() {
                     : '';
 
                 let cyberGearBtn = '';
-                if (id === 'cyber') {
+                if (id === 'cyber' || id === 'absolute') {
                     let cyberEquippedName = 'Не выбран';
                     if (cyberExtraAccessory.id) {
                         if (cyberExtraAccessory.type === 'speakers') cyberEquippedName = SPEAKER_SKINS[cyberExtraAccessory.id]?.name || '';
                         else if (cyberExtraAccessory.type === 'newton') cyberEquippedName = NEWTON_SKINS[cyberExtraAccessory.id]?.name || '';
                         else if (cyberExtraAccessory.type === 'talismans') cyberEquippedName = TALISMANS[cyberExtraAccessory.id]?.name || '';
                     }
-                    cyberGearBtn = `<button onclick="openCyberConfig()" style="background: none; border: 1px dashed #00ffff; color: #00ffff; border-radius: 4px; font-size: 9px; padding: 2px 5px; cursor: pointer; margin-bottom: 2px; width: 100%;">🦾 Слот (${cyberEquippedName})</button>`;
+                    const borderColor = (id === 'absolute') ? '#f1c40f' : '#00ffff';
+                    cyberGearBtn = `<button onclick="openCyberConfig()" style="background: none; border: 1px dashed ${borderColor}; color: ${borderColor}; border-radius: 4px; font-size: 9px; padding: 2px 5px; cursor: pointer; margin-bottom: 2px; width: 100%;">🦾 Слот (${cyberEquippedName})</button>`;
                 }
 
                 actionAreaHtml = `
@@ -5604,17 +6140,17 @@ function renderInventory() {
             } else if (currentInventoryTab === 'talismans') {
                 if (id === nextTalismanToBuy) {
                     const canAfford = goldenNuts >= item.price;
-                    actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="talismans" data-id="${id}" style="background: ${canAfford ? '#f1c40f' : '#555'}; color: #000;" ${!canAfford ? 'disabled' : ''}>${item.price} 🟡</button>`;
+                    actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="talismans" data-id="${id}" style="background: ${canAfford ? '#f1c40f' : '#555'}; color: #000; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} <img src="assets/golden_nut.webp" class="ui-ico-sm"></button>`;
                 } else {
                     actionAreaHtml = `<button class="btn-equip locked" disabled>По очереди</button>`;
                 }
             } else if (currentInventoryTab === 'speakers' || currentInventoryTab === 'newton') {
                 const isGold = item.priceType === 'goldenNuts';
                 const canAfford = isGold ? (goldenNuts >= item.price) : (nuts >= item.price);
-                const currencyIcon = isGold ? '🟡' : '🔩';
+                const currencyIcoHtml = isGold ? '<img src="assets/golden_nut.webp" class="ui-ico-sm">' : '<img src="assets/nut.webp" class="ui-ico-sm">';
                 const btnBg = canAfford ? (isGold ? '#f1c40f' : '#3498db') : '#555';
                 const btnColor = isGold ? '#000' : '#fff';
-                actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="${currentInventoryTab}" data-id="${id}" style="background: ${btnBg}; color: ${btnColor}; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} ${currencyIcon}</button>`;
+                actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="${currentInventoryTab}" data-id="${id}" style="background: ${btnBg}; color: ${btnColor}; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} ${currencyIcoHtml}</button>`;
             }
         }
 
@@ -5641,7 +6177,7 @@ function renderInventory() {
                 e.stopPropagation();
                 equipLadderEffect(id);
                 if (id === 'mimic') openMimicConfig();
-                if (id === 'cyber') openCyberConfig();
+                if (id === 'cyber' || id === 'absolute') openCyberConfig();
             };
             if (bMain) bMain.onclick = (e) => {
                 e.stopPropagation();
@@ -5651,11 +6187,11 @@ function renderInventory() {
                     equipItem('ladders', id, true);
                     equipLadderEffect(id);
                     if (id === 'mimic') openMimicConfig();
-                    if (id === 'cyber') openCyberConfig();
+                    if (id === 'cyber' || id === 'absolute') openCyberConfig();
                 } else if (isVis && !isEff) {
                     equipLadderEffect(id);
                     if (id === 'mimic') openMimicConfig();
-                    if (id === 'cyber') openCyberConfig();
+                    if (id === 'cyber' || id === 'absolute') openCyberConfig();
                 } else if (!isVis && isEff) {
                     equipItem('ladders', id);
                 }
@@ -5674,28 +6210,39 @@ function renderInventory() {
                 const targetItem = itemsSource[bId];
                 if (!targetItem) return;
 
-                const isGold = targetItem.priceType === 'goldenNuts';
+                // Талисманы ВСЕГДА покупаются за золото, даже если priceType не прописан в объекте
+                const isGold = (bType === 'talismans') || (targetItem.priceType === 'goldenNuts');
 
                 const processPurchase = () => {
                     if (isGold) goldenNuts -= targetItem.price;
                     else nuts -= targetItem.price;
 
-                    if (bType === 'talismans') ownedTalismans.push(bId);
-                    else if (bType === 'speakers') ownedSpeakerSkins.push(bId);
-                    else if (bType === 'newton') ownedNewtonSkins.push(bId);
+                    if (bType === 'talismans') {
+                        ownedTalismans.push(bId);
+                        equipItem('talismans', bId);
+                    } else if (bType === 'speakers') {
+                        ownedSpeakerSkins.push(bId);
+                        equipItem('speakers', bId);
+                    } else if (bType === 'newton') {
+                        ownedNewtonSkins.push(bId);
+                        equipItem('newton', bId);
+                    }
 
                     AudioEngine.play('gaiki', 0.8);
                     uiNuts.innerText = `${nuts}`;
                     if (typeof modalNutsVal !== 'undefined' && modalNutsVal) modalNutsVal.innerText = nuts;
                     if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
 
+                    updateFieldIcons();
                     saveGame();
                     renderInventory();
                 };
 
-                if (isGold && goldenNuts >= targetItem.price) {
-                    showConfirmPurchase('Покупка предмета', `Купить "${targetItem.name}" за ${targetItem.price} 🟡?`, targetItem.price, processPurchase);
-                } else if (!isGold && nuts >= targetItem.price) {
+                if (isGold) {
+                    if (goldenNuts >= targetItem.price) {
+                        showConfirmPurchase('Покупка предмета', `Купить «${targetItem.name}» за ${targetItem.price}?`, targetItem.price, processPurchase);
+                    }
+                } else if (nuts >= targetItem.price) {
                     processPurchase();
                 }
             };
@@ -5853,15 +6400,14 @@ function loadGame() {
 
     if (!saved) return false;
 
-    try {
+   try {
 
         // 1. СНАЧАЛА ПАРСИМ СЕЙВ (исправлена критическая ошибка)
         const data = JSON.parse(saved);
         if (data.mimicSlots && Array.isArray(data.mimicSlots)) {
             mimicSlots = data.mimicSlots;
         }
-        visualHouseHeight = currentHeight;
-        if (data.cyberExtraAccessory) cyberExtraAccessory = data.cyberExtraAccessory; // <-- ДОБАВИЛИ
+        if (data.cyberExtraAccessory) cyberExtraAccessory = data.cyberExtraAccessory;
 
         if (data.settingsState) {
             Object.assign(settingsState, data.settingsState);
@@ -6240,7 +6786,7 @@ function refreshDailyDeal(force = false) {
     // 75% — Epic скин лестницы
     else {
         // Исключаем Календарь и Билборд, так как они выдаются только за прогресс
-        const epicSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'epic' && k !== 'calendar_ladder' && k !== 'add_stair');
+        const epicSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'epic' && k !== 'calendar_stair' && k !== 'add_stair');
         const chosen = epicSkins[Math.floor(Math.random() * epicSkins.length)];
         dailyDeal = { ...dailyDeal, type: 'skin', id: chosen, basePrice: 220, salePrice: 119, lastRefresh: now };
     }
@@ -6434,7 +6980,7 @@ const CALENDAR_REWARDS = [
     { day: 4, text: '+800 <img src="assets/nut.webp" class="ui-ico-sm">', icon: '<img src="assets/nut.webp" class="ui-ico-lg">', type: 'nuts', amount: 800 },
     { day: 5, text: '1 <img src="assets/iron_box.webp" class="ui-ico-sm">', icon: '<img src="assets/iron_box.webp" class="ui-ico-lg">', type: 'case', caseId: 'iron', amount: 1 },
     { day: 6, text: '+25 <img src="assets/golden_nut.webp" class="ui-ico-sm">', icon: '<img src="assets/golden_nut.webp" class="ui-ico-lg">', type: 'gold', amount: 25 },
-    { day: 7, text: 'Скин «Календарь»', icon: '<img src="assets/wood_stair-removebg-preview.png" class="ui-ico-lg">', type: 'skin', skinId: 'calendar_stair' }
+    { day: 7, text: 'Скин «Календарь»', icon: '<img src="assets/calendar_stair.webp" class="ui-ico-lg">', type: 'skin', skinId: 'calendar_stair' }
 ];
 
 let calendarState = {
@@ -6526,7 +7072,7 @@ function renderCalendarUI() {
 if (day7Box) {
         const day7Title = isLoopCycle ? 'День 7: Супер-награда' : 'День 7: Супер-приз';
         const day7Desc = isLoopCycle ? '+75 <img src="assets/golden_nut.webp" class="ui-ico-sm"> и 1 <img src="assets/iron_box.webp" class="ui-ico-sm">' : 'Скин «Календарь» (Epic)';
-        const day7Icon = isLoopCycle ? '<img src="assets/iron_box.webp" class="ui-ico-lg">' : '<img src="assets/wood_stair-removebg-preview.png" class="ui-ico-lg">';
+        const day7Icon = isLoopCycle ? '<img src="assets/iron_box.webp" class="ui-ico-lg">' : '<img src="assets/calendar_stair.webp" class="ui-ico-lg">';
 
         day7Box.querySelector('div').innerHTML = `
             <span style="font-size: 24px;">${day7Icon}</span>
@@ -7137,7 +7683,7 @@ function triggerCaseGainedPopup() {
 
     const popup = document.createElement('div');
     popup.className = 'case-floating-popup';
-    popup.innerText = '+📦 КЕЙС!';
+    popup.innerHTML = '+<img src="assets/wooden_box.webp" style="width: 17px; height: 17px; vertical-align: -3px; margin: 0 2px;"> КЕЙС!';
     layer.appendChild(popup);
 
     setTimeout(() => {
