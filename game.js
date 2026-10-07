@@ -55,7 +55,7 @@ function showThankYouModal(title, desc) {
     if (!modal) return;
 
     if (titleEl) titleEl.innerText = title;
-    if (descEl) descEl.innerText = desc;
+    if (descEl) descEl.innerHTML = desc; // <-- СТРОГО innerHTML
 
     modal.classList.remove('hidden');
     AudioEngine.play('donate_sound', 1.0);
@@ -70,7 +70,7 @@ function showConfirmPurchase(title, desc, cost, onConfirm) {
     const modal = document.getElementById('confirm-purchase-modal');
     if (!modal) return;
     document.getElementById('confirm-title').innerText = title;
-    document.getElementById('confirm-desc').innerText = desc;
+    document.getElementById('confirm-desc').innerHTML = desc; // <-- СТРОГО innerHTML
     document.getElementById('confirm-cost').innerHTML = `${cost} <img src="assets/golden_nut.webp" class="ui-ico">`;
     pendingConfirmAction = onConfirm;
     modal.classList.remove('hidden');
@@ -122,10 +122,10 @@ if (btnCloseStarter && starterModal) {
 }
 
 // Покупка Starter Pack
+// Покупка Starter Pack (убираем эмодзи и дублированную строку)
 const btnBuyStarter = document.getElementById('btn-buy-starter');
 if (btnBuyStarter) {
     btnBuyStarter.onclick = () => {
-        // Заглушка оплаты (в проде здесь вызов платёжки ВК/Яндекса)
         starterPack.purchased = true;
         isVip = true;
 
@@ -135,19 +135,17 @@ if (btnBuyStarter) {
         userCases.wooden = boxesOwned;
         userCases.iron = (userCases.iron || 0) + 5;
 
-        // Выдаём скин колонки Кибер
         if (!ownedSpeakerSkins.includes('cyber')) {
             ownedSpeakerSkins.push('cyber');
         }
 
-        particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: '👑 НАБОР НОВИЧКА ПОЛУЧЕН!', color: '#f1c40f', alpha: 2.5, speed: 2 });
+        particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: 'НАБОР НОВИЧКА ПОЛУЧЕН!', color: '#f1c40f', alpha: 2.5, speed: 2 });
 
         uiNuts.innerText = `${nuts}`;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
         starterModal.classList.add('hidden');
         if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
-        showThankYouModal('НАБОР НОВИЧКА!', 'Гора ресурсов и легендарный скин «Кибер» твои! Спасибо за поддержку 👑');
-        showThankYouModal('НАБОР НОВИЧКА!', 'Гора ресурсов и легендарный скин «Кибер» твои! Спасибо за поддержку 👑');
+        showThankYouModal('НАБОР НОВИЧКА!', 'Гора ресурсов и легендарный скин «Кибер» твои! Спасибо за поддержку <img src="assets/crown.webp" class="ui-ico-sm">');
         saveGame();
     };
 }
@@ -156,7 +154,7 @@ if (btnBuyStarter) {
 document.querySelectorAll('.mock-buy-btn').forEach(btn => {
     btn.onclick = () => {
         const type = btn.dataset.type;
-        isVip = true; // Любая покупка даёт VIP 👑
+        isVip = true;
 
         if (type === 'adfree') {
             hasAdFree = true;
@@ -169,7 +167,7 @@ document.querySelectorAll('.mock-buy-btn').forEach(btn => {
             const amount = parseInt(btn.dataset.amount, 10);
             goldenNuts += amount;
             if (donateModal) donateModal.classList.add('hidden');
-            showThankYouModal('ЗОЛОТО ЗАЧИСЛЕНО!', `+${amount} 🟡 уже на балансе. Приятных покупок!`);
+            showThankYouModal('ЗОЛОТО ЗАЧИСЛЕНО!', `+${amount} <img src="assets/golden_nut.webp" class="ui-ico"> уже на балансе. Приятных покупок!`);
         }
 
         saveGame();
@@ -282,7 +280,7 @@ function checkAdStreakDailyReset() {
     }
 }
 
-// Активация Турбо-рывка (x3 на 60 сек, с Билбордом 90 сек)
+// Активация Турбо-рывка
 function activateTurboBoost(customSeconds = null) {
     watchRewardedAd('turbo_x3', () => {
         const mult = hasMech('billboard') ? 1.5 : 1.0;
@@ -292,9 +290,11 @@ function activateTurboBoost(customSeconds = null) {
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.35,
-            text: `🔥 ТУРБО x3 (${Math.round(durationMs / 1000)}с)!`,
+            img: canvasIcoTurbo,
+            imgSize: 32,
+            text: `ТУРБО-ДОХОД x3 (${Math.round(durationMs / 1000)}с)!`,
             color: '#e67e22',
-            font: 'bold 26px sans-serif',
+            font: 'bold 24px sans-serif',
             alpha: 2.2,
             speed: 1.5
         });
@@ -339,7 +339,7 @@ const HEIGHT_MILESTONES = [
     }
 ];
 
-// Активация Знака Фортуны (+15 удачи на 10 мин, стек до 30 мин)
+// Активация Удачи
 function activateFortuneBoost(customMinutes = null, luckAdd = 15) {
     watchRewardedAd('fortune_luck', () => {
         const mult = hasMech('billboard') ? 1.5 : 1.0;
@@ -351,29 +351,35 @@ function activateFortuneBoost(customMinutes = null, luckAdd = 15) {
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.35,
-            text: `🍀 УДАЧА +${luckAdd}!`,
+            img: canvasIcoClover,
+            imgSize: 32,
+            text: `УДАЧА +${luckAdd}!`,
             color: '#2ecc71',
-            font: 'bold 26px sans-serif',
+            font: 'bold 24px sans-serif',
             alpha: 2.2,
             speed: 1.5
         });
     });
 }
 
-// Активация Гайкопада (Frenzy-режим: 30 сек)
+// Активация Гайкопада (в обоих местах, где объявлена функция):
 function activateFrenzyMode(seconds = 30) {
-    const mult = hasMech('billboard') ? 1.5 : 1.0;
-    adState.frenzyTimer = seconds * 1000 * mult;
+    watchRewardedAd('frenzy_nuts', () => {
+        const mult = hasMech('billboard') ? 1.5 : 1.0;
+        adState.frenzyTimer = seconds * 1000 * mult;
 
-    AudioEngine.play('whoosh_air', 0.8);
-    particles.push({
-        x: canvas.width / 2,
-        y: canvas.height * 0.35,
-        text: '⚡ ГАЙКОПАД АКТИВИРОВАН!',
-        color: '#f1c40f',
-        font: 'bold 26px sans-serif',
-        alpha: 2.5,
-        speed: 1.5
+        AudioEngine.play('whoosh_air', 0.8);
+        particles.push({
+            x: canvas.width / 2,
+            y: canvas.height * 0.35,
+            img: canvasIcoNutRain,
+            imgSize: 32,
+            text: 'ГАЙКОПАД!',
+            color: '#f1c40f',
+            font: 'bold 26px sans-serif',
+            alpha: 2.5,
+            speed: 1.5
+        });
     });
 }
 
@@ -762,6 +768,13 @@ const canvasIcoGold = new Image(); canvasIcoGold.src = 'assets/golden_nut.webp';
 const canvasIcoWoodenBox = new Image(); canvasIcoWoodenBox.src = 'assets/wooden_box.webp';
 const canvasIcoIronBox = new Image(); canvasIcoIronBox.src = 'assets/iron_box.webp';
 const canvasIcoGoldBox = new Image(); canvasIcoGoldBox.src = 'assets/golden_box.webp';
+
+// Иконки баффов для всплывающих уведомлений:
+const canvasIcoClover = new Image(); canvasIcoClover.src = 'assets/clover_lucky.webp';
+const canvasIcoTurbo = new Image(); canvasIcoTurbo.src = 'assets/x3_bust.webp';
+const canvasIcoNutRain = new Image(); canvasIcoNutRain.src = 'assets/nut_rain.webp';
+const canvasIcoRobotHand = new Image(); canvasIcoRobotHand.src = 'assets/robot_hand.webp';
+const canvasIcoTimeSkip = new Image(); canvasIcoTimeSkip.src = 'assets/time_skip.webp';
 
 // === АССЕТ МОЛНИИ (ДЛЯ ПЛАЗМЫ И ЭФФЕКТОВ) ===
 const lightningImg = new Image();
@@ -2615,8 +2628,8 @@ function renderCustomizationModal() {
     document.getElementById('cust-item-rarity').innerText = skinData.rarity;
     document.getElementById('cust-item-rarity').style.color = RARITY_COLORS[skinData.rarity] || '#fff';
 
-    let buffText = getItemBuffText(currentCustType, selectedCustSkin);
-    document.getElementById('cust-item-desc').innerText = buffText;
+let buffText = getItemBuffText(currentCustType, selectedCustSkin);
+document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРОГО innerHTML
 
     const badge = document.getElementById('cust-equipped-badge');
     const isEquipped = (selectedCustSkin === equippedId);
@@ -4919,7 +4932,17 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         for (let i = 0; i < tapsNum; i++) {
             if (Math.random() < 0.01) {
                 goldenNuts += 1;
-                particles.push({ x: clickX, y: clickY - 30, text: '+1 🟡!', color: '#f1c40f', speed: 2, alpha: 1.5 });
+                particles.push({
+    x: clickX,
+    y: clickY - 30,
+    img: canvasIcoGold,
+    imgSize: 22,
+    text: '+1',
+    color: '#f1c40f',
+    font: 'bold 22px sans-serif',
+    speed: 2,
+    alpha: 1.5
+});
             }
         }
     }
@@ -5133,7 +5156,12 @@ const uiClickPower = document.getElementById('shop-click-power');
 const uiLvlSpeaker = document.getElementById('shop-speaker-lvl');
 const uiLvlNewton = document.getElementById('shop-newton-lvl');
 
-btnOpenShop.addEventListener('click', () => shopModal.classList.remove('hidden'));
+btnOpenShop.addEventListener('click', () => {
+    const isClosed = shopModal.classList.toggle('hidden');
+    if (!isClosed) {
+        updateShopUI();
+    }
+});
 btnCloseShop.addEventListener('click', () => shopModal.classList.add('hidden'));
 
 function updateShopUI() {
@@ -5144,6 +5172,12 @@ function updateShopUI() {
     if (uiCostClick) uiCostClick.innerText = upgradeCost;
     if (uiCostSpeaker) uiCostSpeaker.innerText = speakerCost;
     if (uiCostNewton) uiCostNewton.innerText = newtonCost;
+
+    // Вывод текущей мощности (лаконично, в 2 строчки)
+    const elSpkPwr = document.getElementById('shop-speaker-power');
+    const elNwtPwr = document.getElementById('shop-newton-power');
+    if (elSpkPwr && typeof speakerMPS !== 'undefined') elSpkPwr.innerText = speakerMPS;
+    if (elNwtPwr && typeof newtonPower !== 'undefined') elNwtPwr.innerText = newtonPower;
 
     if (currentHeight >= upgradeCost) btnBuyClick.classList.remove('disabled');
     else btnBuyClick.classList.add('disabled');
@@ -5961,34 +5995,40 @@ const LADDER_DESC = {
 };
 
 const SPEAKER_DESC = {
-    old: 'Базовый ритм Сабвуфера.',
+    old: 'Базовый ритм Сабвуфера (мощность x1)',
     monster: '+20% к мощности Сабвуфера. -2 минуты от таймера бесплатного ящика.',
     cyber: '+40% к мощности Сабвуфера. Получайте на 25% больше <img src="assets/nut.webp" class="ui-ico"> и <img src="assets/golden_nut.webp" class="ui-ico">!',
     cool: '×2 к мощности Сабвуфера. Каждый 3-й бас приносит +1 <img src="assets/golden_nut.webp" class="ui-ico">.'
 };
 
 const NEWTON_DESC = {
-    steel: 'Базовый авто-удар Колыбели Ньютона.',
+    steel: 'Базовый авто-удар Колыбели Ньютона (урон x1)',
     billiard: '+25% к урону шаров. Каждый 8-й удар даёт x2.5 высоты и 3–5 <img src="assets/nut.webp" class="ui-ico">.',
     plasma: '+50% к урону шаров. Наэлектризованность: при 6+ тапах/сек удваивает высоту за каждый тап. После 5 сек бездействия — автоклик 10 тапов.',
     planet: '×2 к урону шаров, +3 тапа к ящику за удар. +25% к силе тапа, Сабвуфера и шаров за каждый активный бафф. 1% шанс, что удар включит случайный бонус.'
 };
 
-function getItemBuffText(type, item) {
+function getItemBuffText(type, itemOrId) {
+    // Определяем строковый ID, независимо от того, передали ID или объект
+    const id = typeof itemOrId === 'string' ? itemOrId : (
+        type === 'ladders' ? Object.keys(LADDER_SKINS).find(k => LADDER_SKINS[k] === itemOrId) :
+        type === 'speakers' ? Object.keys(SPEAKER_SKINS).find(k => SPEAKER_SKINS[k] === itemOrId) :
+        type === 'newton' ? Object.keys(NEWTON_SKINS).find(k => NEWTON_SKINS[k] === itemOrId) :
+        type === 'talismans' ? Object.keys(TALISMANS).find(k => TALISMANS[k] === itemOrId) : null
+    );
+
     if (type === 'ladders') {
-        const id = Object.keys(LADDER_SKINS).find(k => LADDER_SKINS[k] === item);
         return LADDER_DESC[id] || 'Без эффектов';
     }
     if (type === 'speakers') {
-        const id = Object.keys(SPEAKER_SKINS).find(k => SPEAKER_SKINS[k] === item);
-        return SPEAKER_DESC[id] || `Бас: x${item.buff?.mpsMult || 1.0}`;
+        return SPEAKER_DESC[id] || `Бас: x${SPEAKER_SKINS[id]?.buff?.mpsMult || 1.0}`;
     }
     if (type === 'newton') {
-        const id = Object.keys(NEWTON_SKINS).find(k => NEWTON_SKINS[k] === item);
-        return NEWTON_DESC[id] || `Удар: x${item.buff?.powerMult || 1.0}`;
+        return NEWTON_DESC[id] || `Удар: x${NEWTON_SKINS[id]?.buff?.powerMult || 1.0}`;
     }
     if (type === 'talismans') {
-        return `+${item.luck} к удаче`; // Как ты и просил
+        const item = typeof itemOrId === 'object' ? itemOrId : TALISMANS[id];
+        return `+${item?.luck || 0} к удаче`;
     }
     return '';
 }
@@ -6012,9 +6052,13 @@ function renderInventory() {
         const statusBox = document.createElement('div');
         statusBox.style.cssText = 'background: rgba(0,0,0,0.5); border: 1px solid #34495e; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; font-size: 11px; display: flex; justify-content: space-between; color: #bdc3c7;';
         statusBox.innerHTML = `
-            <div>🎨 Облик: <b style="color: #2ecc71;">${curVisName}</b></div>
-            <div>✨ Эффект: <b style="color: #9b59b6;">${curEffName}</b></div>
-        `;
+    <div style="display: flex; align-items: center; gap: 5px;">
+        <img src="assets/roller.webp" class="ui-ico-sm"> Облик: <b style="color: #2ecc71;">${curVisName}</b>
+    </div>
+    <div style="display: flex; align-items: center; gap: 5px;">
+        <img src="assets/perk.webp" class="ui-ico-sm"> Эффект: <b style="color: #9b59b6;">${curEffName}</b>
+    </div>
+`;
         inventoryItemsList.appendChild(statusBox);
     } else if (currentInventoryTab === 'speakers') {
         itemsSource = SPEAKER_SKINS;
@@ -6108,18 +6152,20 @@ function renderInventory() {
                         ${cyberGearBtn}
                         <div style="display: flex; gap: 4px;">
                             <button class="badge-vis-btn" title="Надеть только облик" style="
-                                padding: 3px 6px; font-size: 11px; border-radius: 6px; cursor: pointer;
-                                border: 1px solid ${isVis ? '#2ecc71' : '#57606f'};
-                                background: ${isVis ? 'rgba(46, 204, 113, 0.25)' : 'rgba(0,0,0,0.35)'};
-                                color: ${isVis ? '#2ecc71' : '#bdc3c7'}; font-weight: bold;
-                            ">🎨${isVis ? '✓' : ''}</button>
+    padding: 3px 7px; font-size: 11px; border-radius: 6px; cursor: pointer;
+    border: 1px solid ${isVis ? '#2ecc71' : '#57606f'};
+    background: ${isVis ? 'rgba(46, 204, 113, 0.25)' : 'rgba(0,0,0,0.35)'};
+    color: ${isVis ? '#2ecc71' : '#bdc3c7'}; font-weight: bold;
+    display: inline-flex; align-items: center; gap: 3px;
+"><img src="assets/roller.webp" class="ui-ico-sm">${isVis ? '✓' : ''}</button>
 
-                            <button class="badge-eff-btn" title="Надеть только эффект" style="
-                                padding: 3px 6px; font-size: 11px; border-radius: 6px; cursor: pointer;
-                                border: 1px solid ${isEff ? '#9b59b6' : '#57606f'};
-                                background: ${isEff ? 'rgba(155, 89, 182, 0.25)' : 'rgba(0,0,0,0.35)'};
-                                color: ${isEff ? '#e056fd' : '#bdc3c7'}; font-weight: bold;
-                            ">✨${isEff ? '✓' : ''}</button>
+<button class="badge-eff-btn" title="Надеть только эффект" style="
+    padding: 3px 7px; font-size: 11px; border-radius: 6px; cursor: pointer;
+    border: 1px solid ${isEff ? '#9b59b6' : '#57606f'};
+    background: ${isEff ? 'rgba(155, 89, 182, 0.25)' : 'rgba(0,0,0,0.35)'};
+    color: ${isEff ? '#e056fd' : '#bdc3c7'}; font-weight: bold;
+    display: inline-flex; align-items: center; gap: 3px;
+"><img src="assets/perk.webp" class="ui-ico-sm">${isEff ? '✓' : ''}</button>
                         </div>
                         <button class="main-equip-btn" ${mainBtnDisabled ? 'disabled' : ''} style="
                             padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 6px;
@@ -7254,11 +7300,24 @@ if (btnResetStreak) {
 }
 
 // Активация Гайкопада (С рекламой)
+
 function activateFrenzyMode(seconds = 30) {
     watchRewardedAd('frenzy_nuts', () => {
         const mult = hasMech('billboard') ? 1.5 : 1.0;
         adState.frenzyTimer = seconds * 1000 * mult;
-        particles.push({ x: canvas.width / 2, y: canvas.height * 0.35, text: '⚡ ГАЙКОПАД!', color: '#f1c40f', font: 'bold 26px sans-serif', alpha: 2.5, speed: 1.5 });
+
+        AudioEngine.play('whoosh_air', 0.8);
+        particles.push({
+            x: canvas.width / 2,
+            y: canvas.height * 0.35,
+            img: canvasIcoNutRain,
+            imgSize: 32,
+            text: 'ГАЙКОПАД!',
+            color: '#f1c40f',
+            font: 'bold 26px sans-serif',
+            alpha: 2.5,
+            speed: 1.5
+        });
     });
 }
 
@@ -7387,115 +7446,126 @@ if (btnEnableRadar && radarModal) {
     };
 }
 
-// Обработка клика по пушу (Deep Linking через параметры URL ?action=...)
-function checkDeepLinks() {
-    const params = new URLSearchParams(window.location.search);
-    const action = params.get('action');
-
-    if (!action) return;
-
-    setTimeout(() => {
-        if (action === 'deal' && dailyDealModal) {
-            dailyDealModal.classList.remove('hidden');
-            renderDailyDealUI();
-        } else if (action === 'gift') {
-            addNuts(500);
-            AudioEngine.play('win', 0.85);
-            particles.push({ x: canvas.width / 2, y: canvas.height * 0.35, text: '🎁 ВОЗВРАЩЕНИЕ: +500 🔩!', color: '#3498db', alpha: 2.5, speed: 2 });
-        }
-    }, 1000);
-}
-
-// === СИСТЕМА ЛИДЕРБОРДА, ТРОТТЛИНГА И СЕЗОНОВ ===
+/// === СИСТЕМА ЛИДЕРБОРДА, ТРОТТЛИНГА И СЕЗОНОВ ===
 let lastSubmittedHeight = 0;
 let lastLeaderboardSubmitTime = 0;
 let currentLeaderboardTab = 'all'; // 'all' | 'week'
+let cachedYandexLeaderboard = null; // Кэш реальных данных
 
-// Защищенная отправка счета с валидацией и троттлингом (Sanity Check)
+// 1. Отправка счета в Яндекс Игры
 function submitScoreToLeaderboard(force = false) {
     const now = Date.now();
     const intScore = Math.floor(currentHeight);
 
-    // 1. Sanity Check (защита от читеров и мусора)
     if (intScore <= 0 || intScore > 500000000) return;
     if (intScore <= lastSubmittedHeight && !force) return;
-
-    // 2. Троттлинг: не чаще 1 раза в 60 секунд, если это не важный рубеж
     if (!force && (now - lastLeaderboardSubmitTime < 60000)) return;
 
     lastLeaderboardSubmitTime = now;
     lastSubmittedHeight = intScore;
 
-    // 3. Отправка в SDK Яндекс Игр / VK (заглушка готова для прода)
     if (window.ysdk && window.ysdk.getLeaderboards) {
         window.ysdk.getLeaderboards().then(lb => {
             const table = currentLeaderboardTab === 'week' ? 'season_height' : 'all_time_height';
-            lb.setLeaderboardScore(table, intScore);
-        }).catch(err => console.warn('[Leaderboard] Ошибка отправки:', err));
+            // В extraData упаковываем VIP-статус
+            const extraData = JSON.stringify({ isVip: !!isVip });
+            lb.setLeaderboardScore(table, intScore, extraData);
+        }).catch(err => {
+            // Ошибка нормальна, если игрок не залогинен в Яндекс
+            console.warn('[Leaderboard] Запись не удалась (возможно, гость):', err);
+        });
     }
-
-    console.log(`[Leaderboard] Очки отправлены: ${intScore} м (force=${force})`);
 }
 
-// Демо-игроки для оживления рейтинга
+// Демо-игроки (фоллбэк для локального тестирования и гостей)
 const MOCK_LEADERS = {
     all: [
-        { rank: 1, name: 'CyberStair', score: 145000, isVip: true },
-        { rank: 2, name: 'CosmoClimber', score: 98200, isVip: true },
-        { rank: 3, name: 'ApexStriker', score: 64100, isVip: false },
-        { rank: 4, name: 'SkyWalker', score: 32000, isVip: false },
-        { rank: 5, name: 'StepMaster', score: 12500, isVip: false }
+        { rank: 1, name: 'CyberStair', score: 145000, isVip: true, avatar: null },
+        { rank: 2, name: 'CosmoClimber', score: 98200, isVip: true, avatar: null },
+        { rank: 3, name: 'ApexStriker', score: 64100, isVip: false, avatar: null },
+        { rank: 4, name: 'SkyWalker', score: 32000, isVip: false, avatar: null },
+        { rank: 5, name: 'StepMaster', score: 12500, isVip: false, avatar: null }
     ],
     week: [
-        { rank: 1, name: 'SpeedyTap', score: 18400, isVip: true },
-        { rank: 2, name: 'Newbie2026', score: 11200, isVip: false },
-        { rank: 3, name: 'StarFall', score: 7800, isVip: false },
-        { rank: 4, name: 'LadderHero', score: 4500, isVip: false },
-        { rank: 5, name: 'Volt', score: 2100, isVip: false }
+        { rank: 1, name: 'SpeedyTap', score: 18400, isVip: true, avatar: null },
+        { rank: 2, name: 'Newbie2026', score: 11200, isVip: false, avatar: null },
+        { rank: 3, name: 'StarFall', score: 7800, isVip: false, avatar: null },
+        { rank: 4, name: 'LadderHero', score: 4500, isVip: false, avatar: null },
+        { rank: 5, name: 'Volt', score: 2100, isVip: false, avatar: null }
     ]
 };
 
-// Отрисовка интерфейса Лидерборда с честной сортировкой
-function renderLeaderboardUI() {
+// 2. Универсальная загрузка и отрисовка ТОПа
+async function renderLeaderboardUI() {
     const listEl = document.getElementById('leaderboard-list');
     const playerCardEl = document.getElementById('lb-player-card');
     const descEl = document.getElementById('lb-season-desc');
     if (!listEl) return;
 
-    listEl.innerHTML = '';
+    listEl.innerHTML = '<div style="text-align:center;color:#bdc3c7;padding:20px;">Загрузка рекордов...</div>';
+    
     descEl.innerText = currentLeaderboardTab === 'all'
         ? 'Общий рейтинг покорителей космоса'
         : 'Сброс каждый понедельник в 00:00';
 
     const myScore = Math.floor(currentHeight);
+    let entries = [];
+    let myRank = null;
 
-    // 1. Клонируем список ботов и добавляем игрока
-    const baseLeaders = MOCK_LEADERS[currentLeaderboardTab] || [];
-    const allEntries = baseLeaders.map(p => ({ ...p, isPlayer: false }));
+    // Пытаемся получить живых игроков из Яндекс Игр
+    if (window.ysdk && window.ysdk.getLeaderboards) {
+        try {
+            const lb = await window.ysdk.getLeaderboards();
+            const table = currentLeaderboardTab === 'week' ? 'season_height' : 'all_time_height';
+            const res = await lb.getLeaderboardEntries(table, {
+                quantityTop: 10,
+                includeUser: true,
+                quantityAround: 3
+            });
 
-    allEntries.push({
-        name: 'Ты (Игрок)',
-        score: myScore,
-        isVip: isVip,
-        isPlayer: true
-    });
+            if (res && res.entries) {
+                entries = res.entries.map(e => {
+                    let extra = {};
+                    try { extra = JSON.parse(e.extraData || '{}'); } catch (_) {}
+                    return {
+                        rank: e.rank,
+                        name: e.player.publicName || 'Анонимный альпинист',
+                        score: e.score,
+                        isVip: extra.isVip || false,
+                        avatar: e.player.getAvatarSrc ? e.player.getAvatarSrc('small') : null,
+                        isPlayer: e.player.uniqueID === res.userRank?.player?.uniqueID
+                    };
+                });
+                if (res.userRank) myRank = res.userRank;
+            }
+        } catch (e) {
+            console.warn('[Leaderboard] Фоллбэк на демо-ботов:', e);
+        }
+    }
 
-    // 2. Сортируем всех участников по убыванию высоты
-    allEntries.sort((a, b) => b.score - a.score);
+    // Фоллбэк: если запустились на ПК, оффлайн или в Яндексе пока пусто
+    if (entries.length === 0) {
+        const base = MOCK_LEADERS[currentLeaderboardTab] || [];
+        entries = base.map(p => ({ ...p, isPlayer: false }));
+        entries.push({
+            name: 'Ты (Игрок)',
+            score: myScore,
+            isVip: isVip,
+            avatar: null,
+            isPlayer: true
+        });
+        entries.sort((a, b) => b.score - a.score);
+        entries.forEach((entry, idx) => {
+            entry.rank = idx + 1;
+            if (entry.isPlayer) myRank = entry.rank;
+        });
+    }
 
-    // 3. Пересчитываем ранги
-    let playerRank = 1;
-    allEntries.forEach((entry, idx) => {
-        entry.rank = idx + 1;
-        if (entry.isPlayer) playerRank = entry.rank;
-    });
+    listEl.innerHTML = '';
 
-    // 4. Отрисовываем топ-6 участников
-    const topLeaders = allEntries.slice(0, 6);
-
-    topLeaders.forEach(p => {
+    // Отрисовка списка
+    entries.slice(0, 10).forEach(p => {
         const row = document.createElement('div');
-
         let borderStyle = 'border: 1px solid #34495e;';
         let bgStyle = 'background: rgba(30, 39, 46, 0.85);';
 
@@ -7512,9 +7582,14 @@ function renderLeaderboardUI() {
             ${bgStyle} ${borderStyle}
         `;
 
+        const avatarHtml = p.avatar 
+            ? `<img src="${p.avatar}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">`
+            : '';
+
         row.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-weight: bold; width: 24px; color: ${p.rank <= 3 ? '#f1c40f' : '#bdc3c7'};">#${p.rank}</span>
+                ${avatarHtml}
                 <span style="color: ${p.isPlayer ? '#2ecc71' : (p.isVip ? '#f1c40f' : '#fff')}; font-weight: bold;">
                     ${p.isVip ? '<img src="assets/crown.webp" class="ui-ico-sm" style="margin-right: 3px;"> ' : ''}${p.name}
                 </span>
@@ -7524,14 +7599,14 @@ function renderLeaderboardUI() {
         listEl.appendChild(row);
     });
 
-    // 5. Нижняя карточка игрока со своим реальным рассчитанным местом
+    // Нижняя плашка игрока
     if (playerCardEl) {
         playerCardEl.style.borderColor = isVip ? '#f1c40f' : '#2ecc71';
         playerCardEl.style.boxShadow = isVip ? '0 0 10px rgba(241,196,15,0.4)' : 'none';
 
         playerCardEl.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: bold; color: #f1c40f;">#${playerRank}</span>
+                <span style="font-weight: bold; color: #f1c40f;">#${myRank || '—'}</span>
                 <span style="color: ${isVip ? '#f1c40f' : '#fff'}; font-weight: bold;">
                     ${isVip ? '<img src="assets/crown.webp" class="ui-ico-sm" style="margin-right: 3px;"> ' : ''}Ты ${isVip ? '(VIP)' : ''}
                 </span>
@@ -7861,16 +7936,18 @@ function triggerTimeWarp() {
         if (uiBoxProgress) uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
     }
 
-    let report = `⏩ +${earnedMeters.toLocaleString('ru-RU')} м`;
-    if (earnedNuts > 0) report += `, +${earnedNuts} 🔩`;
-    if (earnedGold > 0) report += `, +${earnedGold} 🟡`;
+let report = `+${earnedMeters.toLocaleString('ru-RU')} м`;
+    if (earnedNuts > 0) report += ` • +${earnedNuts} гаек`;
+    if (earnedGold > 0) report += ` • +${earnedGold} золота`;
 
     particles.push({
         x: canvas.width / 2,
         y: canvas.height * 0.38,
+        img: canvasIcoTimeSkip,
+        imgSize: 30,
         text: report,
         color: '#9b59b6',
-        font: 'bold 20px sans-serif',
+        font: 'bold 22px sans-serif',
         alpha: 3.0,
         speed: 1.6
     });
@@ -7883,20 +7960,44 @@ function triggerTimeWarp() {
 function activateBuffDirectly(type, durationMs) {
     if (typeof adState === 'undefined') window.adState = {};
 
-    if (type === 'fortune') adState.fortuneTimer = durationMs;
-    if (type === 'turbo') adState.turboTimer = durationMs;
-    if (type === 'frenzy') adState.frenzyTimer = durationMs;
+    if (type === 'fortune') {
+        adState.fortuneTimer = durationMs;
+        particles.push({
+            x: canvas.width / 2, y: canvas.height * 0.35,
+            img: canvasIcoClover, imgSize: 32,
+            text: 'УДАЧА +15!', color: '#2ecc71', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
+        });
+    }
+    if (type === 'turbo') {
+        adState.turboTimer = durationMs;
+        particles.push({
+            x: canvas.width / 2, y: canvas.height * 0.35,
+            img: canvasIcoTurbo, imgSize: 32,
+            text: 'ТУРБО-ДОХОД x3!', color: '#e67e22', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
+        });
+    }
+    if (type === 'frenzy') {
+        adState.frenzyTimer = durationMs;
+        particles.push({
+            x: canvas.width / 2, y: canvas.height * 0.35,
+            img: canvasIcoNutRain, imgSize: 32,
+            text: 'ГАЙКОПАД!', color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 2.5, speed: 1.5
+        });
+    }
     if (type === 'autotap') {
         adState.autotapTimer = durationMs;
+        particles.push({
+            x: canvas.width / 2, y: canvas.height * 0.35,
+            img: canvasIcoRobotHand, imgSize: 32,
+            text: 'АВТОПИЛОТ (15 тапов/с)!', color: '#00d2ff', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
+        });
+
         if (window.autoTapInterval) {
             clearInterval(window.autoTapInterval);
             window.autoTapInterval = null;
         }
         window.autoTapInterval = setInterval(() => {
-            // 1. Уменьшаем таймер прямо здесь, независимо от того, спит ли окно:
             adState.autotapTimer = Math.max(0, (adState.autotapTimer || 0) - 66);
-
-            // 2. Если время вышло — гарантированно выключаем интервал:
             if (adState.autotapTimer <= 0) {
                 clearInterval(window.autoTapInterval);
                 window.autoTapInterval = null;
@@ -7906,14 +8007,14 @@ function activateBuffDirectly(type, durationMs) {
             handleTap(rect.left + rect.width / 2, rect.top + rect.height * 0.45);
         }, 66);
     }
+
     if (type === 'timewarp') {
         triggerTimeWarp();
+        if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
     }
 
     if (typeof AudioEngine !== 'undefined') AudioEngine.play('whoosh_air', 0.7);
-
     if (typeof saveGame === 'function') saveGame();
-    if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
 }
 
 // Покупка за ЗОЛОТО (базовая стоимость 39 🟡)
@@ -7923,12 +8024,17 @@ const bindBuffGoldAction = (btnId, cost, durationMs, type) => {
     btn.onclick = (e) => {
         e.stopPropagation();
         if (goldenNuts >= cost) {
-            showConfirmPurchase('Активация усиления', `Потратить ${cost} 🟡 на активацию эффекта?`, cost, () => {
-                goldenNuts -= cost;
-                activateBuffDirectly(type, durationMs);
-            });
+            showConfirmPurchase(
+                'Активация усиления',
+                `Потратить ${cost} <img src="assets/golden_nut.webp" class="ui-ico"> на активацию эффекта?`,
+                cost,
+                () => {
+                    goldenNuts -= cost;
+                    activateBuffDirectly(type, durationMs);
+                }
+            );
         } else {
-            alert('Недостаточно золотых гаек 🟡');
+            alert('Недостаточно золотых гаек');
         }
     };
 };
@@ -7952,7 +8058,6 @@ const bindBuffAdAction = (btnId, durationMs, type, fallbackBtnId) => {
             adState.streakCount = Math.min(10, (adState.streakCount || 0) + 1);
             activateBuffDirectly(type, durationMs);
         }
-        if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
     };
 };
 bindBuffAdAction('btn-buy-buff-fortune-ad', 600000, 'fortune', 'btn-boost-fortune');
@@ -8076,19 +8181,16 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     });
 });
 
-// 2. Закрытие правой шторки баффов и черного рынка при клике мимо
+// 2. Закрытие правой шторки баффов при клике мимо
 document.addEventListener('pointerdown', (e) => {
     // Шторка баффов
     if (buffsDrawer && buffsDrawer.style.transform === 'translateX(0%)') {
-        if (!buffsDrawer.contains(e.target) && !btnToggleBuffs.contains(e.target)) {
-            buffsDrawer.style.transform = 'translateX(105%)';
-        }
-    }
+        const confirmModal = document.getElementById('confirm-purchase-modal');
+        const isClickOnConfirm = confirmModal && !confirmModal.classList.contains('hidden') && confirmModal.contains(e.target);
 
-    // Черный рынок (магазин метров)
-    if (shopModal && !shopModal.classList.contains('hidden')) {
-        if (!shopModal.contains(e.target) && !btnOpenShop.contains(e.target)) {
-            shopModal.classList.add('hidden');
+        // Не закрываем шторку, если кликаем внутри шторки, по кнопке вызова ИЛИ по окну подтверждения покупки
+        if (!buffsDrawer.contains(e.target) && !btnToggleBuffs.contains(e.target) && !isClickOnConfirm) {
+            buffsDrawer.style.transform = 'translateX(105%)';
         }
     }
 });
@@ -8397,7 +8499,22 @@ function triggerUfoBeacon() {
     else if (r < 0.9) ufoGift.rewardType = 2;  // Железный сейф
     else ufoGift.rewardType = 3;               // Золото
 
+    // Всплывающее уведомление с тарелкой
+    particles.push({
+        x: canvas.width / 2,
+        y: canvas.height * 0.35,
+        img: ufoGiftImg,
+        imgSize: 32,
+        text: 'МАГНИТ НЛО!',
+        color: '#4cd137',
+        font: 'bold 24px sans-serif',
+        alpha: 2.2,
+        speed: 1.5
+    });
+
     if (typeof AudioEngine !== 'undefined') AudioEngine.play('ufo_tap', 0.8);
+    
+    // Закрываем шторку при призыве НЛО
     if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
 }
 
@@ -8415,13 +8532,18 @@ if (btnUfoGold) {
     btnUfoGold.onclick = (e) => {
         e.stopPropagation();
         if (goldenNuts >= 39) {
-            showConfirmPurchase('Активация усиления', 'Потратить 39 🟡 на призыв НЛО?', 39, () => {
-                goldenNuts -= 39;
-                triggerUfoBeacon();
-                saveGame();
-            });
+            showConfirmPurchase(
+                'Активация усиления',
+                'Потратить 39 <img src="assets/golden_nut.webp" class="ui-ico"> на призыв НЛО?',
+                39,
+                () => {
+                    goldenNuts -= 39;
+                    triggerUfoBeacon();
+                    saveGame();
+                }
+            );
         } else {
-            alert('Недостаточно золотых гаек 🟡');
+            alert('Недостаточно золотых гаек');
         }
     };
 }
