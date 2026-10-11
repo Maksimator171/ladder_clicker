@@ -104,107 +104,38 @@ canvas {
 
 .box-progress-container {
     position: relative;
-    width: 180px;
-    height: 22px;
-    background: #2c3e50;
-    border: 2px solid #34495e;
-    border-radius: 11px;
+    width: 14px;
+    height: 74px;
+    background: rgba(20, 25, 35, 0.95);
+    border: 1.5px solid #e67e22;
+    border-radius: 7px;
     overflow: hidden;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 #box-progress-bar {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(90deg, #9b59b6, #8e44ad);
-    transition: width 0.15s linear;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: linear-gradient(0deg, #d35400, #f1c40f);
+    transition: height 0.15s ease;
 }
 
 #box-progress-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #fff;
-    font-size: 11px;
-    font-weight: bold;
+    position: static;
+    transform: none;
+    font-size: 10px;
+    font-weight: 900;
+    color: #f1c40f;
+    text-shadow: 0 1px 3px #000;
     white-space: nowrap;
-    text-shadow: 1px 1px 2px #000;
+    text-align: center;
 }
 
 /* Боковые слоты */
-.slots {
-    position: absolute;
-    top: 40%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: auto;
-}
-
-.slots.left {
-    left: 15px;
-}
-
-.slots.right {
-    right: 15px;
-}
-
-.slot {
-    width: 52px;
-    height: 52px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-size: 1.3rem;
-    color: #fff;
-    text-shadow: 1px 1px 0 #000;
-    cursor: pointer;
-    transition: transform 0.1s;
-    line-height: 1;
-}
-
-.slot span {
-    font-size: 0.75rem;
-    font-weight: bold;
-    margin-top: 2px;
-}
-
-.slot:active {
-    transform: scale(0.92);
-}
-
-/* Нижняя панель */
-.bottom-panel {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    pointer-events: auto;
-    margin-bottom: 10px;
-    z-index: 20;
-}
-
-.nav-btn {
-    padding: 10px 16px;
-    font-size: 15px;
-    font-weight: 800;
-    color: #fff;
-    border-radius: 10px;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    transition: transform 0.1s;
-}
-
-.nav-btn:active {
-    transform: translateY(3px);
-    box-shadow: none;
-}
 
 #btn-open-cases {
     background: #9b59b6;
@@ -556,6 +487,7 @@ canvas {
     z-index: 2;
     line-height: 1;
 }
+
 
 .buff-badge-time {
     font-size: 9px;
@@ -1495,25 +1427,20 @@ canvas {
 
 .dd-shell {
     position: relative;
-    width: 300px;
+    width: 310px;
     max-width: 92vw;
-    background: linear-gradient(145deg, #0d1117 0%, #16202e 60%, #0a0d14 100%);
-    border-radius: 0;
-    /* Chamfered corners */
-    clip-path: polygon(
-        0 16px, 16px 0,
-        calc(100% - 16px) 0, 100% 16px,
-        100% calc(100% - 16px), calc(100% - 16px) 100%,
-        16px 100%, 0 calc(100% - 16px)
-    );
-    padding: 20px;
+    background: radial-gradient(circle, #1a2536 0%, #0b0f15 100%);
+    border: 2px solid #f1c40f;
+    border-radius: 18px;
+    padding: 18px;
     box-shadow:
-        0 0 0 2px #d4a017,
-        0 0 40px rgba(212,160,23,0.3),
-        0 30px 80px rgba(0,0,0,0.9);
+        0 0 25px rgba(241, 196, 15, 0.35),
+        0 20px 60px rgba(0, 0, 0, 0.9);
     color: #fff;
     overflow: hidden;
 }
+
+
 
 /* Ambient glow behind the card */
 .dd-halo {
@@ -1540,10 +1467,10 @@ canvas {
     pointer-events: none;
     opacity: 0.7;
 }
-.dd-corner-tl { top: 4px; left: 4px;  border-width: 2px 0 0 2px; }
-.dd-corner-tr { top: 4px; right: 4px; border-width: 2px 2px 0 0; }
-.dd-corner-bl { bottom: 4px; left: 4px;  border-width: 0 0 2px 2px; }
-.dd-corner-br { bottom: 4px; right: 4px; border-width: 0 2px 2px 0; }
+/* Отключаем кривые декоративные скобки по углам */
+.dd-corner {
+    display: none !important;
+}
 
 /* Header */
 .dd-header {
@@ -1684,12 +1611,245 @@ canvas {
 .dd-reroll-btn:active { transform: scale(0.98); }
 .dd-reroll-icon { font-size: 14px; }
 
-@keyframes buffActivatedFlash {
-    0% { filter: brightness(1); transform: scale(1); }
-    50% { filter: brightness(1.6); transform: scale(1.02); }
-    100% { filter: brightness(1); transform: scale(1); }
+/* ══════════════════════════════════════════════════════════════
+   1. СЕТКА ЛЕСТНИЦ В ИНВЕНТАРЕ (2 В РЯДУ, ВЫСОКИЕ КАРТОЧКИ)
+   ══════════════════════════════════════════════════════════════ */
+
+#inventory-items-list.inv-grid-ladders {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-auto-rows: 145px !important; /* Гарантирует высоту каждого ряда в 145px */
+    gap: 10px !important;
+    padding: 6px 4px 16px !important;
+    align-content: start !important;
 }
 
-.buff-activated {
-    animation: buffActivatedFlash 0.3s ease-out;
+#inventory-items-list.inv-grid-ladders .ladder-card-tile {
+    position: relative !important;
+    width: 100% !important;
+    height: 145px !important;
+    min-height: 145px !important;
+    box-sizing: border-box !important;
+    background: linear-gradient(160deg, #151f2b 0%, #0d131a 100%) !important;
+    border: 1.5px solid #2c3e50 !important;
+    border-radius: 12px !important;
+    padding: 8px 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    cursor: pointer !important;
+    overflow: hidden !important;
+    transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+#inventory-items-list.inv-grid-ladders .ladder-card-tile:active {
+    transform: scale(0.96) !important;
+}
+
+/* Подиум под спрайт лестницы на карточке */
+.ladder-tile-pedestal {
+    width: 100% !important;
+    height: 85px !important;
+    min-height: 85px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%) !important;
+    flex-shrink: 0 !important;
+}
+
+.ladder-tile-img {
+    max-height: 80px !important;
+    max-width: 46px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8)) !important;
+    display: block !important;
+}
+
+.ladder-tile-title {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: #fff !important;
+    text-align: center !important;
+    width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+    margin-top: 2px !important;
+}
+
+.ladder-tile-rarity {
+    font-size: 8.5px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    line-height: 1 !important;
+}
+
+/* Бейджи надетых свойств на карточке (Валик и Искра) */
+.ladder-tile-badges {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: flex;
+    gap: 3px;
+    z-index: 2;
+}
+
+.ladder-mini-badge {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.ladder-card-tile.locked {
+    opacity: 0.55;
+    filter: grayscale(0.85);
+}
+
+.ladder-lock-icon {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    opacity: 0.9;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   2. УВЕЛИЧЕННОЕ ОКНО ПРЕДПРОСМОТРА С ГИГАНТСКОЙ ЛЕСТНИЦЕЙ
+   ══════════════════════════════════════════════════════════════ */
+
+.ladder-preview-card {
+    position: relative;
+    width: 345px; /* Сделали шире (было 310px) */
+    max-width: 92vw;
+    background: radial-gradient(circle at 50% 30%, #1e2c3d 0%, #0d1219 100%);
+    border: 2px solid #3498db;
+    border-radius: 20px;
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 35px rgba(0, 0, 0, 0.9), 0 0 25px rgba(52, 152, 219, 0.35);
+    color: #fff;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Верхняя шапка */
+.lp-top-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+
+.lp-title-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.lp-title {
+    font-size: 19px;
+    font-weight: 900;
+    margin: 0 0 4px 0;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.lp-rarity-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid currentColor;
+}
+
+.lp-close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #bdc3c7;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+.lp-close-btn:active { background: rgba(231, 76, 60, 0.4); color: #fff; }
+
+/* ОГРОМНЫЙ ПОДИУМ ПОД ЛЕСТНИЦУ (185px высоты!) */
+.lp-podium {
+    width: 100%;
+    height: 185px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 4px 0 10px 0;
+}
+
+.lp-halo {
+    position: absolute;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(52, 152, 219, 0.35) 0%, transparent 70%);
+    pointer-events: none;
+    filter: blur(8px);
+}
+
+.lp-ladder-img {
+    max-height: 175px; /* Увеличено со 130px до 175px */
+    max-width: 85px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.9));
+    z-index: 2;
+}
+
+/* Описание пассивки */
+.lp-info {
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.lp-desc {
+    font-size: 12px;
+    color: #bdc3c7;
+    line-height: 1.4;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    padding: 9px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: center;
+}
+
+.lp-actions-box {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }

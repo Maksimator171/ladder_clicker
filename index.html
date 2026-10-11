@@ -89,10 +89,9 @@
 
                     <div style="font-weight: bold; color: #ff9f43; font-size: 14px; margin-bottom: 4px;">Скин «Ретро»
                     </div>
-                    <div
-                        style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 8px; font-size: 11px; color: #ecf0f1; margin-bottom: 12px; line-height: 1.3;">
-                        ✨ <b style="color: #f1c40f;">Способность:</b> Запуск аркадных монеток каждые 20-35 сек (+75–125
-                        🔩 и +5–15 🟡)!
+                    <div style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 8px; font-size: 11px; color: #ecf0f1; margin-bottom: 12px; line-height: 1.4; display: flex; align-items: center; gap: 6px;">
+                        <img src="assets/perk.webp" class="ui-ico-sm">
+                        <span><b style="color: #f1c40f;">Способность:</b> Поймай летящую монетку (приз: до 125 <img src="assets/nut.webp" class="ui-ico-sm"> и 15 <img src="assets/golden_nut.webp" class="ui-ico-sm">).</span>
                     </div>
 
                     <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 14px;">
@@ -137,13 +136,13 @@
                         <img src="assets/cup1.webp" style="width: 24px; height: 24px; object-fit: contain;"> ТОП
                     </button>
                     <button id="btn-open-settings" class="zen-hide"
-                        style="width: 36px; height: 36px; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #7f8c8d; border-radius: 12px; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
-                        ⚙️
-                    </button>
+    style="width: 36px; height: 36px; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #7f8c8d; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
+    <img src="assets/settings.webp" style="width: 20px; height: 20px; object-fit: contain;">
+</button>
                     <button id="btn-toggle-zen" title="Дзен-режим (Скрыть UI)"
-                        style="width: 36px; height: 36px; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #00d2ff; border-radius: 12px; color: #00d2ff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,210,255,0.3); box-sizing: border-box;">
-                        👁️
-                    </button>
+    style="width: 36px; height: 36px; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #00d2ff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,210,255,0.3); box-sizing: border-box;">
+    <img id="ico-zen" src="assets/ico_open_eye.webp" style="width: 20px; height: 20px; object-fit: contain;">
+</button>
                 </div>
 
                 <button id="btn-open-starter" class="starter-pulse-glow hidden zen-hide"
@@ -181,19 +180,16 @@
                 </div>
             </div>
 
+            <!-- ШТОРКА БАФФОВ -->
             <div id="buffs-drawer" class="buffs-drawer-redesign">
-                <!-- Buffs drawer neon header -->
                 <div class="bd-header">
                     <div class="bd-title">⚡ УСИЛИТЕЛИ</div>
-                    <button id="btn-close-buffs" class="bd-close">✖</button>
+                    <button id="btn-close-buffs" class="bd-close">✕</button>
                 </div>
                 <div class="bd-divider"></div>
-                <!-- Buffs scroll list -->
                 <div class="bd-list">
-
                     <!-- УДАЧА -->
                     <div class="bd-tile" style="--bd-accent:#2ecc71;">
-                        <div class="bd-tile-stripe"></div>
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/clover_lucky.webp" class="drawer-buff-ico"> УДАЧА</span>
                             <span id="drawer-timer-fortune" class="bd-timer">⏱️ 10:00</span>
@@ -207,7 +203,6 @@
 
                     <!-- ТУРБО -->
                     <div class="bd-tile" style="--bd-accent:#e67e22;">
-                        <div class="bd-tile-stripe"></div>
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/x3_bust.webp" class="drawer-buff-ico"> ТУРБО-ДОХОД</span>
                             <span id="drawer-timer-turbo" class="bd-timer">⏱️ 01:00</span>
@@ -221,7 +216,6 @@
 
                     <!-- ГАЙКОПАД -->
                     <div class="bd-tile" style="--bd-accent:#f1c40f;">
-                        <div class="bd-tile-stripe"></div>
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/nut_rain.webp" class="drawer-buff-ico"> ГАЙКОПАД</span>
                             <span id="drawer-timer-frenzy" class="bd-timer">⏱️ 00:30</span>
@@ -235,7 +229,6 @@
 
                     <!-- АВТОПИЛОТ -->
                     <div class="bd-tile" style="--bd-accent:#00d2ff;">
-                        <div class="bd-tile-stripe"></div>
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/robot_hand.webp" class="drawer-buff-ico"> АВТОПИЛОТ</span>
                             <span id="drawer-timer-autotap" class="bd-timer">⏱️ 00:40</span>
@@ -249,7 +242,6 @@
 
                     <!-- МАШИНА ВРЕМЕНИ -->
                     <div class="bd-tile" style="--bd-accent:#9b59b6;">
-                        <div class="bd-tile-stripe"></div>
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/time_skip.webp" class="drawer-buff-ico"> МАШИНА ВРЕМЕНИ</span>
                             <span class="bd-timer" style="color:#2ecc71;">Мгновенно</span>
@@ -263,7 +255,6 @@
 
                     <!-- МАГНИТ НЛО -->
                     <div class="bd-tile" style="--bd-accent:#4cd137;">
-                        <div class="bd-tile-stripe"></div>
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/ufo_gift.webp" class="drawer-buff-ico"> МАГНИТ НЛО</span>
                             <span class="bd-timer" style="color:#4cd137;">Призыв</span>
@@ -274,7 +265,6 @@
                             <button id="btn-buy-buff-ufo-gold" class="bd-btn bd-btn-gold">39 <img src="assets/golden_nut.webp" class="ui-ico"></button>
                         </div>
                     </div>
-
                 </div>
             </div>
 
@@ -310,9 +300,9 @@
 
                 <!-- Индикатор/бегунок высоты (прилегает к левой грани трека) -->
                 <div id="altitude-marker"
-                    style="position: absolute; bottom: 0%; left: -14px; transform: translateY(50%); width: 22px; height: 20px; background: rgba(10, 25, 40, 0.95); border: 1.5px solid #00d2ff; border-radius: 6px 0 0 6px; box-shadow: 0 0 8px rgba(0, 210, 255, 0.8); z-index: 2; transition: bottom 0.15s ease-out, transform 0.1s ease-out; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff;">
-                    🪜▶
-                </div>
+    style="position: absolute; bottom: 0%; left: -18px; transform: translateY(50%); width: 26px; height: 20px; background: rgba(10, 25, 40, 0.95); border: 1.5px solid #00d2ff; border-radius: 6px 0 0 6px; box-shadow: 0 0 8px rgba(0, 210, 255, 0.8); z-index: 2; transition: bottom 0.15s ease-out, transform 0.1s ease-out; display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 8px; color: #00d2ff;">
+    <img src="assets/icon_stair.webp" style="width: 12px; height: 12px; object-fit: contain;">▶
+</div>
 
                 <!-- 7 Контрольных точек локаций (0m .. 10M m) -->
                 <div class="altitude-checkpoint locked" data-stage="6"
@@ -423,12 +413,90 @@
             <div class="zen-hide"
                 style="position: absolute; right: 12px; bottom: 12px; z-index: 25; pointer-events: auto;">
                 <button id="btn-open-inventory"
-    style="width: 108px; height: 34px; padding: 0; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #e67e22; border-radius: 10px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
-    <img src="assets/roller.webp" class="ui-ico"> Скины
-</button>
+                    style="width: 108px; height: 34px; padding: 0; background: rgba(30, 39, 46, 0.95); border: 1.5px solid #e67e22; border-radius: 10px; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); box-sizing: border-box;">
+                    <img src="assets/roller.webp" class="ui-ico"> Скины
+                </button>
             </div>
 
             <!-- МОДАЛЬНЫЕ ОКНА ИГРЫ -->
+
+            <!-- Магазин прокачки клика/колонки/шаров -->
+            <div id="shop-modal" class="hidden">
+                <!-- Фоновые скан-линии -->
+                <div class="shop-scanlines" aria-hidden="true"></div>
+
+                <!-- Верхняя плашка с заголовком и крестиком -->
+                <div class="shop-header-row">
+                    <div class="shop-title-block">
+                        <span class="shop-skull">⚡</span>
+                        <h2>Черный Рынок</h2>
+                    </div>
+                    <button id="btn-close-shop" class="shop-close-x">✕</button>
+                </div>
+
+                <!-- АРТ ЛАВКИ КОНТРАБАНДИСТА -->
+                <div class="shop-banner-box">
+                    <img src="assets/black_market.webp" class="shop-banner-img" alt="Черный Рынок">
+                    <div class="shop-banner-fade"></div>
+                </div>
+
+                <!-- Список улучшений (увеличенные тач-зоны) -->
+                <div class="shop-items-container">
+                    <!-- Item 1: Удар -->
+                    <div class="shop-item bm-row" style="--bm-color: #f1c40f;">
+                        <div class="bm-accent-bar"></div>
+                        <div class="bm-icon-box">
+                            <img src="assets/tap.webp" class="bm-asset-ico" alt="Удар">
+                        </div>
+                        <div class="bm-info-box">
+                            <span class="bm-item-title">УДАР</span>
+                            <span class="bm-item-val"><span id="shop-click-power">1</span> м/клик</span>
+                        </div>
+                        <button id="buy-click" class="buy-btn bm-action-btn">
+                            <span class="bm-btn-sub">КУПИТЬ</span>
+                            <span class="bm-btn-val"><span id="cost-click">10</span> м</span>
+                        </button>
+                    </div>
+
+                    <!-- Item 2: Сабвуфер -->
+                    <div class="shop-item bm-row" style="--bm-color: #3498db;">
+                        <div class="bm-accent-bar"></div>
+                        <div class="bm-icon-box">
+                            <img src="assets/old_speaker.webp" class="bm-asset-ico" alt="Сабвуфер" onerror="this.onerror=null; this.src='assets/speaker.webp';">
+                        </div>
+                        <div class="bm-info-box">
+                            <span class="bm-item-title">САБВУФЕР</span>
+                            <span class="bm-item-val">
+                                Ур. <span id="shop-speaker-lvl">0</span> 
+                                <span class="bm-stat-tag">• <span id="shop-speaker-power">0</span> м/с</span>
+                            </span>
+                        </div>
+                        <button id="buy-speaker" class="buy-btn bm-action-btn">
+                            <span class="bm-btn-sub">КУПИТЬ</span>
+                            <span class="bm-btn-val"><span id="cost-speaker">50</span> м</span>
+                        </button>
+                    </div>
+
+                    <!-- Item 3: Шары Ньютона -->
+                    <div class="shop-item bm-row" style="--bm-color: #9b59b6;">
+                        <div class="bm-accent-bar"></div>
+                        <div class="bm-icon-box">
+                            <img src="assets/newton_cradle.webp" class="bm-asset-ico" alt="Шары Ньютона">
+                        </div>
+                        <div class="bm-info-box">
+                            <span class="bm-item-title">ШАРЫ НЬЮТОНА</span>
+                            <span class="bm-item-val">
+                                Ур. <span id="shop-newton-lvl">0</span> 
+                                <span class="bm-stat-tag">• <span id="shop-newton-power">0</span> м/уд</span>
+                            </span>
+                        </div>
+                        <button id="buy-newton" class="buy-btn bm-action-btn">
+                            <span class="bm-btn-sub">КУПИТЬ</span>
+                            <span class="bm-btn-val"><span id="cost-newton">75</span> м</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Модальное окно Донат-Магазина -->
             <div id="donate-modal" class="modal-overlay hidden">
@@ -514,8 +582,9 @@
                     style="max-width: 320px; border: 2px solid #e74c3c; border-radius: 16px; padding: 18px; text-align: center; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 12px; color: #e74c3c; font-weight: bold; text-transform: uppercase;">🔥
-                            Эксклюзив</span>
+                        <span style="font-size: 12px; color: #e74c3c; font-weight: bold; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px;">
+                            <img src="assets/ico_deal_coin.webp" class="ui-ico-sm"> Эксклюзив
+                        </span>
                         <button id="btn-close-starter" class="modal-close-btn">&times;</button>
                     </div>
 
@@ -524,14 +593,13 @@
                         Исчезнет через: <b id="starter-modal-timer" style="color: #e74c3c;">48:00:00</b>
                     </div>
 
-                    <div
-                        style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 10px; text-align: left; font-size: 12px; margin-bottom: 16px; border: 1px solid #34495e;">
-                        <div style="margin-bottom: 5px;">🟡 <b>179</b> золотых гаек</div>
-                        <div style="margin-bottom: 5px;">🔩 <b>1 799</b> обычных гаек</div>
-                        <div style="margin-bottom: 5px;">📦 <b>10</b> деревянных кейсов</div>
-                        <div style="margin-bottom: 5px;">🧰 <b>5</b> железных сейфов</div>
-                        <div style="margin-bottom: 5px; color: #00ffff;">📻 Колонка <b>«Кибер»</b> (Epic)</div>
-                        <div style="color: #f1c40f;">👑 <b>VIP-рамка</b> в лидерборде навсегда</div>
+                    <div style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 10px; text-align: left; font-size: 12px; margin-bottom: 16px; border: 1px solid #34495e; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;"><img src="assets/golden_nut.webp" class="ui-ico-sm"> <b>179</b> золотых гаек</div>
+                        <div style="display: flex; align-items: center; gap: 6px;"><img src="assets/nut.webp" class="ui-ico-sm"> <b>1 799</b> обычных гаек</div>
+                        <div style="display: flex; align-items: center; gap: 6px;"><img src="assets/wooden_box.webp" class="ui-ico-sm"> <b>10</b> деревянных кейсов</div>
+                        <div style="display: flex; align-items: center; gap: 6px;"><img src="assets/iron_box.webp" class="ui-ico-sm"> <b>5</b> железных сейфов</div>
+                        <div style="display: flex; align-items: center; gap: 6px; color: #00ffff;"><img src="assets/old_speaker.webp" class="ui-ico-sm"> Колонка <b>«Кибер»</b> (Epic)</div>
+                        <div style="display: flex; align-items: center; gap: 6px; color: #f1c40f;"><img src="assets/crown.webp" class="ui-ico-sm"> <b>VIP-рамка</b> в лидерборде навсегда</div>
                     </div>
 
                     <button id="btn-buy-starter"
@@ -627,87 +695,6 @@
                 </div>
             </div>
 
-            <!-- Магазин прокачки клика/колонки/шаров -->
-<!-- Магазин прокачки клика/колонки/шаров -->
-<div id="shop-modal" class="hidden">
-    <!-- Фоновые скан-линии -->
-    <div class="shop-scanlines" aria-hidden="true"></div>
-
-    <!-- Верхняя плашка с заголовком и крестиком -->
-    <div class="shop-header-row">
-        <div class="shop-title-block">
-            <span class="shop-skull">⚡</span>
-            <h2>Черный Рынок</h2>
-        </div>
-        <button id="btn-close-shop" class="shop-close-x">✕</button>
-    </div>
-
-    <!-- АРТ ЛАВКИ КОНТРАБАНДИСТА -->
-    <div class="shop-banner-box">
-        <img src="assets/black_market.webp" class="shop-banner-img" alt="Черный Рынок">
-        <div class="shop-banner-fade"></div>
-    </div>
-
-    <!-- Список улучшений (увеличенные тач-зоны) -->
-    <div class="shop-items-container">
-        <!-- Item 1: Удар -->
-        <div class="shop-item bm-row" style="--bm-color: #f1c40f;">
-            <div class="bm-accent-bar"></div>
-            <div class="bm-icon-box">
-                <img src="assets/tap.webp" class="bm-asset-ico" alt="Удар">
-            </div>
-            <div class="bm-info-box">
-                <span class="bm-item-title">УДАР</span>
-                <span class="bm-item-val"><span id="shop-click-power">1</span> м/клик</span>
-            </div>
-            <button id="buy-click" class="buy-btn bm-action-btn">
-                <span class="bm-btn-sub">КУПИТЬ</span>
-                <span class="bm-btn-val"><span id="cost-click">10</span> м</span>
-            </button>
-        </div>
-
-        <!-- Item 2: Сабвуфер -->
-        <div class="shop-item bm-row" style="--bm-color: #3498db;">
-            <div class="bm-accent-bar"></div>
-            <div class="bm-icon-box">
-                <!-- Fallback: если файл назван speaker_old.webp или speaker.webp -->
-                <img src="assets/old_speaker.webp" class="bm-asset-ico" alt="Сабвуфер" onerror="this.onerror=null; this.src='assets/speaker.webp';">
-            </div>
-            <!-- САБВУФЕР -->
-<div class="bm-info-box">
-    <span class="bm-item-title">САБВУФЕР</span>
-    <span class="bm-item-val">
-        Ур. <span id="shop-speaker-lvl">0</span> 
-        <span class="bm-stat-tag">• <span id="shop-speaker-power">0</span> м/с</span>
-    </span>
-</div>
-            <button id="buy-speaker" class="buy-btn bm-action-btn">
-                <span class="bm-btn-sub">КУПИТЬ</span>
-                <span class="bm-btn-val"><span id="cost-speaker">50</span> м</span>
-            </button>
-        </div>
-
-        <!-- Item 3: Шары Ньютона -->
-        <div class="shop-item bm-row" style="--bm-color: #9b59b6;">
-            <div class="bm-accent-bar"></div>
-            <div class="bm-icon-box">
-                <img src="assets/newton_cradle.webp" class="bm-asset-ico" alt="Шары Ньютона">
-            </div>
-            <div class="bm-info-box">
-    <span class="bm-item-title">ШАРЫ НЬЮТОНА</span>
-    <span class="bm-item-val">
-        Ур. <span id="shop-newton-lvl">0</span> 
-        <span class="bm-stat-tag">• <span id="shop-newton-power">0</span> м/уд</span>
-    </span>
-</div>
-            <button id="buy-newton" class="buy-btn bm-action-btn">
-                <span class="bm-btn-sub">КУПИТЬ</span>
-                <span class="bm-btn-val"><span id="cost-newton">75</span> м</span>
-            </button>
-        </div>
-    </div>
-</div>
-
             <!-- Модальное окно кейсов -->
             <div id="cases-modal" class="modal-overlay hidden">
                 <div class="modal-card"
@@ -746,31 +733,30 @@
             <!-- Модальное окно гардероба скинов -->
             <div id="inventory-modal" class="modal-overlay hidden">
                 <div class="inv-shell">
-                    <!-- Top chrome bar -->
                     <div class="inv-chrome-bar">
-    <h2 class="inv-title">Инвентарь снаряжения</h2>
-    <button id="btn-close-inventory" class="inv-close-btn">✕</button>
-</div>
-                    <!-- Category tab rail -->
+                        <h2 class="inv-title">Инвентарь снаряжения</h2>
+                        <button id="btn-close-inventory" class="inv-close-btn">✕</button>
+                    </div>
+
                     <div class="inventory-tabs inv-tab-rail">
                         <button class="inv-tab active" data-tab="ladders">
-                            <span class="inv-tab-icon">🪜</span>
+                            <span class="inv-tab-icon"><img src="assets/wood_stair-removebg-preview.png" class="ui-ico-sm"></span>
                             <span class="inv-tab-label">Лестницы</span>
                         </button>
                         <button class="inv-tab" data-tab="speakers">
-                            <span class="inv-tab-icon">📻</span>
+                            <span class="inv-tab-icon"><img src="assets/old_speaker.webp" class="ui-ico-sm"></span>
                             <span class="inv-tab-label">Колонки</span>
                         </button>
                         <button class="inv-tab" data-tab="newton">
-                            <span class="inv-tab-icon">⚪</span>
+                            <span class="inv-tab-icon"><img src="assets/newton_cradle.webp" class="ui-ico-sm"></span>
                             <span class="inv-tab-label">Шарики</span>
                         </button>
                         <button class="inv-tab" data-tab="talismans">
-                            <span class="inv-tab-icon">🧿</span>
-                            <span class="inv-tab-label">Брелоки</span>
+                            <span class="inv-tab-icon"><img src="assets/talismans.webp" class="ui-ico-sm"></span>
+                            <span class="inv-tab-label">Брелки</span>
                         </button>
                     </div>
-                    <!-- Items list -->
+
                     <div id="inventory-items-list" class="modal-scroll-list inv-items-area"></div>
                 </div>
             </div>
@@ -778,29 +764,23 @@
             <!-- Модальное окно Сделки дня -->
             <div id="daily-deal-modal" class="modal-overlay hidden">
                 <div class="dd-shell">
-                    <!-- Glow halo behind shell -->
                     <div class="dd-halo" aria-hidden="true"></div>
-                    <!-- Corner chips -->
                     <div class="dd-corner dd-corner-tl" aria-hidden="true"></div>
                     <div class="dd-corner dd-corner-tr" aria-hidden="true"></div>
                     <div class="dd-corner dd-corner-bl" aria-hidden="true"></div>
                     <div class="dd-corner dd-corner-br" aria-hidden="true"></div>
-                    <!-- Header -->
                     <div class="dd-header">
                         <h2 class="dd-title">
                             <img src="assets/ico_deal_coin.webp" class="ui-ico-title"> Предложение дня
                         </h2>
                         <button id="btn-close-deal" class="dd-close">✕</button>
                     </div>
-                    <!-- Countdown strip -->
                     <div class="dd-countdown-strip">
                         <span class="dd-countdown-label">Смена через</span>
                         <span class="dd-countdown-sep">▶</span>
                         <b id="daily-deal-timer" class="dd-countdown-time">24:00:00</b>
                     </div>
-                    <!-- Deal content -->
                     <div id="daily-deal-content" class="dd-content"></div>
-                    <!-- Reroll -->
                     <button id="btn-deal-reroll" class="dd-reroll-btn">
                         <span class="dd-reroll-icon">🔄</span> Обновить (Реклама)
                     </button>
@@ -841,50 +821,63 @@
             </div>
 
             <!-- Модалка оффлайн-прогресса -->
-            <div id="offline-modal" class="modal-overlay hidden">
-                <div class="modal-card"
-                    style="max-width: 310px; border: 2px solid #3498db; border-radius: 16px; padding: 20px; background: rgba(20, 25, 30, 0.95);">
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <h2 style="color: #3498db; font-size: 20px; margin: 0 0 5px 0;">💤 С возвращением!</h2>
-                        <div style="font-size: 11px; color: #95a5a6;">
-                            Ты отсутствовал: <b id="off-time-txt" style="color:#fff;">0м 0с</b><br>
-                            (Лимит: <span id="off-limit-txt">30м</span>)
-                        </div>
-                    </div>
+<div id="offline-modal" class="modal-overlay hidden" style="z-index: 28000;">
+    <div class="modal-card"
+        style="max-width: 325px; width: 92%; height: auto !important; min-height: auto !important; max-height: 92vh; overflow-y: auto; border: 2px solid #3498db; border-radius: 18px; padding: 16px; background: radial-gradient(circle, #202b38 0%, #10141d 100%); box-shadow: 0 0 35px rgba(52, 152, 219, 0.35);">
 
-                    <div
-                        style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 12px; margin-bottom: 15px; border: 1px solid #34495e; font-size: 13px; color: #bdc3c7;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <span style="font-size: 18px;">📻</span>
-                            <span>Колонка настучала: <b id="off-speaker-txt" style="color:#fff;">+0 м</b></span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <span style="font-size: 18px;">⚪</span>
-                            <span>Шары выбили: <b id="off-newton-txt" style="color:#fff;">+0 м</b></span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 18px;">📦</span>
-                            <span>Найдено ящиков: <b id="off-cases-txt" style="color:#f1c40f;">0 шт.</b></span>
-                        </div>
-                    </div>
+        <!-- 1. АРТ-БЛОК ПЕРСОНАЖА (Полная картинка без обрезки) -->
+        <div style="width: 100%; height: 135px; display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 6px;">
+            <div style="position: absolute; width: 110px; height: 110px; background: radial-gradient(circle, rgba(52, 152, 219, 0.3) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+            <img src="assets/offline_welcome.webp" alt="С возвращением"
+                style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.75)); z-index: 2;">
+        </div>
 
-                    <div style="text-align: center; font-size: 14px; margin-bottom: 16px;">
-                        Всего заработано: <br>
-                        <b id="off-total-txt" style="font-size: 22px; color: #f1c40f;">+0 м</b>
-                    </div>
-
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button id="btn-claim-offline-x2"
-                            style="background: #2ecc71; color: #111; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);">
-                            ▶ Удвоить за рекламу
-                        </button>
-                        <button id="btn-claim-offline-normal"
-                            style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer;">
-                            Забрать обычную
-                        </button>
-                    </div>
-                </div>
+        <!-- 2. ЗАГОЛОВОК И ВРЕМЯ ОТСУТСТВИЯ -->
+        <div style="text-align: center; margin-bottom: 10px;">
+            <h2 style="color: #3498db; font-size: 19px; font-weight: 900; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 0 10px rgba(52,152,219,0.5);">
+                С возвращением!
+            </h2>
+            <div style="font-size: 11px; color: #bdc3c7;">
+                Ты отсутствовал: <b id="off-time-txt" style="color:#fff;">0м 0с</b> 
+                <span style="color: #7f8c8d;">(Лимит: <span id="off-limit-txt">30м</span>)</span>
             </div>
+        </div>
+
+        <!-- 3. ДЕТАЛИЗАЦИЯ НАГРАДЫ -->
+        <div style="background: rgba(0,0,0,0.45); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; border: 1px solid #34495e; font-size: 12px; color: #bdc3c7; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <img src="assets/old_speaker.webp" class="ui-ico">
+                <span>Колонка настучала: <b id="off-speaker-txt" style="color:#fff;">+0 м</b></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <img src="assets/newton_cradle.webp" class="ui-ico">
+                <span>Шары выбили: <b id="off-newton-txt" style="color:#fff;">+0 м</b></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <img src="assets/wooden_box.webp" class="ui-ico">
+                <span>Найдено ящиков: <b id="off-cases-txt" style="color:#f1c40f;">0 шт.</b></span>
+            </div>
+        </div>
+
+        <!-- 4. ИТОГОВАЯ ВЫСОТА -->
+        <div style="text-align: center; margin-bottom: 12px;">
+            <div style="font-size: 11px; color: #bdc3c7; text-transform: uppercase; letter-spacing: 1px;">Всего заработано:</div>
+            <b id="off-total-txt" style="font-size: 24px; font-weight: 900; color: #f1c40f; text-shadow: 0 0 12px rgba(241,196,15,0.4); line-height: 1.1;">+0 м</b>
+        </div>
+
+        <!-- 5. КНОПКИ ЗАБОРА -->
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button id="btn-claim-offline-x2"
+                style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(46, 204, 113, 0.4);">
+                ▶ Удвоить за рекламу
+            </button>
+            <button id="btn-claim-offline-normal"
+                style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 7px; border-radius: 8px; font-size: 11px; cursor: pointer;">
+                Забрать обычную
+            </button>
+        </div>
+    </div>
+</div>
 
             <!-- Модальное окно Настроек -->
             <div id="settings-modal" class="modal-overlay hidden" style="z-index: 29000;">
@@ -892,16 +885,16 @@
                     style="max-width: 320px; width: 92%; height: auto !important; min-height: auto !important; padding: 18px; border: 2px solid #7f8c8d; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); box-shadow: 0 0 25px rgba(0,0,0,0.85);">
                     <div class="modal-header"
                         style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2
-                            style="color: #ecf0f1; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">
-                            ⚙️ Настройки</h2>
+                        <h2 style="color: #ecf0f1; font-size: 17px; margin: 0; display: flex; align-items: center; gap: 6px;">
+    <img src="assets/settings.webp" class="ui-ico-title"> Настройки
+</h2>
                         <button id="btn-close-settings" class="modal-close-btn">&times;</button>
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #bdc3c7;">
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                                <span>🎵 Музыка и фон</span>
+                                <span><img src="assets/ico_music.webp" class="ui-ico-sm" style="vertical-align: -2px;"> Музыка и фон</span>
                                 <b id="val-music" style="color: #fff;">30%</b>
                             </div>
                             <input type="range" id="slider-music" min="0" max="1" step="0.05" value="0.3"
@@ -910,7 +903,7 @@
 
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                                <span>🪜 Звуки тапа</span>
+                                <span><img src="assets/ico_sfx_tap.webp" class="ui-ico-sm" style="vertical-align: -2px;"> Звуки тапа</span>
                                 <b id="val-tap" style="color: #fff;">80%</b>
                             </div>
                             <input type="range" id="slider-tap" min="0" max="1" step="0.05" value="0.8"
@@ -919,7 +912,7 @@
 
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                                <span>📻 Бас колонки</span>
+                                <span><img src="assets/old_speaker.webp" class="ui-ico-sm" style="vertical-align: -2px;"> Бас колонки</span>
                                 <b id="val-speaker" style="color: #fff;">80%</b>
                             </div>
                             <input type="range" id="slider-speaker" min="0" max="1" step="0.05" value="0.8"
@@ -928,7 +921,7 @@
 
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                                <span>⚪ Удар шаров</span>
+                                <span><img src="assets/newton_cradle.webp" class="ui-ico-sm" style="vertical-align: -2px;"> Удар шаров</span>
                                 <b id="val-newton" style="color: #fff;">80%</b>
                             </div>
                             <input type="range" id="slider-newton" min="0" max="1" step="0.05" value="0.8"
@@ -937,7 +930,7 @@
 
                         <div>
                             <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                                <span>🔔 Награды и эффекты</span>
+                                <span><img src="assets/ico_bell.webp" class="ui-ico-sm" style="vertical-align: -2px;"> Награды и эффекты</span>
                                 <b id="val-sfx" style="color: #fff;">90%</b>
                             </div>
                             <input type="range" id="slider-sfx" min="0" max="1" step="0.05" value="0.9"
@@ -946,7 +939,7 @@
 
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px solid #34495e;">
-                            <span>📳 Вибрация (телефон)</span>
+                            <span><img src="assets/ico_vibration.webp" class="ui-ico-sm" style="vertical-align: -2px;"> Вибрация (телефон)</span>
                             <input type="checkbox" id="toggle-vibrate" checked
                                 style="width: 18px; height: 18px; accent-color: #2ecc71; cursor: pointer;">
                         </div>
@@ -957,9 +950,9 @@
                         <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 6px;">Космическая Стремянка v1.0.0
                         </div>
                         <button onclick="alert('Сообщество игры и поддержка: vk.com/your_game_group')"
-                            style="background: rgba(255,255,255,0.06); border: 1px solid #7f8c8d; color: #bdc3c7; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;">
-                            💬 Поддержка / Сообщество
-                        </button>
+    style="background: rgba(255,255,255,0.06); border: 1px solid #7f8c8d; color: #bdc3c7; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+    <img src="assets/ico_dialog.webp" class="ui-ico-sm"> Поддержка / Сообщество
+</button>
                     </div>
                 </div>
             </div>
@@ -1027,9 +1020,9 @@
                     style="max-width: 320px; width: 92%; border: 2px solid #2ecc71; border-radius: 16px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%); padding: 18px;">
                     <div class="modal-header"
                         style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2
-                            style="color: #2ecc71; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">
-                            🍀 Твоя Удача</h2>
+                        <h2 style="color: #2ecc71; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">
+    <img src="assets/clover_lucky.webp" class="ui-ico-title"> Твоя Удача
+</h2>
                         <button id="btn-close-luck" class="modal-close-btn">&times;</button>
                     </div>
 
@@ -1097,8 +1090,8 @@
                     <div
                         style="background: rgba(241, 196, 15, 0.15); border: 1px dashed #f1c40f; border-radius: 10px; padding: 8px; margin-bottom: 16px;">
                         <span style="font-size: 12px; color: #f1c40f; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px;">
-    <img src="assets/crown.webp" class="ui-ico-sm"> СТАТУС VIP АКТИВИРОВАН
-</span>
+                            <img src="assets/crown.webp" class="ui-ico-sm"> СТАТУС VIP АКТИВИРОВАН
+                        </span>
                     </div>
 
                     <button id="btn-close-thank"
@@ -1207,6 +1200,34 @@
                 <button id="gachaClaimBtn"
                     style="display: none; margin-top: 20px; padding: 10px 30px; font-size: 18px; font-weight: bold; background: #f1c40f; border: none; border-radius: 5px; cursor: pointer;">Забрать</button>
             </div>
+
+<!-- Модальное окно детального предпросмотра лестницы -->
+<div id="ladder-preview-modal" class="modal-overlay hidden" style="z-index: 29000;">
+    <div class="ladder-preview-card">
+        <!-- 1. ВЕРХНЯЯ ШАПКА: Слева Название и Редкость, Справа Крестик -->
+        <div class="lp-top-bar">
+            <div class="lp-title-block">
+                <h3 id="lp-name" class="lp-title">Название</h3>
+                <span id="lp-rarity-badge" class="lp-rarity-badge">COMMON</span>
+            </div>
+            <button id="btn-close-ladder-preview" class="lp-close-btn">✕</button>
+        </div>
+
+        <!-- 2. ОГРОМНЫЙ ПОДИУМ ПОД ЛЕСТНИЦУ -->
+        <div class="lp-podium">
+            <div id="lp-halo" class="lp-halo"></div>
+            <img id="lp-img" src="" alt="Лестница" class="lp-ladder-img">
+        </div>
+
+        <!-- 3. ОПИСАНИЕ СВОЙСТВ -->
+        <div class="lp-info">
+            <div id="lp-desc" class="lp-desc">Описание эффекта</div>
+        </div>
+
+        <!-- 4. КНОПКИ УПРАВЛЕНИЯ -->
+        <div id="lp-actions" class="lp-actions-box"></div>
+    </div>
+</div>
         </div>
     </div>
 
@@ -1222,9 +1243,9 @@
                 Выберите 1 дополнительный эффект любого открытого аксессуара (Колонки, Шаров или Брелока):
             </div>
             <div class="inventory-tabs" style="margin-bottom: 8px;">
-                <button class="cyber-tab active" data-tab="speakers">📻 Колонки</button>
-                <button class="cyber-tab" data-tab="newton">⚪ Шарики</button>
-                <button class="cyber-tab" data-tab="talismans">🧿 Брелоки</button>
+                <button class="cyber-tab active" data-tab="speakers"><img src="assets/old_speaker.webp" class="ui-ico-sm"> Колонки</button>
+                <button class="cyber-tab" data-tab="newton"><img src="assets/newton_cradle.webp" class="ui-ico-sm"> Шарики</button>
+                <button class="cyber-tab" data-tab="talismans"><img src="assets/talismans.webp" class="ui-ico-sm"> Брелки</button>
             </div>
             <div id="cyber-selection-list"
                 style="overflow-y: auto; flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-right: 2px;">

@@ -251,7 +251,7 @@ function watchRewardedAd(placementName, onSuccess) {
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.4,
-                text: `📺 Спонсор: +${bNuts} 🔩 и +${bGold} 🟡!`,
+                text: `📺 Спонсорр: +${bNuts} и +${bGold}!`,
                 color: '#00d2d3',
                 font: 'bold 20px sans-serif',
                 alpha: 2.0,
@@ -362,27 +362,6 @@ function activateFortuneBoost(customMinutes = null, luckAdd = 15) {
     });
 }
 
-// Активация Гайкопада (в обоих местах, где объявлена функция):
-function activateFrenzyMode(seconds = 30) {
-    watchRewardedAd('frenzy_nuts', () => {
-        const mult = hasMech('billboard') ? 1.5 : 1.0;
-        adState.frenzyTimer = seconds * 1000 * mult;
-
-        AudioEngine.play('whoosh_air', 0.8);
-        particles.push({
-            x: canvas.width / 2,
-            y: canvas.height * 0.35,
-            img: canvasIcoNutRain,
-            imgSize: 32,
-            text: 'ГАЙКОПАД!',
-            color: '#f1c40f',
-            font: 'bold 26px sans-serif',
-            alpha: 2.5,
-            speed: 1.5
-        });
-    });
-}
-
 const DUPLICATE_GOLD_REWARDS = {
     common: 5,
     rare: 10,
@@ -392,12 +371,11 @@ const DUPLICATE_GOLD_REWARDS = {
 
 let dailyDeal = {
     type: null,           // 'skin' | 'talisman'
-    id: null,             // ID скина или талисмана
+    id: null,
     basePrice: 0,
     salePrice: 0,
-    lastRefresh: 0,       // Время последней смены (timestamp)
-    lastLegendaryBuy: 0,  // Кулдаун 5 дней на покупку леги
-    lastAdReroll: 0       // Кулдаун 4 часа на рекламу
+    currentDayId: '',     // Идентификатор дня 'YYYY-M-D' для плановой смены в 00:00
+    adRerollsLeft: 5      // 5 попыток реролла в день
 };
 
 
@@ -615,6 +593,8 @@ function updateAltitudeTrackerUI() {
 }
 
 function showMilestoneModal(m) {
+    pendingMilestone = m; // <-- ОБЯЗАТЕЛЬНО: привязываем рубеж к модалке!
+
     const modal = document.getElementById('milestone-modal');
     const title = document.getElementById('ms-title');
     const desc = document.getElementById('ms-desc');
@@ -638,8 +618,8 @@ function showMilestoneModal(m) {
         icon.style.display = 'none';
     };
 
-    btnX2.innerText = `▶ Удвоить за рекламу (+${m.reward * 2} 🟡)`;
-    btnNormal.innerText = `Забрать обычную (+${m.reward} 🟡)`;
+    btnX2.innerHTML = `▶ Удвоить за рекламу (+${m.reward * 2} <img src="assets/golden_nut.webp" class="ui-ico-sm">)`;
+btnNormal.innerHTML = `Забрать обычную (+${m.reward} <img src="assets/golden_nut.webp" class="ui-ico-sm">)`;
 
     // Блокируем кнопки на 1 секунду от случайных тапов
     if (btnBox) {
@@ -661,7 +641,13 @@ function showMilestoneModal(m) {
 }
 
 function claimMilestoneReward(isDouble = false) {
-    if (!pendingMilestone) return;
+    const modal = document.getElementById('milestone-modal');
+
+    // Если рубеж почему-то пуст, просто закрываем окно и не крашимся
+    if (!pendingMilestone) {
+        if (modal) modal.classList.add('hidden');
+        return;
+    }
 
     const mult = isDouble ? 2 : 1;
     const awardedMilestoneGold = addGoldenNuts(pendingMilestone.reward * mult);
@@ -671,7 +657,7 @@ function claimMilestoneReward(isDouble = false) {
     particles.push({
         x: canvas.width / 2,
         y: canvas.height * 0.4,
-        text: `+${awardedMilestoneGold} 🟡!`,
+        text: `+${awardedMilestoneGold}!`,
         color: '#f1c40f',
         font: 'bold 26px sans-serif',
         alpha: 2.2,
@@ -681,7 +667,6 @@ function claimMilestoneReward(isDouble = false) {
     const modalGold = document.getElementById('cases-modal-gold');
     if (modalGold) modalGold.innerText = goldenNuts;
 
-    const modal = document.getElementById('milestone-modal');
     if (modal) modal.classList.add('hidden');
 
     pendingMilestone = null;
@@ -759,8 +744,12 @@ let ownedSpeakerSkins = ['old'];
 let ownedNewtonSkins = ['steel'];
 let ownedTalismans = []; //строка 123
 
+const canvasIcoTv = new Image(); canvasIcoTv.src = 'assets/ico_ad_tv.webp';
+
 const moonImg = new Image();
 moonImg.src = 'assets/moon.webp';
+
+const canvasIcoCrown = new Image(); canvasIcoCrown.src = 'assets/crown.webp';
 
 // === КЭШ АССЕТОВ ДЛЯ ПАРТИКЛОВ КАНВАСА ===
 const canvasIcoNut = new Image(); canvasIcoNut.src = 'assets/nut.webp';
@@ -2515,7 +2504,7 @@ function updateFieldIcons() {
         if (currentTalisman && TALISMANS[currentTalisman]) {
             lkIcon.innerHTML = `<img src="${TALISMANS[currentTalisman].file}" style="width: 82%; height: 82%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));">`;
         } else {
-            lkIcon.innerHTML = `<span style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">🍀</span>`;
+            lkIcon.innerHTML = `<img src="assets/clover_lucky.webp" style="width: 75%; height: 75%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">`;
         }
     }
 
@@ -2657,6 +2646,7 @@ document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРО�
             equipItem(currentCustType, selectedCustSkin);
             renderCustomizationModal();
             updateFieldIcons();
+            checkAbsoluteUnlock();
             saveGame();
         };
     } else {
@@ -2827,7 +2817,7 @@ function renderLuckModal() {
             };
             card.appendChild(btn);
         } else {
-            card.innerHTML += `<div style="font-size: 9px; color: #7f8c8d; margin-top: 4px;">🔒 Закрыто</div>`;
+            card.innerHTML += `<div style="font-size: 9px; color: #7f8c8d; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 3px;"><img src="assets/locker.webp" class="ui-ico-sm"> Закрыто</div>`;
         }
 
         listEl.appendChild(card);
@@ -2885,16 +2875,29 @@ function updateAutoClickers(dt) {
             }
 
             if (isCoolSpeaker && speakerPulseCount % 3 === 0) {
-                const spGold = addGoldenNuts(1);
-                if (slotSpeaker) {
-                    particles.push({
-                        x: slotSpeaker.getBoundingClientRect().left + 25,
-                        y: slotSpeaker.getBoundingClientRect().top,
-                        text: `+${spGold} 🟡`, color: '#f1c40f', font: 'bold 22px sans-serif', alpha: 1.5, speed: 2
-                    });
-                }
-                if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
-            }
+				const spGold = addGoldenNuts(1);
+
+				// 1. Точные координаты висящей колонки на тросах:
+				const targetWidth = canvas.width * 0.27;
+				const ladderLeft = canvas.width / 2 - targetWidth / 2;
+				const speakerCenterX = ladderLeft - 36; // Ровно центр подвешенной колонки
+				const speakerTopY = canvas.height * 0.50 + ladderDropY;
+
+				// 2. Спавним партикл с картинкой золотой гайки (без эмодзи):
+				particles.push({
+					x: speakerCenterX,
+					y: speakerTopY,
+					img: canvasIcoGold,        // Картинка golden_nut.webp
+					imgSize: 22,
+					text: `+${spGold}`,        // Только цифра, без желтого кружка
+					color: '#f1c40f',
+					font: 'bold 22px sans-serif',
+					alpha: 1.8,
+					speed: 2.2
+				});
+
+				if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
+			}
         }
     }
 
@@ -2973,36 +2976,45 @@ function updateAutoClickers(dt) {
                 clicksForBox += boxAdd;
                 if (isPlanet) shakeTime = Math.max(shakeTime, 10);
 
-        let actualNeeded = clicksNeeded;
-        if (skin.buffs.caseLimitMinus) actualNeeded -= skin.buffs.caseLimitMinus;
-        actualNeeded = Math.max(10, actualNeeded);
+                let actualNeeded = clicksNeeded;
+                if (skin.buffs.caseLimitMinus) actualNeeded -= skin.buffs.caseLimitMinus;
+                actualNeeded = Math.max(10, actualNeeded);
 
-        if (clicksForBox >= actualNeeded) {
-            clicksForBox -= actualNeeded;
-            boxesOwned++;
-            userCases.wooden = boxesOwned;
-            if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-            pityStage++;
-            clicksNeeded = getClicksNeeded(pityStage);
-            triggerCaseGainedPopup();
-        }
-        if (uiBoxText) {
-            uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
-        }
-        if (uiBoxProgress) {
-            uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
-        }
+                if (clicksForBox >= actualNeeded) {
+                    clicksForBox -= actualNeeded;
+                    boxesOwned++;
+                    userCases.wooden = boxesOwned;
+                    if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+                    pityStage++;
+                    clicksNeeded = getClicksNeeded(pityStage);
+                    triggerCaseGainedPopup();
+                }
+                if (uiBoxText) {
+                    uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
+                }
+                if (uiBoxProgress) {
+                    uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
+                }
+
                 // Турбо x3 для шаров Ньютона
                 if (adState.turboTimer > 0) hitDamage *= 3;
 
-                currentHeight += Math.round(hitDamage * getGlobalMultiplier());
+                const effectiveBallHit = Math.round(hitDamage * getGlobalMultiplier());
+                currentHeight += effectiveBallHit;
+
                 checkHeightMilestones();
                 ladderScaleX = 1.06; ladderScaleY = 0.92; ladderSpeed = 16;
                 shakeTime = Math.max(shakeTime, 7);
 
                 AudioEngine.play(NEWTON_SKINS[currentNewtonSkin].sound, 0.6, 'newton');
-                particles.push({ x: ballX, y: canvas.height * 0.28 + ladderDropY, text: `+${hitDamage}`, alpha: 1, speed: 2.5 });
-            };
+                particles.push({ 
+                    x: ballX, 
+                    y: canvas.height * 0.28 + ladderDropY, 
+                    text: `+${effectiveBallHit}`,
+                    alpha: 1, 
+                    speed: 2.5 
+                });
+            }; // <-- ЗДЕСЬ ЗАКРЫВАЕТСЯ processBallHit!
 
             // Удар левого шара
             if (newtonAnimProgress >= 0.5 && !newtonLeftHitFired) {
@@ -4720,7 +4732,62 @@ function drawDebris() {
     }
 }
 
-// Проверка наград за достижение высоты
+// Проверка полной коллекции игры и открытие венца эволюции — «АБСОЛЮТ»
+function checkAbsoluteUnlock() {
+    // Если Абсолют уже получен — выходим
+    if (ownedSkins.includes('absolute')) return;
+
+    // 1. Все лестницы (кроме самого Абсолюта)
+    const allLadders = Object.keys(LADDER_SKINS).filter(id => id !== 'absolute');
+    const hasAllLadders = allLadders.every(id => ownedSkins.includes(id));
+
+    // 2. Все колонки
+    const allSpeakers = Object.keys(SPEAKER_SKINS);
+    const hasAllSpeakers = allSpeakers.every(id => ownedSpeakerSkins.includes(id));
+
+    // 3. Все шары Ньютона
+    const allNewtons = Object.keys(NEWTON_SKINS);
+    const hasAllNewtons = allNewtons.every(id => ownedNewtonSkins.includes(id));
+
+    // 4. Все талисманы (включая секретный носок)
+    const allTalismans = Object.keys(TALISMANS);
+    const hasAllTalismans = allTalismans.every(id => ownedTalismans.includes(id));
+
+    // Если собрано АБСОЛЮТНО ВСЁ:
+    if (hasAllLadders && hasAllSpeakers && hasAllNewtons && hasAllTalismans) {
+        ownedSkins.push('absolute');
+        saveGame();
+
+        AudioEngine.play('jacpot', 1.0);
+        shakeTime = 30; // Эпичная тряска экрана
+
+        particles.push({
+    x: canvas.width / 2,
+    y: canvas.height * 0.35,
+    img: canvasIcoCrown,
+    imgSize: 30,
+    text: 'ОТКРЫТ АБСОЛЮТ!',
+    color: '#f1c40f',
+    font: 'bold 24px sans-serif',
+    alpha: 3.0,
+    speed: 1.2
+});
+
+        if (typeof renderInventory === 'function') renderInventory();
+        
+        // Открываем модалку предпросмотра только что полученного Абсолюта
+        if (typeof openLadderPreview === 'function') {
+            openLadderPreview('absolute');
+        }
+    }
+}
+
+function hardResetGame() {
+    window.onbeforeunload = null;
+    localStorage.clear();
+    location.reload();
+}
+
 // Проверка наград за достижение высоты
 function checkHeightUnlocks() {
     const unlocks = [
@@ -4835,14 +4902,16 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
 
             AudioEngine.play('pickupCoin5', 1.0);
             particles.push({
-                x: clickX,
-                y: clickY,
-                text: `+${finalCoinNuts} 🔩 и +${finalCoinGold} 🟡!`,
-                color: '#f1c40f',
-                font: 'bold 22px sans-serif',
-                speed: 3,
-                alpha: 1.6
-            });
+    x: clickX,
+    y: clickY,
+    img: canvasIcoGold,
+    imgSize: 24,
+    text: `+${finalCoinNuts} гаек, +${finalCoinGold}!`,
+    color: '#f1c40f',
+    font: 'bold 22px sans-serif',
+    speed: 3,
+    alpha: 1.6
+});
             return;
         }
     }
@@ -4948,7 +5017,9 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
     }
 
     // Применяем высоту и импульс пружины UI
-    currentHeight += Math.round(currentClickPower * getGlobalMultiplier());
+    const effectiveClick = Math.round(currentClickPower * getGlobalMultiplier());
+    currentHeight += effectiveClick;
+
     counterScale = Math.min(counterScale + 0.08, 1.4);
     markerBounce = Math.min(markerBounce + 0.15, 1.45);
     checkHeightUnlocks();
@@ -5079,17 +5150,17 @@ for (let i = 0; i < tapsNum; i++) {
 
             const roll = Math.random();
             if (roll < 0.6) {
-                addNuts(100);
-                particles.push({ x: clickX, y: clickY, text: '🎁 +100 🔩', color: '#27ae60', speed: 2, alpha: 1 });
-            } else if (roll < 0.9) {
-                userCases.wooden++;
-                boxesOwned = userCases.wooden;
-                if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-                particles.push({ x: clickX, y: clickY, text: '🎁 ДЕРЕВЯННЫЙ!', color: '#8d6e63', speed: 2, alpha: 1 });
-            } else {
-                userCases.iron++;
-                particles.push({ x: clickX, y: clickY, text: '🎁 ЖЕЛЕЗНЫЙ!', color: '#7f8c8d', speed: 2, alpha: 1 });
-            }
+    addNuts(100);
+    particles.push({ x: clickX, y: clickY, img: canvasIcoNut, imgSize: 22, text: '+100', color: '#27ae60', speed: 2, alpha: 1 });
+} else if (roll < 0.9) {
+    userCases.wooden++;
+    boxesOwned = userCases.wooden;
+    if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+    particles.push({ x: clickX, y: clickY, img: canvasIcoWoodenBox, imgSize: 26, text: '+1 ЯЩИК!', color: '#8d6e63', speed: 2, alpha: 1 });
+} else {
+    userCases.iron++;
+    particles.push({ x: clickX, y: clickY, img: canvasIcoIronBox, imgSize: 26, text: '+1 СЕЙФ!', color: '#7f8c8d', speed: 2, alpha: 1 });
+}
         }
     }
 
@@ -5105,7 +5176,7 @@ for (let i = 0; i < tapsNum; i++) {
             y: clickY - 20,
             img: lightningImg,
             imgSize: 26,
-            text: `+${currentClickPower} (x2)`,
+            text: `+${effectiveClick} (x2)`,
             color: '#00ffff',
             font: 'bold 30px sans-serif',
             alpha: 1.5,
@@ -5116,7 +5187,7 @@ for (let i = 0; i < tapsNum; i++) {
         particles.push({
             x: clickX + (Math.random() * 40 - 20),
             y: clickY - 20,
-            text: `+${currentClickPower}`,
+            text: `+${effectiveClick}`,
             font: 'bold 30px sans-serif',
             alpha: 1,
             speed: 3 + Math.random() * 2
@@ -5366,7 +5437,7 @@ function rollLootFromCase(caseId) {
             if (totalLuck >= 30 && Math.random() < 0.03) {
                 goldenNuts += 1;
                 if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
-                particles.push({ x: canvas.width / 2, y: canvas.height * 0.3, text: '✨ ДЖЕКПОТ: +1 🟡!', color: '#f1c40f', alpha: 2, speed: 1.5 });
+                particles.push({ x: canvas.width / 2, y: canvas.height * 0.3, text: 'ДЖЕКПОТ: +1 ЗОЛОТО!', color: '#f1c40f', alpha: 2, speed: 1.5 });
             }
 
             return { type: 'nuts', amount: finalNuts, name: `${finalNuts} Гаек` };
@@ -5667,7 +5738,7 @@ document.getElementById('gachaClaimBtn').onclick = () => {
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.32,
-            text: `💎 +${actualCrystalGold} 🟡 (Кристалл)!`,
+            text: `+${actualCrystalGold} (Кристалл)!`,
             color: '#00ffff',
             font: 'bold 22px sans-serif',
             alpha: 2.2,
@@ -5712,6 +5783,7 @@ document.getElementById('gachaClaimBtn').onclick = () => {
             }
         }
     }
+    checkAbsoluteUnlock();
 
     uiNuts.innerText = `${nuts}`;
     document.getElementById('gachaModal').style.display = 'none';
@@ -6033,10 +6105,17 @@ function getItemBuffText(type, itemOrId) {
     return '';
 }
 
-// Отрисовка списка предметов инвентаря
+// Отрисовка списка предметов инвентаря (с поддержкой сетки 2 в ряд для лестниц)
 function renderInventory() {
     if (!inventoryItemsList) return;
     inventoryItemsList.innerHTML = '';
+
+    // Если вкладка лестниц — включаем класс 2 колонок
+    if (currentInventoryTab === 'ladders') {
+        inventoryItemsList.classList.add('inv-grid-ladders');
+    } else {
+        inventoryItemsList.classList.remove('inv-grid-ladders');
+    }
 
     let itemsSource = {};
     let ownedList = [];
@@ -6047,157 +6126,111 @@ function renderInventory() {
         ownedList = ownedSkins;
         equippedId = currentSkinId;
 
+        // Плашка текущего облика и эффекта над сеткой
         const curVisName = LADDER_SKINS[currentSkinId]?.name || 'Деревянная';
         const curEffName = LADDER_SKINS[currentEffectId]?.name || 'Деревянная';
         const statusBox = document.createElement('div');
-        statusBox.style.cssText = 'background: rgba(0,0,0,0.5); border: 1px solid #34495e; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; font-size: 11px; display: flex; justify-content: space-between; color: #bdc3c7;';
+        statusBox.style.cssText = 'grid-column: 1 / -1; background: rgba(0,0,0,0.5); border: 1px solid #34495e; border-radius: 8px; padding: 6px 10px; margin-bottom: 2px; font-size: 11px; display: flex; justify-content: space-between; color: #bdc3c7;';
         statusBox.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 5px;">
-        <img src="assets/roller.webp" class="ui-ico-sm"> Облик: <b style="color: #2ecc71;">${curVisName}</b>
-    </div>
-    <div style="display: flex; align-items: center; gap: 5px;">
-        <img src="assets/perk.webp" class="ui-ico-sm"> Эффект: <b style="color: #9b59b6;">${curEffName}</b>
-    </div>
-`;
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <img src="assets/roller.webp" class="ui-ico-sm"> Облик: <b style="color: #2ecc71;">${curVisName}</b>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <img src="assets/perk.webp" class="ui-ico-sm"> Эффект: <b style="color: #9b59b6;">${curEffName}</b>
+            </div>
+        `;
         inventoryItemsList.appendChild(statusBox);
-    } else if (currentInventoryTab === 'speakers') {
-        itemsSource = SPEAKER_SKINS;
-        ownedList = ownedSpeakerSkins;
-        equippedId = currentSpeakerSkin;
-    } else if (currentInventoryTab === 'newton') {
-        itemsSource = NEWTON_SKINS;
-        ownedList = ownedNewtonSkins;
-        equippedId = currentNewtonSkin;
-    } else if (currentInventoryTab === 'talismans') {
-        itemsSource = TALISMANS;
-        ownedList = ownedTalismans;
-        equippedId = currentTalisman;
+
+        // Отрисовка каждой лестницы карточкой в 2 колонки
+        Object.keys(itemsSource).forEach(id => {
+            const item = itemsSource[id];
+            const isOwned = ownedList.includes(id);
+            const isVis = (currentSkinId === id);
+            const isEff = (currentEffectId === id);
+            const rarityColor = RARITY_COLORS[item.rarity] || '#bdc3c7';
+
+            const card = document.createElement('div');
+            card.className = `ladder-card-tile ${!isOwned ? 'locked' : ''}`;
+
+            // Подсветка рамки активных лестниц
+            if (isVis && isEff) {
+                card.style.borderColor = '#f1c40f';
+                card.style.boxShadow = '0 0 12px rgba(241,196,15,0.35)';
+            } else if (isVis) {
+                card.style.borderColor = '#2ecc71';
+            } else if (isEff) {
+                card.style.borderColor = '#9b59b6';
+            } else if (isOwned) {
+                card.style.borderColor = rarityColor;
+            }
+
+            // Бейджи надетых свойств
+            let badgesHtml = '';
+            if (isVis) {
+                badgesHtml += `<div class="ladder-mini-badge" style="background: rgba(46,204,113,0.3); border: 1px solid #2ecc71;"><img src="assets/roller.webp" style="width:11px; height:11px;"></div>`;
+            }
+            if (isEff) {
+                badgesHtml += `<div class="ladder-mini-badge" style="background: rgba(155,89,182,0.3); border: 1px solid #9b59b6;"><img src="assets/perk.webp" style="width:11px; height:11px;"></div>`;
+            }
+
+            card.innerHTML = `
+                ${badgesHtml ? `<div class="ladder-tile-badges">${badgesHtml}</div>` : ''}
+                ${!isOwned ? `<img src="assets/locker.webp" class="ladder-lock-icon">` : ''}
+                <div class="ladder-tile-pedestal">
+                    <img src="${item.file}" class="ladder-tile-img" onerror="this.style.display='none'">
+                </div>
+                <div class="ladder-tile-title" style="color: ${rarityColor};">${item.name}</div>
+                <div class="ladder-tile-rarity" style="color: ${rarityColor};">${item.rarity}</div>
+            `;
+
+            // Клик открывает окно детального предпросмотра
+            card.onclick = () => openLadderPreview(id);
+            inventoryItemsList.appendChild(card);
+        });
+
+        return; // Завершаем, так как для лестниц отрисовка окончена
     }
 
-    let nextTalismanToBuy = null;
-    if (currentInventoryTab === 'talismans') {
-        nextTalismanToBuy = TALISMANS_ORDER.find(tId => !ownedTalismans.includes(tId));
-    }
+    // ДЛЯ ОСТАЛЬНЫХ ВКЛАДОК (Колонки, Шары, Брелоки) сохраняем привычный список:
+    if (currentInventoryTab === 'speakers') { itemsSource = SPEAKER_SKINS; ownedList = ownedSpeakerSkins; equippedId = currentSpeakerSkin; }
+    else if (currentInventoryTab === 'newton') { itemsSource = NEWTON_SKINS; ownedList = ownedNewtonSkins; equippedId = currentNewtonSkin; }
+    else if (currentInventoryTab === 'talismans') { itemsSource = TALISMANS; ownedList = ownedTalismans; equippedId = currentTalisman; }
 
     const itemsKeys = (currentInventoryTab === 'talismans') ? TALISMANS_ORDER : Object.keys(itemsSource);
+    const nextTalismanToBuy = (currentInventoryTab === 'talismans') ? TALISMANS_ORDER.find(tId => !ownedTalismans.includes(tId)) : null;
 
     for (let id of itemsKeys) {
         const item = itemsSource[id];
         if (!item) continue;
-
         const isOwned = ownedList.includes(id);
         const rarityColor = RARITY_COLORS[item.rarity] || '#bdc3c7';
 
         const card = document.createElement('div');
         card.className = 'inv-item-card';
-
-        if (currentInventoryTab === 'ladders') {
-            const isVis = (currentSkinId === id);
-            const isEff = (currentEffectId === id);
-            if (isVis && isEff) card.style.borderColor = '#f1c40f';
-            else if (isVis) card.style.borderColor = '#2ecc71';
-            else if (isEff) card.style.borderColor = '#9b59b6';
-            else card.style.borderColor = isOwned ? rarityColor : '#333';
-        } else {
-            card.style.borderColor = (equippedId === id) ? '#f1c40f' : (isOwned ? rarityColor : '#333');
-        }
-
+        card.style.borderColor = (equippedId === id) ? '#f1c40f' : (isOwned ? rarityColor : '#333');
         card.style.opacity = isOwned ? '1' : '0.65';
 
         const buffDesc = getItemBuffText(currentInventoryTab, item);
-        const imgSrc = item.file || (currentInventoryTab === 'newton' ? '' : 'assets/wood_stair-removebg-preview.png');
+        const imgSrc = item.file || '';
 
         let actionAreaHtml = '';
-
-        if (currentInventoryTab === 'ladders') {
-            if (isOwned) {
-                const isVis = (currentSkinId === id);
-                const isEff = (currentEffectId === id);
-
-                let mainBtnText = 'Экипировать';
-                let mainBtnStyle = 'background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111;';
-                let mainBtnDisabled = false;
-
-                if (isVis && isEff) {
-                    mainBtnText = 'Надето ✓';
-                    mainBtnStyle = 'background: #27ae60; color: #fff; cursor: default;';
-                    mainBtnDisabled = true;
-                } else if (isVis && !isEff) {
-                    mainBtnText = 'Надеть эффект';
-                    mainBtnStyle = 'background: #9b59b6; color: #fff;';
-                } else if (!isVis && isEff) {
-                    mainBtnText = 'Надеть облик';
-                    mainBtnStyle = 'background: #2ecc71; color: #111;';
-                }
-
-                const mimicGearBtn = (id === 'mimic')
-                    ? `<button onclick="openMimicConfig()" style="background: none; border: 1px dashed #8c7ae6; color: #8c7ae6; border-radius: 4px; font-size: 9px; padding: 2px 5px; cursor: pointer; margin-bottom: 2px; width: 100%;">⚙️ Слоты (${LADDER_SKINS[mimicSlots[0]]?.name || '1'}, ${LADDER_SKINS[mimicSlots[1]]?.name || '2'})</button>`
-                    : '';
-
-                let cyberGearBtn = '';
-                if (id === 'cyber' || id === 'absolute') {
-                    let cyberEquippedName = 'Не выбран';
-                    if (cyberExtraAccessory.id) {
-                        if (cyberExtraAccessory.type === 'speakers') cyberEquippedName = SPEAKER_SKINS[cyberExtraAccessory.id]?.name || '';
-                        else if (cyberExtraAccessory.type === 'newton') cyberEquippedName = NEWTON_SKINS[cyberExtraAccessory.id]?.name || '';
-                        else if (cyberExtraAccessory.type === 'talismans') cyberEquippedName = TALISMANS[cyberExtraAccessory.id]?.name || '';
-                    }
-                    const borderColor = (id === 'absolute') ? '#f1c40f' : '#00ffff';
-                    cyberGearBtn = `<button onclick="openCyberConfig()" style="background: none; border: 1px dashed ${borderColor}; color: ${borderColor}; border-radius: 4px; font-size: 9px; padding: 2px 5px; cursor: pointer; margin-bottom: 2px; width: 100%;">🦾 Слот (${cyberEquippedName})</button>`;
-                }
-
-                actionAreaHtml = `
-                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                        ${mimicGearBtn}
-                        ${cyberGearBtn}
-                        <div style="display: flex; gap: 4px;">
-                            <button class="badge-vis-btn" title="Надеть только облик" style="
-    padding: 3px 7px; font-size: 11px; border-radius: 6px; cursor: pointer;
-    border: 1px solid ${isVis ? '#2ecc71' : '#57606f'};
-    background: ${isVis ? 'rgba(46, 204, 113, 0.25)' : 'rgba(0,0,0,0.35)'};
-    color: ${isVis ? '#2ecc71' : '#bdc3c7'}; font-weight: bold;
-    display: inline-flex; align-items: center; gap: 3px;
-"><img src="assets/roller.webp" class="ui-ico-sm">${isVis ? '✓' : ''}</button>
-
-<button class="badge-eff-btn" title="Надеть только эффект" style="
-    padding: 3px 7px; font-size: 11px; border-radius: 6px; cursor: pointer;
-    border: 1px solid ${isEff ? '#9b59b6' : '#57606f'};
-    background: ${isEff ? 'rgba(155, 89, 182, 0.25)' : 'rgba(0,0,0,0.35)'};
-    color: ${isEff ? '#e056fd' : '#bdc3c7'}; font-weight: bold;
-    display: inline-flex; align-items: center; gap: 3px;
-"><img src="assets/perk.webp" class="ui-ico-sm">${isEff ? '✓' : ''}</button>
-                        </div>
-                        <button class="main-equip-btn" ${mainBtnDisabled ? 'disabled' : ''} style="
-                            padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 6px;
-                            border: none; cursor: ${mainBtnDisabled ? 'default' : 'pointer'}; min-width: 95px; text-align: center;
-                            ${mainBtnStyle}
-                        ">${mainBtnText}</button>
-                    </div>
-                `;
+        const isEquipped = (equippedId === id);
+        if (isEquipped) {
+            actionAreaHtml = `<button class="btn-equip active">${currentInventoryTab === 'talismans' ? 'СНЯТЬ' : 'НАДЕТО'}</button>`;
+        } else if (isOwned) {
+            actionAreaHtml = `<button class="btn-equip available">Надеть</button>`;
+        } else if (currentInventoryTab === 'talismans') {
+            if (id === nextTalismanToBuy) {
+                const canAfford = goldenNuts >= item.price;
+                actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="talismans" data-id="${id}" style="background: ${canAfford ? '#f1c40f' : '#555'}; color: #000; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} <img src="assets/golden_nut.webp" class="ui-ico-sm"></button>`;
             } else {
-                actionAreaHtml = `<button class="btn-equip locked" disabled>Закрыто</button>`;
+                actionAreaHtml = `<button class="btn-equip locked" disabled><img src="assets/locker.webp" class="ui-ico-sm"> По очереди</button>`;
             }
         } else {
-            const isEquipped = (equippedId === id);
-            if (isEquipped) {
-                actionAreaHtml = `<button class="btn-equip active">${currentInventoryTab === 'talismans' ? 'СНЯТЬ' : 'НАДЕТО'}</button>`;
-            } else if (isOwned) {
-                actionAreaHtml = `<button class="btn-equip available">Надеть</button>`;
-            } else if (currentInventoryTab === 'talismans') {
-                if (id === nextTalismanToBuy) {
-                    const canAfford = goldenNuts >= item.price;
-                    actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="talismans" data-id="${id}" style="background: ${canAfford ? '#f1c40f' : '#555'}; color: #000; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} <img src="assets/golden_nut.webp" class="ui-ico-sm"></button>`;
-                } else {
-                    actionAreaHtml = `<button class="btn-equip locked" disabled>По очереди</button>`;
-                }
-            } else if (currentInventoryTab === 'speakers' || currentInventoryTab === 'newton') {
-                const isGold = item.priceType === 'goldenNuts';
-                const canAfford = isGold ? (goldenNuts >= item.price) : (nuts >= item.price);
-                const currencyIcoHtml = isGold ? '<img src="assets/golden_nut.webp" class="ui-ico-sm">' : '<img src="assets/nut.webp" class="ui-ico-sm">';
-                const btnBg = canAfford ? (isGold ? '#f1c40f' : '#3498db') : '#555';
-                const btnColor = isGold ? '#000' : '#fff';
-                actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="${currentInventoryTab}" data-id="${id}" style="background: ${btnBg}; color: ${btnColor}; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} ${currencyIcoHtml}</button>`;
-            }
+            const isGold = item.priceType === 'goldenNuts';
+            const canAfford = isGold ? (goldenNuts >= item.price) : (nuts >= item.price);
+            const currencyIcoHtml = isGold ? '<img src="assets/golden_nut.webp" class="ui-ico-sm">' : '<img src="assets/nut.webp" class="ui-ico-sm">';
+            actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="${currentInventoryTab}" data-id="${id}" style="background: ${canAfford ? (isGold ? '#f1c40f' : '#3498db') : '#555'}; color: ${isGold ? '#000' : '#fff'}; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} ${currencyIcoHtml}</button>`;
         }
 
         card.innerHTML = `
@@ -6213,36 +6246,7 @@ function renderInventory() {
             <div>${actionAreaHtml}</div>
         `;
 
-        if (currentInventoryTab === 'ladders' && isOwned) {
-            const bVis = card.querySelector('.badge-vis-btn');
-            const bEff = card.querySelector('.badge-eff-btn');
-            const bMain = card.querySelector('.main-equip-btn');
-
-            if (bVis) bVis.onclick = (e) => { e.stopPropagation(); equipItem('ladders', id); };
-            if (bEff) bEff.onclick = (e) => {
-                e.stopPropagation();
-                equipLadderEffect(id);
-                if (id === 'mimic') openMimicConfig();
-                if (id === 'cyber' || id === 'absolute') openCyberConfig();
-            };
-            if (bMain) bMain.onclick = (e) => {
-                e.stopPropagation();
-                const isVis = (currentSkinId === id);
-                const isEff = (currentEffectId === id);
-                if (!isVis && !isEff) {
-                    equipItem('ladders', id, true);
-                    equipLadderEffect(id);
-                    if (id === 'mimic') openMimicConfig();
-                    if (id === 'cyber' || id === 'absolute') openCyberConfig();
-                } else if (isVis && !isEff) {
-                    equipLadderEffect(id);
-                    if (id === 'mimic') openMimicConfig();
-                    if (id === 'cyber' || id === 'absolute') openCyberConfig();
-                } else if (!isVis && isEff) {
-                    equipItem('ladders', id);
-                }
-            };
-        } else if (isOwned) {
+        if (isOwned) {
             card.style.cursor = 'pointer';
             card.onclick = () => equipItem(currentInventoryTab, id);
         }
@@ -6255,40 +6259,27 @@ function renderInventory() {
                 const bId = buyBtn.dataset.id;
                 const targetItem = itemsSource[bId];
                 if (!targetItem) return;
-
-                // Талисманы ВСЕГДА покупаются за золото, даже если priceType не прописан в объекте
                 const isGold = (bType === 'talismans') || (targetItem.priceType === 'goldenNuts');
 
                 const processPurchase = () => {
                     if (isGold) goldenNuts -= targetItem.price;
                     else nuts -= targetItem.price;
 
-                    if (bType === 'talismans') {
-                        ownedTalismans.push(bId);
-                        equipItem('talismans', bId);
-                    } else if (bType === 'speakers') {
-                        ownedSpeakerSkins.push(bId);
-                        equipItem('speakers', bId);
-                    } else if (bType === 'newton') {
-                        ownedNewtonSkins.push(bId);
-                        equipItem('newton', bId);
-                    }
+                    if (bType === 'talismans') { ownedTalismans.push(bId); equipItem('talismans', bId); }
+                    else if (bType === 'speakers') { ownedSpeakerSkins.push(bId); equipItem('speakers', bId); }
+                    else if (bType === 'newton') { ownedNewtonSkins.push(bId); equipItem('newton', bId); }
 
                     AudioEngine.play('gaiki', 0.8);
                     uiNuts.innerText = `${nuts}`;
-                    if (typeof modalNutsVal !== 'undefined' && modalNutsVal) modalNutsVal.innerText = nuts;
-                    if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
-
                     updateFieldIcons();
+                    checkAbsoluteUnlock();
                     saveGame();
                     renderInventory();
                 };
 
-                if (isGold) {
-                    if (goldenNuts >= targetItem.price) {
-                        showConfirmPurchase('Покупка предмета', `Купить «${targetItem.name}» за ${targetItem.price}?`, targetItem.price, processPurchase);
-                    }
-                } else if (nuts >= targetItem.price) {
+                if (isGold && goldenNuts >= targetItem.price) {
+                    showConfirmPurchase('Покупка предмета', `Купить «${targetItem.name}» за ${targetItem.price}?`, targetItem.price, processPurchase);
+                } else if (!isGold && nuts >= targetItem.price) {
                     processPurchase();
                 }
             };
@@ -6296,6 +6287,133 @@ function renderInventory() {
 
         inventoryItemsList.appendChild(card);
     }
+}
+
+// === ЛОГИКА ОКНА ПРЕДПРОСМОТРА ЛЕСТНИЦЫ ===
+let currentPreviewLadderId = null;
+
+function openLadderPreview(id) {
+    const item = LADDER_SKINS[id];
+    if (!item) return;
+    currentPreviewLadderId = id;
+
+    const modal = document.getElementById('ladder-preview-modal');
+    const cardEl = modal ? modal.querySelector('.ladder-preview-card') : null;
+    const imgEl = document.getElementById('lp-img');
+    const nameEl = document.getElementById('lp-name');
+    const descEl = document.getElementById('lp-desc');
+    const badgeEl = document.getElementById('lp-rarity-badge');
+    const haloEl = document.getElementById('lp-halo');
+    const actionsBox = document.getElementById('lp-actions');
+    const rarityColor = RARITY_COLORS[item.rarity] || '#bdc3c7';
+
+    if (!modal) return;
+
+    // Подстраиваем цвет рамки карточки под редкость
+    if (cardEl) {
+        cardEl.style.borderColor = rarityColor;
+        cardEl.style.boxShadow = `0 0 35px rgba(0, 0, 0, 0.9), 0 0 25px ${rarityColor}40`;
+    }
+
+    imgEl.src = item.file;
+    nameEl.innerText = item.name;
+    nameEl.style.color = rarityColor;
+    descEl.innerHTML = LADDER_DESC[id] || 'Базовые свойства лестницы';
+    badgeEl.innerText = (item.rarity || 'common').toUpperCase();
+    badgeEl.style.color = rarityColor;
+    badgeEl.style.borderColor = rarityColor;
+    if (haloEl) haloEl.style.background = `radial-gradient(circle, ${rarityColor}45 0%, transparent 70%)`;
+
+    // Настраиваем кнопки в зависимости от статуса владения
+    actionsBox.innerHTML = '';
+    const isOwned = ownedSkins.includes(id);
+    const isVis = (currentSkinId === id);
+    const isEff = (currentEffectId === id);
+
+    if (isOwned) {
+        // Кнопки для Мимика и Киберпанка
+        if (id === 'mimic') {
+            actionsBox.innerHTML += `
+                <button onclick="openMimicConfig()" style="background: none; border: 1.5px dashed #8c7ae6; color: #8c7ae6; border-radius: 8px; padding: 7px; font-weight: bold; cursor: pointer; font-size: 11px;">
+                    ⚙️ Настроить слоты (${LADDER_SKINS[mimicSlots[0]]?.name || '1'}, ${LADDER_SKINS[mimicSlots[1]]?.name || '2'})
+                </button>
+            `;
+        }
+        if (id === 'cyber' || id === 'absolute') {
+            const bCol = (id === 'absolute') ? '#f1c40f' : '#00ffff';
+            actionsBox.innerHTML += `
+                <button onclick="openCyberConfig()" style="background: none; border: 1.5px dashed ${bCol}; color: ${bCol}; border-radius: 8px; padding: 7px; font-weight: bold; cursor: pointer; font-size: 11px;">
+                    🦾 Настроить доп. слот
+                </button>
+            `;
+        }
+
+        // Основная большая кнопка «Экипировать всё»
+        const isFullyEquipped = isVis && isEff;
+        actionsBox.innerHTML += `
+            <button id="btn-lp-equip-all" style="width: 100%; height: 42px; border-radius: 10px; border: none; font-size: 13px; font-weight: 900; cursor: ${isFullyEquipped ? 'default' : 'pointer'}; background: ${isFullyEquipped ? '#27ae60' : 'linear-gradient(135deg, #f1c40f, #e67e22)'}; color: ${isFullyEquipped ? '#fff' : '#111'}; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                ${isFullyEquipped ? '✔ ПОЛНОСТЬЮ НАДЕТО' : 'ЭКИПИРОВАТЬ ВСЁ'}
+            </button>
+        `;
+
+        // Две раздельные кнопки (Только облик / Только эффект)
+        actionsBox.innerHTML += `
+            <div style="display: flex; gap: 8px; width: 100%;">
+                <button id="btn-lp-equip-vis" style="flex: 1; height: 36px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; border: 1.5px solid #2ecc71; background: ${isVis ? 'rgba(46,204,113,0.3)' : 'rgba(0,0,0,0.4)'}; color: #2ecc71; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    <img src="assets/roller.webp" class="ui-ico-sm"> ${isVis ? 'Облик надет ✓' : 'Только облик'}
+                </button>
+                <button id="btn-lp-equip-eff" style="flex: 1; height: 36px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; border: 1.5px solid #9b59b6; background: ${isEff ? 'rgba(155,89,182,0.3)' : 'rgba(0,0,0,0.4)'}; color: #e056fd; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    <img src="assets/perk.webp" class="ui-ico-sm"> ${isEff ? 'Эффект надет ✓' : 'Только эффект'}
+                </button>
+            </div>
+        `;
+    } else {
+        actionsBox.innerHTML = `
+            <div style="padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #555; border-radius: 8px; font-size: 12px; color: #bdc3c7; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <img src="assets/locker.webp" class="ui-ico"> Предмет не открыт
+            </div>
+        `;
+    }
+
+    modal.classList.remove('hidden');
+    AudioEngine.play('click', 0.5);
+
+    // Привязка действий кнопок
+    const btnAll = document.getElementById('btn-lp-equip-all');
+    const btnVis = document.getElementById('btn-lp-equip-vis');
+    const btnEff = document.getElementById('btn-lp-equip-eff');
+
+    if (btnAll) {
+        btnAll.onclick = () => {
+            equipItem('ladders', id, true);
+            equipLadderEffect(id);
+            openLadderPreview(id); // Обновляем статусы в открытом окне
+            renderInventory();
+        };
+    }
+    if (btnVis) {
+        btnVis.onclick = () => {
+            equipItem('ladders', id);
+            openLadderPreview(id);
+            renderInventory();
+        };
+    }
+    if (btnEff) {
+        btnEff.onclick = () => {
+            equipLadderEffect(id);
+            openLadderPreview(id);
+            renderInventory();
+        };
+    }
+}
+
+// Закрытие модалки предпросмотра
+const btnCloseLp = document.getElementById('btn-close-ladder-preview');
+if (btnCloseLp) {
+    btnCloseLp.onclick = () => {
+        const modal = document.getElementById('ladder-preview-modal');
+        if (modal) modal.classList.add('hidden');
+    };
 }
 
 // 8. Запуск цикла (с защитой от двойного старта при смене скина)
@@ -6320,10 +6438,9 @@ if (ladderImg.complete) {
 }
 
 window.addEventListener('keydown', (e) => {
-
     if (e.key !== 'Escape') return;
 
-    // 1. КРИТИЧЕСКИЕ ОКНА НАГРАД (Строго блокируют закрытие по Esc!)
+    // 1. КРИТИЧЕСКИЕ ОКНА НАГРАД (Блокируют закрытие по Esc)
     const milestoneModal = document.getElementById('milestone-modal');
     const calendarModal = document.getElementById('calendar-modal');
     const offlineModal = document.getElementById('offline-modal');
@@ -6335,31 +6452,60 @@ window.addEventListener('keydown', (e) => {
         (offlineModal && !offlineModal.classList.contains('hidden')) ||
         (thankModal && !thankModal.classList.contains('hidden'));
 
-    // Если открыто любое окно с наградой — Esc полностью игнорируется
-    if (isRewardModalOpen) {
+    if (isRewardModalOpen) return;
+
+    // 2. КАРТОЧКА ЛОКАЦИИ СПРАВА (Бортовой журнал)
+    const locCard = document.getElementById('location-card');
+    if (locCard && !locCard.classList.contains('hidden')) {
+        hideLocationCard();
+        return;
+    }
+
+    // 3. ПОД-ОКНА ИНВЕНТАРЯ (Закрываются в первую очередь)
+    const lpModal = document.getElementById('ladder-preview-modal');
+    if (lpModal && !lpModal.classList.contains('hidden')) {
+        lpModal.classList.add('hidden');
+        return;
+    }
+
+    const mimicModalEl = document.getElementById('mimic-modal');
+    if (mimicModalEl && !mimicModalEl.classList.contains('hidden')) {
+        mimicModalEl.classList.add('hidden');
+        return;
+    }
+
+    const cyberModalEl = document.getElementById('cyber-modal');
+    if (cyberModalEl && !cyberModalEl.classList.contains('hidden')) {
+        cyberModalEl.classList.add('hidden');
         return;
     }
 
     const custModal = document.getElementById('customization-modal');
-    if (custModal) custModal.classList.add('hidden');
+    if (custModal && !custModal.classList.contains('hidden')) {
+        custModal.classList.add('hidden');
+        return;
+    }
 
     const luckModal = document.getElementById('luck-modal');
-    if (luckModal) luckModal.classList.add('hidden');
+    if (luckModal && !luckModal.classList.contains('hidden')) {
+        luckModal.classList.add('hidden');
+        return;
+    }
 
-    // 2. Окно рулетки кейса
+    // 4. Окно рулетки кейса
     const gachaModal = document.getElementById('gachaModal');
     const claimBtn = document.getElementById('gachaClaimBtn');
     if (gachaModal && gachaModal.style.display !== 'none') {
-        AudioEngine.stop('jacpot'); // <-- Глушим при закрытии рулетки по Escape
+        AudioEngine.stop('jacpot');
         if (isGachaSpinning) {
-            gachaModal.click(); // Пропустить прокрутку
+            gachaModal.click();
         } else if (claimBtn && claimBtn.style.display !== 'none') {
-            claimBtn.click(); // Забрать предмет
+            claimBtn.click();
         }
         return;
     }
 
-    // 3. ОБЫЧНЫЕ МЕНЮ (Их безопасно закрывать на Esc)
+    // 5. ОСНОВНЫЕ МЕНЮ
     const retroInfoModal = document.getElementById('retro-info-modal');
     if (retroInfoModal) retroInfoModal.classList.add('hidden');
     if (shopModal) shopModal.classList.add('hidden');
@@ -6411,6 +6557,7 @@ function triggerPurchaseEffect(cost = 10) {
 
 function saveGame() {
     const saveData = {
+        blackHoleBonus,
         retroChallengeMs,
         mimicSlots,
         cyberExtraAccessory,
@@ -6461,6 +6608,13 @@ function loadGame() {
         }
         if (data.radarState) radarState = data.radarState;
         if (data.calendarState) calendarState = data.calendarState;
+
+        if (data.adState) Object.assign(adState, data.adState);
+        if (data.blackHoleBonus !== undefined) blackHoleBonus = data.blackHoleBonus;
+
+        if (adState.autotapTimer > 0) {
+            startAutoTapInterval();
+        }
 
         isVip = data.isVip || false;
         hasAdFree = data.hasAdFree || false;
@@ -6589,7 +6743,7 @@ function loadGame() {
                     document.getElementById('off-total-txt').innerText = `+${totalOffMeters} м`;
 
                     const btnClaim2x = document.getElementById('btn-claim-offline-x2');
-                    btnClaim2x.innerText = `▶ Забрать x2 (+${totalOffMeters * 2} м, ${offCases * 2} 📦)`;
+                    btnClaim2x.innerHTML = `▶ Удвоить за рекламу (+${(totalOffMeters * 2).toLocaleString('ru-RU')} м, ${offCases * 2} <img src="assets/wooden_box.webp" class="ui-ico-sm">)`;
 
                     offModal.classList.remove('hidden');
 
@@ -6615,9 +6769,10 @@ function loadGame() {
                 }, 500);
             }
         }
-        checkDeepLinks();
-        updateFieldIcons();
-        return true;
+
+        checkAbsoluteUnlock();
+    updateFieldIcons();
+    return true;
     } catch (e) {
         console.error("Ошибка при загрузке сохранения:", e);
         return false;
@@ -6704,6 +6859,7 @@ function claimStreakReward(step) {
             particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: `Повторка: +${DUPLICATE_GOLD_REWARDS.epic || 35} 🟡`, color: '#f1c40f', alpha: 2, speed: 1.5 });
         } else {
             ownedSkins.push(r.skinId);
+            checkAbsoluteUnlock();
             particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: '🎉 ПОЛУЧЕН СКИН БИЛБОРД!', color: '#00d2d3', alpha: 2.5, speed: 1.5 });
             if (typeof renderInventory === 'function') renderInventory();
         }
@@ -6744,7 +6900,7 @@ function renderAdStreakUI() {
         } else if (isUnlocked) {
             btnHtml = `<button class="claim-streak-btn" data-step="${r.step}" style="background: #2ecc71; color: #fff; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Забрать</button>`;
         } else {
-            btnHtml = `<span style="color: #7f8c8d; font-size: 11px;">🔒 ${r.step} ролик</span>`;
+            btnHtml = `<span style="color: #7f8c8d; font-size: 11px; display: inline-flex; align-items: center; gap: 3px;"><img src="assets/locker.webp" class="ui-ico-sm"> ${r.step} ролик</span>`;
         }
 
         row.innerHTML = `
@@ -6793,48 +6949,53 @@ setInterval(() => {
     const now = new Date();
     const midnight = new Date(now);
     midnight.setHours(24, 0, 0, 0);
-    const msLeft = Math.max(0, midnight - now);
+    const timeLeft = Math.max(0, midnight - now);
 
-    const h = String(Math.floor(msLeft / 3600000)).padStart(2, '0');
-    const m = String(Math.floor((msLeft % 3600000) / 60000)).padStart(2, '0');
-    const s = String(Math.floor((msLeft % 60000) / 1000)).padStart(2, '0');
-
-    const timerEl = document.getElementById('ad-streak-timer');
+    const h = String(Math.floor(timeLeft / 3600000)).padStart(2, '0');
+    const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, '0');
+    const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0');
     if (timerEl) timerEl.innerText = `${h}:${m}:${s}`;
 }, 1000);
 
-function refreshDailyDeal(force = false) {
-    const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
+function refreshDailyDeal(isAdReroll = false) {
+    const now = new Date();
+    const todayId = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
 
-    // Обновляем, только если прошли 24 часа или нажат принудительный реролл
-    if (!force && dailyDeal.id && (now - dailyDeal.lastRefresh < DAY_MS)) {
+    // Если наступил новый день (00:00) — сбрасываем попытки рекламы на 5
+    if (dailyDeal.currentDayId !== todayId) {
+        dailyDeal.currentDayId = todayId;
+        dailyDeal.adRerollsLeft = 5;
+    } else if (!isAdReroll && dailyDeal.id) {
+        // Если день тот же и это не реролл за рекламу — товар не меняем
         return;
     }
 
-    const roll = Math.random() * 100;
-    const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
-    const canLegendary = (now - dailyDeal.lastLegendaryBuy) >= fiveDaysMs;
+    // Если это реролл за рекламу — списываем 1 попытку
+    if (isAdReroll) {
+        if (dailyDeal.adRerollsLeft <= 0) return;
+        dailyDeal.adRerollsLeft--;
+    }
 
-    // 10% — Legendary скин лестницы
-    if (roll < 10 && canLegendary) {
+    const roll = Math.random() * 100;
+
+    // 10% — Легендарная лестница
+    if (roll < 10) {
         const legSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'legendary');
         const chosen = legSkins[Math.floor(Math.random() * legSkins.length)];
-        dailyDeal = { ...dailyDeal, type: 'skin', id: chosen, basePrice: 450, salePrice: 219, lastRefresh: now };
+        dailyDeal = { ...dailyDeal, type: 'skin', id: chosen, basePrice: 450, salePrice: 219 };
     }
     // 15% — Талисман со скидкой 30%
     else if (roll < 25) {
         const allTalismans = Object.keys(TALISMANS);
         const chosen = allTalismans[Math.floor(Math.random() * allTalismans.length)];
         const base = TALISMANS[chosen].price;
-        dailyDeal = { ...dailyDeal, type: 'talisman', id: chosen, basePrice: base, salePrice: Math.floor(base * 0.7), lastRefresh: now };
+        dailyDeal = { ...dailyDeal, type: 'talisman', id: chosen, basePrice: base, salePrice: Math.floor(base * 0.7) };
     }
-    // 75% — Epic скин лестницы
+    // 75% — Эпическая лестница
     else {
-        // Исключаем Календарь и Билборд, так как они выдаются только за прогресс
         const epicSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'epic' && k !== 'calendar_stair' && k !== 'add_stair');
         const chosen = epicSkins[Math.floor(Math.random() * epicSkins.length)];
-        dailyDeal = { ...dailyDeal, type: 'skin', id: chosen, basePrice: 220, salePrice: 119, lastRefresh: now };
+        dailyDeal = { ...dailyDeal, type: 'skin', id: chosen, basePrice: 220, salePrice: 119 };
     }
 
     saveGame();
@@ -6990,29 +7151,28 @@ function renderDailyDealUI() {
         };
     }
 
-    // 5. Кулдаун реролла с иконкой 🔄
+    
+    // 5. Кнопка реролла за рекламу
     if (rerollBtn) {
-        const FOUR_HOURS = 4 * 60 * 60 * 1000;
-        const rerollLeft = FOUR_HOURS - (Date.now() - dailyDeal.lastAdReroll);
-        if (rerollLeft > 0) {
-            const rh = Math.floor(rerollLeft / 3600000);
-            const rm = Math.floor((rerollLeft % 3600000) / 60000);
-            rerollBtn.innerText = `🔄 Обновление через ${rh}ч ${rm}м`;
-            rerollBtn.disabled = true;
-            rerollBtn.style.opacity = '0.4';
-            rerollBtn.style.cursor = 'default';
-        } else {
-            rerollBtn.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico"> Обновить (Реклама)';
+        const attempts = dailyDeal.adRerollsLeft !== undefined ? dailyDeal.adRerollsLeft : 5;
+
+        if (attempts > 0) {
+            rerollBtn.innerHTML = `<img src="assets/ico_ad_tv.webp" class="ui-ico"> Обновить (${attempts}/5)`;
             rerollBtn.disabled = false;
             rerollBtn.style.opacity = '1';
             rerollBtn.style.cursor = 'pointer';
             rerollBtn.onclick = () => {
                 watchRewardedAd('daily_deal_reroll', () => {
-                    dailyDeal.lastAdReroll = Date.now();
                     refreshDailyDeal(true);
                     renderDailyDealUI();
                 });
             };
+        } else {
+            rerollBtn.innerHTML = `Попытки исчерпаны (0/5)`;
+            rerollBtn.disabled = true;
+            rerollBtn.style.opacity = '0.45';
+            rerollBtn.style.cursor = 'default';
+            rerollBtn.onclick = null;
         }
     }
 }
@@ -7149,7 +7309,7 @@ if (day7Box) {
         } else if (calendarState.currentDay > 7) {
             day7Action.innerHTML = `<span style="color: #2ecc71; font-weight: bold; font-size: 12px;">✔ ВЗЯТО</span>`;
         } else {
-            day7Action.innerHTML = `<span style="color: #7f8c8d; font-size: 11px;">🔒 День 7</span>`;
+            day7Action.innerHTML = `<span style="color: #7f8c8d; font-size: 11px; display: inline-flex; align-items: center; gap: 3px;"><img src="assets/locker.webp" class="ui-ico-sm"> День 7</span>`;
             if (btnClaimX2) {
                 btnClaimX2.style.display = 'block';
                 btnClaimX2.innerText = '▶ Удвоить за рекламу (x2)';
@@ -7187,8 +7347,11 @@ function claimCalendarDay(isDouble = false) {
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.4,
-            text: `📅 День ${day} получен!`,
+            img: canvasIcoClover, // Или canvasIcoWoodenBox
+            imgSize: 26,
+            text: `День ${day} получен!`,
             color: '#f1c40f',
+            font: 'bold 24px sans-serif',
             alpha: 2.2,
             speed: 1.8
         });
@@ -7199,16 +7362,20 @@ function claimCalendarDay(isDouble = false) {
             // Неделя 1: Выдаем эксклюзивную лестницу
             if (!ownedSkins.includes('calendar_stair')) {
                 ownedSkins.push('calendar_stair');
+                checkAbsoluteUnlock();
                 if (typeof renderInventory === 'function') renderInventory();
             }
             particles.push({
-                x: canvas.width / 2,
-                y: canvas.height * 0.4,
-                text: '🎉 ПОЛУЧЕН СКИН КАЛЕНДАРЬ!',
-                color: '#e74c3c',
-                alpha: 2.5,
-                speed: 1.8
-            });
+            x: canvas.width / 2,
+            y: canvas.height * 0.4,
+            img: canvasIcoCrown,
+            imgSize: 30,
+            text: 'ПОЛУЧЕН СКИН КАЛЕНДАРЬ!',
+            color: '#e74c3c',
+            font: 'bold 22px sans-serif',
+            alpha: 2.5,
+            speed: 1.8
+        });
         } else {
             // Неделя 2 и далее: +75 🟡 и 1 🧰 сейф (или 150 🟡 и 2 🧰 с x2)
             goldenNuts += (75 * mult);
@@ -7216,13 +7383,16 @@ function claimCalendarDay(isDouble = false) {
             if (typeof renderCasesShop === 'function') renderCasesShop();
 
             particles.push({
-                x: canvas.width / 2,
-                y: canvas.height * 0.4,
-                text: `🎁 +${75 * mult} 🟡 и +${1 * mult} 🧰!`,
-                color: '#f1c40f',
-                alpha: 2.5,
-                speed: 1.8
-            });
+            x: canvas.width / 2,
+            y: canvas.height * 0.4,
+            img: canvasIcoGold,
+            imgSize: 26,
+            text: `+${75 * mult} и +${1 * mult} сейф!`,
+            color: '#f1c40f',
+            font: 'bold 24px sans-serif',
+            alpha: 2.5,
+            speed: 1.8
+        });
         }
     }
 
@@ -7262,6 +7432,7 @@ if (btnClaimRetro) {
         const modal = document.getElementById('retro-modal');
         if (modal) modal.classList.add('hidden');
         equipItem('ladders', 'retro'); // Сразу надеваем скин
+        checkAbsoluteUnlock();
         saveGame();
     };
 }
@@ -7299,7 +7470,7 @@ if (btnResetStreak) {
     };
 }
 
-// Активация Гайкопада (С рекламой)
+
 
 function activateFrenzyMode(seconds = 30) {
     watchRewardedAd('frenzy_nuts', () => {
@@ -7379,11 +7550,14 @@ setInterval(() => {
     if (!dailyDealModal || dailyDealModal.classList.contains('hidden') || !dailyDeal.id) return;
 
     const timerEl = document.getElementById('daily-deal-timer');
-    const timeLeft = Math.max(0, (24 * 60 * 60 * 1000) - (Date.now() - dailyDeal.lastRefresh));
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const timeLeft = Math.max(0, midnight - now);
 
-    // Если 24 часа закончились прямо с открытым окном — перегенерируем товар
+    // Если наступила полночь прямо при открытом окне — генерируем новый товар
     if (timeLeft <= 0) {
-        refreshDailyDeal(true);
+        refreshDailyDeal(false);
         renderDailyDealUI();
         return;
     }
@@ -7402,13 +7576,28 @@ setInterval(() => submitScoreToLeaderboard(false), 60000);
 
 // Сохранение при закрытии вкладки или сворачивании на телефоне
 window.addEventListener('beforeunload', saveGame);
+let lastVisibilityHiddenTime = 0;
+
 window.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
+        lastVisibilityHiddenTime = Date.now();
         if (window.autoTapInterval) {
             clearInterval(window.autoTapInterval);
             window.autoTapInterval = null;
         }
         saveGame();
+    } else if (document.visibilityState === 'visible') {
+        // Если игрок был в Alt-Tab с надетой Чёрной дырой — доначисляем массу!
+        if (hasMech('endless') && lastVisibilityHiddenTime > 0) {
+            const awaySeconds = (Date.now() - lastVisibilityHiddenTime) / 1000;
+            // +1000% (10.0) за 1200 секунд (20 минут)
+            blackHoleBonus = Math.min(10.0, blackHoleBonus + (10.0 / 1200) * awaySeconds);
+            lastVisibilityHiddenTime = 0;
+        }
+
+        if (adState.autotapTimer > 0 && !window.autoTapInterval) {
+            startAutoTapInterval();
+        }
     }
 });
 
@@ -7953,8 +8142,27 @@ let report = `+${earnedMeters.toLocaleString('ru-RU')} м`;
     });
 
     if (typeof AudioEngine !== 'undefined') AudioEngine.play('win', 1.0);
+    checkAbsoluteUnlock();
     checkHeightMilestones();
     if (typeof saveGame === 'function') saveGame();
+}
+
+function startAutoTapInterval() {
+    if (window.autoTapInterval) {
+        clearInterval(window.autoTapInterval);
+        window.autoTapInterval = null;
+    }
+
+    window.autoTapInterval = setInterval(() => {
+        adState.autotapTimer = Math.max(0, (adState.autotapTimer || 0) - 66);
+        if (adState.autotapTimer <= 0) {
+            clearInterval(window.autoTapInterval);
+            window.autoTapInterval = null;
+            return;
+        }
+        const rect = canvas.getBoundingClientRect();
+        handleTap(rect.left + rect.width / 2, rect.top + rect.height * 0.45, true);
+    }, 66);
 }
 
 function activateBuffDirectly(type, durationMs) {
@@ -7985,27 +8193,20 @@ function activateBuffDirectly(type, durationMs) {
         });
     }
     if (type === 'autotap') {
-        adState.autotapTimer = durationMs;
+        adState.autotapTimer = durationMs; // <-- ЗАДАЁМ ВРЕМЯ БАФФА (40 сек)
         particles.push({
-            x: canvas.width / 2, y: canvas.height * 0.35,
-            img: canvasIcoRobotHand, imgSize: 32,
-            text: 'АВТОПИЛОТ (15 тапов/с)!', color: '#00d2ff', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
+            x: canvas.width / 2, 
+            y: canvas.height * 0.35,
+            img: canvasIcoRobotHand, 
+            imgSize: 32,
+            text: 'АВТОПИЛОТ (15 тапов/с)!', 
+            color: '#00d2ff', 
+            font: 'bold 24px sans-serif', 
+            alpha: 2.2, 
+            speed: 1.5
         });
 
-        if (window.autoTapInterval) {
-            clearInterval(window.autoTapInterval);
-            window.autoTapInterval = null;
-        }
-        window.autoTapInterval = setInterval(() => {
-            adState.autotapTimer = Math.max(0, (adState.autotapTimer || 0) - 66);
-            if (adState.autotapTimer <= 0) {
-                clearInterval(window.autoTapInterval);
-                window.autoTapInterval = null;
-                return;
-            }
-            const rect = canvas.getBoundingClientRect();
-            handleTap(rect.left + rect.width / 2, rect.top + rect.height * 0.45);
-        }, 66);
+        startAutoTapInterval(); // <-- ЗАПУСКАЕМ ЕДИНЫЙ ИНТЕРВАЛ
     }
 
     if (type === 'timewarp') {
@@ -8450,7 +8651,14 @@ const uiLayer = document.getElementById('ui-layer');
 if (btnToggleZen && uiLayer) {
     btnToggleZen.addEventListener('click', (e) => {
         e.stopPropagation();
-        uiLayer.classList.toggle('zen-mode');
+        const isZen = uiLayer.classList.toggle('zen-mode');
+        
+        // Меняем иконку: если скрыто — закрытый глаз, если видно — открытый
+        const icoZen = document.getElementById('ico-zen');
+        if (icoZen) {
+            icoZen.src = isZen ? 'assets/ico_closed_eye.webp' : 'assets/ico_open_eye.webp';
+        }
+
         AudioEngine.play('click', 0.5);
     });
 }
