@@ -251,7 +251,7 @@ function watchRewardedAd(placementName, onSuccess) {
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.4,
-                text: `📺 Спонсорр: +${bNuts} и +${bGold}!`,
+                text: `📺 Спонсор: +${bNuts} 🔩 и +${bGold} 🟡!`,
                 color: '#00d2d3',
                 font: 'bold 20px sans-serif',
                 alpha: 2.0,
@@ -657,7 +657,7 @@ function claimMilestoneReward(isDouble = false) {
     particles.push({
         x: canvas.width / 2,
         y: canvas.height * 0.4,
-        text: `+${awardedMilestoneGold}!`,
+        text: `+${awardedMilestoneGold} 🟡!`,
         color: '#f1c40f',
         font: 'bold 26px sans-serif',
         alpha: 2.2,
@@ -743,8 +743,6 @@ let currentTalisman = null;
 let ownedSpeakerSkins = ['old'];
 let ownedNewtonSkins = ['steel'];
 let ownedTalismans = []; //строка 123
-
-const canvasIcoTv = new Image(); canvasIcoTv.src = 'assets/ico_ad_tv.webp';
 
 const moonImg = new Image();
 moonImg.src = 'assets/moon.webp';
@@ -955,7 +953,8 @@ function addNuts(amount) {
         const regShare = finalAmount - goldShare;
         nuts += regShare;
         goldenNuts += goldShare;
-        if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
+        const mGold = document.getElementById('cases-modal-gold');
+if (mGold) mGold.innerText = goldenNuts;
     } else {
         nuts += finalAmount;
     }
@@ -976,7 +975,8 @@ function addGoldenNuts(amount) {
 
     goldenNuts += finalAmount;
 
-    if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
+    const mGold = document.getElementById('cases-modal-gold');
+if (mGold) mGold.innerText = goldenNuts;
     const topGoldDisplay = document.getElementById('gold-display');
     if (topGoldDisplay) topGoldDisplay.innerText = `${goldenNuts}`;
 
@@ -2896,7 +2896,8 @@ function updateAutoClickers(dt) {
 					speed: 2.2
 				});
 
-				if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
+				const mGold = document.getElementById('cases-modal-gold');
+if (mGold) mGold.innerText = goldenNuts;
 			}
         }
     }
@@ -4766,7 +4767,7 @@ function checkAbsoluteUnlock() {
     y: canvas.height * 0.35,
     img: canvasIcoCrown,
     imgSize: 30,
-    text: 'ОТКРЫТ АБСОЛЮТ!',
+    text: 'АБСОЛЮТ ОТКРЫТ!',
     color: '#f1c40f',
     font: 'bold 24px sans-serif',
     alpha: 3.0,
@@ -5437,7 +5438,7 @@ function rollLootFromCase(caseId) {
             if (totalLuck >= 30 && Math.random() < 0.03) {
                 goldenNuts += 1;
                 if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
-                particles.push({ x: canvas.width / 2, y: canvas.height * 0.3, text: 'ДЖЕКПОТ: +1 ЗОЛОТО!', color: '#f1c40f', alpha: 2, speed: 1.5 });
+                particles.push({ x: canvas.width / 2, y: canvas.height * 0.3, text: '✨ ДЖЕКПОТ: +1 🟡!', color: '#f1c40f', alpha: 2, speed: 1.5 });
             }
 
             return { type: 'nuts', amount: finalNuts, name: `${finalNuts} Гаек` };
@@ -5738,7 +5739,7 @@ document.getElementById('gachaClaimBtn').onclick = () => {
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.32,
-            text: `+${actualCrystalGold} (Кристалл)!`,
+            text: `💎 +${actualCrystalGold} 🟡 (Кристалл)!`,
             color: '#00ffff',
             font: 'bold 22px sans-serif',
             alpha: 2.2,
@@ -6954,6 +6955,7 @@ setInterval(() => {
     const h = String(Math.floor(timeLeft / 3600000)).padStart(2, '0');
     const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, '0');
     const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0');
+    const timerEl = document.getElementById('ad-streak-timer');
     if (timerEl) timerEl.innerText = `${h}:${m}:${s}`;
 }, 1000);
 
@@ -7565,7 +7567,7 @@ setInterval(() => {
     const h = String(Math.floor(timeLeft / 3600000)).padStart(2, '0');
     const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, '0');
     const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0');
-    if (timerEl) timerEl.innerText = `${h}:${m}:${s}`;
+    if (timerEl) timerEl.innerText = `${h}:${m}:${s}`; //f
 }, 1000);
 
 // Автосохранение каждые 5 секунд
