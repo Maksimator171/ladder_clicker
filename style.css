@@ -1166,6 +1166,11 @@ canvas {
     border-radius: 6px;
     white-space: nowrap;
     border: 1px solid rgba(255, 255, 255, 0.05);
+
+    /* Выравнивание картинки и текста */
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .bd-tile-desc {
@@ -1852,4 +1857,535 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ОКНО ПРЕДЛОЖЕНИЯ ЯРЛЫКА (SHORTCUT OFFER)
+   ══════════════════════════════════════════════════════════════ */
+
+.shortcut-offer-card {
+    position: relative;
+    width: 325px;
+    max-width: 92vw;
+    background: radial-gradient(circle at 50% 20%, #1a2636 0%, #0d121a 100%);
+    border: 2px solid #f1c40f;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 0 35px rgba(241, 196, 15, 0.35), 0 20px 60px rgba(0, 0, 0, 0.95);
+    display: flex;
+    flex-direction: column;
+    animation: shortcutPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes shortcutPopIn {
+    from {
+        opacity: 0;
+        transform: scale(0.85) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Баннер 16:9 */
+.shortcut-banner-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #090e16;
+    border-bottom: 2px solid rgba(241, 196, 15, 0.35);
+}
+
+.shortcut-banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.shortcut-banner-glow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(13, 18, 26, 0.9) 100%);
+    pointer-events: none;
+}
+
+.shortcut-tag-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(15, 20, 30, 0.85);
+    border: 1px solid #f1c40f;
+    color: #f1c40f;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* Контентная часть */
+.shortcut-body {
+    padding: 14px 16px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.shortcut-title {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.35;
+    margin: 0 0 6px 0;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.shortcut-desc {
+    color: #94a3b8;
+    font-size: 11.5px;
+    line-height: 1.4;
+    margin: 0 0 12px 0;
+}
+
+/* Плашка с наградой */
+.shortcut-reward-pill {
+    width: 100%;
+    background: rgba(241, 196, 15, 0.08);
+    border: 1.5px dashed rgba(241, 196, 15, 0.5);
+    border-radius: 10px;
+    padding: 7px 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+
+.shortcut-reward-label {
+    font-size: 11px;
+    color: #cbd5e1;
+    font-weight: bold;
+}
+
+.shortcut-reward-val {
+    font-size: 16px;
+    font-weight: 900;
+    color: #f1c40f;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+}
+
+/* Кнопки */
+.shortcut-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+/* Главная кнопка с переливом (shimmer sweep) */
+.shortcut-btn-claim {
+    position: relative;
+    width: 100%;
+    height: 44px;
+    background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%);
+    border: none;
+    border-radius: 10px;
+    color: #111;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(241, 196, 15, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    overflow: hidden;
+    letter-spacing: 0.5px;
+    transition: transform 0.08s ease;
+}
+
+.shortcut-btn-claim:active {
+    transform: scale(0.97);
+}
+
+.shortcut-btn-shine {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: shortcutShineAnim 2.8s infinite ease-in-out;
+}
+
+@keyframes shortcutShineAnim {
+    0% { left: -100%; }
+    50%, 100% { left: 200%; }
+}
+
+.shortcut-btn-skip {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px;
+    transition: color 0.15s ease;
+}
+
+.shortcut-btn-skip:hover {
+    color: #94a3b8;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ОБНОВЛЁННОЕ ОКНО КЕЙСОВ (ФИНАЛЬНЫЙ ЧИСТЫЙ МОБИЛЬНЫЙ UX)
+   ══════════════════════════════════════════════════════════════ */
+
+.cases-modal-card {
+    position: relative;
+    width: 360px;
+    max-width: 94vw;
+    max-height: 88vh;
+    background: #0f141d;
+    border: 2px solid #2e3e52;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 25px rgba(241, 196, 15, 0.15);
+    display: flex;
+    flex-direction: column;
+}
+
+/* 1. БАННЕР 16:9 С ДИЛЕРОМ */
+.cases-banner-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 165px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: #070a0f;
+    border-bottom: 2px solid #202c3b;
+}
+
+.cases-banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cases-banner-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 20, 29, 0.25) 0%, rgba(15, 20, 29, 0.95) 100%);
+    pointer-events: none;
+}
+
+.cases-header-bar {
+    position: absolute;
+    inset: 0;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.cases-header-title {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.cases-badge {
+    align-self: flex-start;
+    background: rgba(241, 196, 15, 0.2);
+    border: 1px solid #f1c40f;
+    color: #f1c40f;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 2px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.8px;
+}
+
+.cases-header-title h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+    letter-spacing: 0.5px;
+}
+
+.cases-close-btn {
+    pointer-events: auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 24px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: transform 0.1s ease;
+}
+
+.cases-close-btn:active {
+    transform: scale(0.92);
+}
+
+/* 2. СКРОЛЛ-КОНТЕНТ */
+.cases-content-scroll {
+    padding: 12px 14px 16px 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+}
+
+.cases-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #7b8eab;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* 3. БЕСПЛАТНЫЕ РЕКЛАМНЫЕ НАГРАДЫ */
+.cases-free-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.free-reward-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #141c26;
+    border: 1px solid #233142;
+    border-radius: 12px;
+    padding: 8px 12px;
+}
+
+.free-reward-icon {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.free-reward-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.free-reward-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.free-reward-sub {
+    font-size: 11px;
+    color: #7d8ea5;
+}
+
+.btn-touch-action {
+    min-width: 105px;
+    height: 40px;
+    background: linear-gradient(135deg, #2980b9, #1f618d);
+    border: none;
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    box-shadow: 0 3px 10px rgba(41, 128, 185, 0.3);
+}
+
+.btn-touch-action:active {
+    transform: scale(0.96);
+}
+
+/* 4. КАРТОЧКИ КЕЙСОВ */
+.cases-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.case-shop-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #131b26;
+    border: 1px solid #223042;
+    border-radius: 14px;
+    padding: 9px 12px;
+    min-height: 68px;
+    box-sizing: border-box;
+}
+
+.case-shop-card.featured {
+    border-color: #2e4766;
+    background: #152233;
+}
+
+.case-shop-card.gold-border {
+    border-color: #f1c40f;
+    background: radial-gradient(circle at 100% 50%, rgba(241, 196, 15, 0.08) 0%, #171d26 80%);
+}
+
+/* Иконка ящика (без налипающих нашлёпок) */
+.case-art-box {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.case-main-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.65));
+}
+
+/* Текстовая колонка */
+.case-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+.case-rarity-sub {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.case-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+}
+
+.case-desc {
+    font-size: 11px;
+    color: #8b9bb4;
+    line-height: 1.2;
+}
+
+/* 5. ЕДИНЫЙ ПРАВЫЙ БЛОК КНОПОК (СТРОГО 156px) */
+.case-actions-group {
+    width: 156px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/* Кнопка покупки (цена) */
+.buy-c-btn {
+    flex: 1;
+    height: 40px;
+    background: #1a2535;
+    border: 1px solid #364961;
+    border-radius: 9px;
+    color: #f1c40f;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 4px;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+}
+
+.buy-c-btn:active {
+    transform: scale(0.95);
+}
+
+.buy-c-btn:disabled {
+    opacity: 0.35;
+    border-color: #24303f;
+    color: #627285;
+    cursor: not-allowed;
+}
+
+/* Кнопка «Открыть» */
+.open-c-btn {
+    flex: 1;
+    height: 40px;
+    background: #27ae60;
+    border: none;
+    border-radius: 9px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(39, 174, 96, 0.35);
+    transition: transform 0.08s ease, opacity 0.15s ease;
+}
+
+.open-c-btn:active {
+    transform: scale(0.95);
+}
+
+.open-c-btn:disabled {
+    background: #202b38;
+    color: #55667a;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+/* Когда кнопка только одна (Деревянный ящик без покупки) */
+.case-actions-group.single-btn .open-c-btn {
+    width: 100%;
 }

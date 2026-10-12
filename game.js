@@ -46,21 +46,37 @@ let radarState = {
 };
 
 // Функция вызова окна благодарности
-function showThankYouModal(title, desc) {
+function showThankYouModal(title, desc, showVip = true) {
     const modal = document.getElementById('thank-you-modal');
     const titleEl = document.getElementById('thank-title');
     const descEl = document.getElementById('thank-desc');
     const closeBtn = document.getElementById('btn-close-thank');
+    const vipEl = document.getElementById('thank-vip-badge');
 
     if (!modal) return;
 
     if (titleEl) titleEl.innerText = title;
-    if (descEl) descEl.innerHTML = desc; // <-- СТРОГО innerHTML
+    if (descEl) descEl.innerHTML = desc;
+
+    if (vipEl) {
+        if (showVip) vipEl.classList.remove('hidden');
+        else vipEl.classList.add('hidden');
+    }
+
+    // Блокируем кнопку закрытия на 1 секунду от случайного нажатия
+    if (closeBtn) {
+        closeBtn.style.pointerEvents = 'none';
+        closeBtn.style.opacity = '0.5';
+        closeBtn.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => {
+            closeBtn.style.pointerEvents = 'auto';
+            closeBtn.style.opacity = '1';
+        }, 1000);
+        closeBtn.onclick = () => modal.classList.add('hidden');
+    }
 
     modal.classList.remove('hidden');
-    AudioEngine.play('donate_sound', 1.0);
-
-    if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+    if (typeof AudioEngine !== 'undefined') AudioEngine.play('donate_sound', 1.0);
 }
 
 // Универсальное окно подтверждения покупки за золото
@@ -657,7 +673,9 @@ function claimMilestoneReward(isDouble = false) {
     particles.push({
         x: canvas.width / 2,
         y: canvas.height * 0.4,
-        text: `+${awardedMilestoneGold} 🟡!`,
+        img: canvasIcoGold,
+        imgSize: 28,
+        text: `+${awardedMilestoneGold}!`,
         color: '#f1c40f',
         font: 'bold 26px sans-serif',
         alpha: 2.2,
@@ -1946,7 +1964,30 @@ function spawnBGObject() {
         }
     }
 
-    bgObjects.push({ x, y, type, size, speedMult, color, vx, fromLeft, animTimer: Math.random() * 10, rot: 0 });
+    // Базовый объект
+    const newBgObj = { x, y, type, size, speedMult, color, vx, fromLeft, animTimer: Math.random() * 10, rot: 0 };
+
+    // Персональные параметры поведения для НЛО
+    if (type === 'ufo') {
+        newBgObj.ufoPhase = 'in'; // Фазы: 'in' (подлет) -> 'hover' (зависание) -> 'out' (отлет)
+        // Выбор зоны остановки (35% слева, 35% справа, 30% за лестницей)
+        const stopRoll = Math.random();
+        if (stopRoll < 0.35) {
+            // Слева на чистом небе (14% - 32% ширины)
+            newBgObj.targetStopX = canvas.width * (0.14 + Math.random() * 0.18);
+        } else if (stopRoll < 0.70) {
+            // Справа на чистом небе (68% - 86% ширины)
+            newBgObj.targetStopX = canvas.width * (0.68 + Math.random() * 0.18);
+        } else {
+            // За лестницей по центру (44% - 56% ширины)
+            newBgObj.targetStopX = canvas.width * (0.44 + Math.random() * 0.12);
+        }
+        newBgObj.hoverTimer = 2.0; // Время зависания на месте (2 секунды)
+        newBgObj.maxSpeed = 95 + Math.random() * 30; // Крейсерская скорость
+        newBgObj.tilt = fromLeft ? 0.16 : -0.16; // Начальный крен
+    }
+
+    bgObjects.push(newBgObj);
 }
 
 function drawBGObjects() {
@@ -2323,10 +2364,138 @@ function drawBGObjects() {
         }
         else if (obj.type === 'ufo') {
             obj.animTimer += dt * 5;
-            ctx.save(); ctx.translate(obj.x, obj.y); ctx.rotate((obj.fromLeft ? 0.15 : -0.15) + Math.sin(obj.animTimer) * 0.08);
-            if (ufoImg.complete) ctx.drawImage(ufoImg, -25, -15, 50, 30);
-            ctx.fillStyle = `rgba(0, 255, 200, ${(Math.sin(obj.animTimer * 2) + 1) * 0.4})`;
-            ctx.beginPath(); ctx.arc(0, 10, 4, 0, Math.PI * 2); ctx.fill();
+
+            // === ФАЗОВАЯ ЛОГИКА ДВИЖЕНИЯ НЛО ===
+            if (!obj.ufoPhase) obj.ufoPhase = 'in';
+
+            if (obj.ufoPhase === 'in') {
+                // 1. ПОДЛЁТ: плавно тормозим по мере приближения к точке targetStopX
+                const distToStop = obj.targetStopX - obj.x;
+                const dir = Math.sign(distToStop) || (obj.fromLeft ? 1 : -1);
+
+                // Плавное замедление (Ease Out)
+                if (Math.abs(distToStop) < 180) {
+                    const slowFactor = Math.max(0.12, Math.abs(distToStop) / 180);
+                    obj.vx = dir * (obj.maxSpeed * slowFactor);
+                }
+
+                // Крен в сторону полета
+                const targetTilt = (obj.vx > 0 ? 0.16 : -0.16) * (Math.abs(obj.vx) / obj.maxSpeed);
+                obj.tilt += (targetTilt - obj.tilt) * (dt * 5);
+
+                // Достигли точки — переходим в зависание
+                if (Math.abs(distToStop) < 5 || (obj.fromLeft ? obj.x >= obj.targetStopX : obj.x <= obj.targetStopX)) {
+                    obj.ufoPhase = 'hover';
+                    obj.vx = 0;
+                }
+            } 
+            else if (obj.ufoPhase === 'hover') {
+                // 2. ЗАВИСАНИЕ: стоим на месте, выравниваем горизонт
+                obj.vx = 0;
+                obj.tilt += (0 - obj.tilt) * (dt * 4); // Выравнивание тарелки строго горизонтально
+                obj.hoverTimer -= dt;
+
+                if (obj.hoverTimer <= 0) {
+                    obj.ufoPhase = 'out';
+                    // Случайный выбор: лететь дальше или развернуться назад (50/50)
+                    const chooseDir = Math.random() > 0.5 ? 1 : -1;
+                    obj.outDir = chooseDir;
+                }
+            } 
+            else if (obj.ufoPhase === 'out') {
+                // 3. ОТЛЁТ: разгоняемся в выбранную сторону и наклоняемся
+                const targetVx = obj.outDir * obj.maxSpeed;
+                obj.vx += (targetVx - obj.vx) * (dt * 2.5);
+
+                const targetTilt = obj.outDir * 0.18;
+                obj.tilt += (targetTilt - obj.tilt) * (dt * 4);
+            }
+
+            // Мягкое вертикальное парение в невесомости
+            const hoverFloatY = Math.sin(obj.animTimer * 1.4) * 3.5;
+
+            // === ОТРИСОВКА (Увеличенный размер 85×51 px) ===
+            const ufoW = 85;
+            const ufoH = 51;
+
+            ctx.save();
+            ctx.translate(obj.x, obj.y + hoverFloatY);
+            ctx.rotate(obj.tilt + Math.sin(obj.animTimer) * 0.03); // Крен движения + легкое живое дрожание
+
+            // Спрайт тарелки
+            if (ufoImg.complete && ufoImg.naturalWidth !== 0) {
+                ctx.drawImage(ufoImg, -ufoW / 2, -ufoH / 2, ufoW, ufoH);
+            }
+
+            // === 1. СВЕТОВОЙ ЛУЧ СКАНИРОВАНИЯ (ВКЛЮЧАЕТСЯ ТОЛЬКО ПРИ ЗАВИСАНИИ) ===
+            const isHover = (obj.ufoPhase === 'hover');
+            
+            // Плавное появление и затухание луча (от 0.0 до 1.0)
+            if (!obj.beamAlpha) obj.beamAlpha = 0;
+            const targetBeamAlpha = isHover ? 1.0 : 0.0;
+            obj.beamAlpha += (targetBeamAlpha - obj.beamAlpha) * (dt * 5);
+
+            const nozzleY = ufoH * 0.22; // Точка выхода луча под днищем
+
+            if (obj.beamAlpha > 0.02) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen';
+
+                const beamLength = 130;  // Длина луча вниз
+                const topW = 12;         // Ширина у сопла
+                const botW = 68;         // Ширина конуса у основания
+
+                // А) Основной конус света с мягким градиентом в пустоту
+                const beamPulse = 0.85 + Math.sin(obj.animTimer * 8) * 0.15;
+                const curAlpha = obj.beamAlpha * beamPulse;
+
+                const beamGrad = ctx.createLinearGradient(0, nozzleY, 0, nozzleY + beamLength);
+                beamGrad.addColorStop(0, `rgba(160, 255, 240, ${0.75 * curAlpha})`);
+                beamGrad.addColorStop(0.25, `rgba(0, 230, 210, ${0.40 * curAlpha})`);
+                beamGrad.addColorStop(0.7, `rgba(0, 180, 255, ${0.15 * curAlpha})`);
+                beamGrad.addColorStop(1, 'rgba(0, 200, 255, 0)');
+
+                ctx.fillStyle = beamGrad;
+                ctx.beginPath();
+                ctx.moveTo(-topW / 2, nozzleY);
+                ctx.lineTo(topW / 2, nozzleY);
+                ctx.lineTo(botW / 2, nozzleY + beamLength);
+                ctx.lineTo(-botW / 2, nozzleY + beamLength);
+                ctx.closePath();
+                ctx.fill();
+
+                // Б) Бегущие световые кольца сканирования внутри луча
+                const scanWave = (Date.now() % 700) / 700; // Бежит сверху вниз
+                const waveY = nozzleY + scanWave * beamLength;
+                const waveW = topW + (botW - topW) * scanWave;
+
+                ctx.strokeStyle = `rgba(200, 255, 255, ${(1 - scanWave) * 0.5 * curAlpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(0, waveY, waveW / 2, 4, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            // === 2. МЯГКИЙ НЕОНОВЫЙ ОРЕОЛ СОПЛА (ВМЕСТО ТВЁРДОГО КРУЖКА) ===
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+
+            const enginePulse = 0.7 + Math.sin(obj.animTimer * 5) * 0.3;
+            const glowR = 14 + (isHover ? 4 : 0);
+
+            const engineGrad = ctx.createRadialGradient(0, nozzleY, 1, 0, nozzleY, glowR);
+            engineGrad.addColorStop(0, `rgba(255, 255, 255, ${0.9 * enginePulse})`);
+            engineGrad.addColorStop(0.35, `rgba(0, 255, 200, ${0.6 * enginePulse})`);
+            engineGrad.addColorStop(1, 'rgba(0, 255, 200, 0)');
+
+            ctx.fillStyle = engineGrad;
+            ctx.beginPath();
+            ctx.arc(0, nozzleY, glowR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
             ctx.restore();
         }
         else if (obj.type === 'cloud') {
@@ -2748,10 +2917,10 @@ function renderLuckModal() {
 
     const ladderSkin = LADDER_SKINS[currentSkinId];
     if (ladderSkin && ladderSkin.buffs.luck) {
-        modEl.innerHTML += `<div>🪜 Лестница «${ladderSkin.name}»: <b style="color:#2ecc71;">+${ladderSkin.buffs.luck}</b></div>`;
+        modEl.innerHTML += `<div><img src="assets/icon_stair.webp" class="ui-ico-sm"> Лестница «${ladderSkin.name}»: <b style="color:#2ecc71;">+${ladderSkin.buffs.luck}</b></div>`;
     }
     if (currentTalisman && TALISMANS[currentTalisman]) {
-        modEl.innerHTML += `<div>🧿 Талисман «${TALISMANS[currentTalisman].name}»: <b style="color:#2ecc71;">+${TALISMANS[currentTalisman].luck}</b></div>`;
+        modEl.innerHTML += `<div><img src="assets/talismans.webp" class="ui-ico-sm"> Талисман «${TALISMANS[currentTalisman].name}»: <b style="color:#2ecc71;">+${TALISMANS[currentTalisman].luck}</b></div>`;
     }
     if (hasMech('cyber') && cyberExtraAccessory.type === 'talismans' && cyberExtraAccessory.id && TALISMANS[cyberExtraAccessory.id]) {
         modEl.innerHTML += `<div>🦾 Кибер-слот «${TALISMANS[cyberExtraAccessory.id].name}»: <b style="color:#00ffff;">+${TALISMANS[cyberExtraAccessory.id].luck}</b></div>`;
@@ -3720,33 +3889,35 @@ function drawBackground() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Отрисовка светящейся Луны (Плавное появление и исчезновение)
-    if (currentHeight >= 7000 && currentHeight < 1000000) {
-        let moonAlpha = 1;
 
-        // Появление (7 000 - 13 000 м) — ТВОЙ ОРИГИНАЛ
-        if (currentHeight < 13000) {
-            moonAlpha = (currentHeight - 7000) / 6000;
+// Отрисовка светящейся Луны (Плавный спуск через весь экран)
+    if (visualHouseHeight >= 7000 && visualHouseHeight < 400000) {
+        // 1. Плавное появление на старте (с 7 000 до 14 000 м)
+        let moonAlpha = 1.0;
+        if (visualHouseHeight < 14000) {
+            moonAlpha = (visualHouseHeight - 7000) / 7000;
         }
-        // Растворение перед Млечным Путем (384 000 - 500 000 м) — ТВОЙ ОРИГИНАЛ
-        else if (currentHeight > 384000) {
-            moonAlpha = Math.max(0, 1 - ((currentHeight - 384000) / 116000));
-        }
-
-        // Ограничиваем прозрачность от 0 до 1
         moonAlpha = Math.max(0, Math.min(1, moonAlpha));
 
-        if (moonAlpha > 0) {
+        // 2. Прогресс пути Луны сверху вниз (с 7 000 м до 350 000 м)
+        const startAlt = 7000;
+        const endAlt = 350000;
+        const descentProgress = Math.min(1, Math.max(0, (visualHouseHeight - startAlt) / (endAlt - startAlt)));
+
+        const moonX = canvas.width * 0.28;
+        const moonSize = 48;
+
+        // Стартует вверху (80px) и плавно уходит под нижний срез экрана (+70px)
+        const startY = 80;
+        const endY = canvas.height + 70;
+        const moonY = startY + descentProgress * (endY - startY);
+
+        // Если Луна уже полностью ушла за нижний край экрана — не тратим ресурсы на отрисовку
+        if (moonY <= canvas.height + 65 && moonAlpha > 0) {
             ctx.save();
             ctx.globalAlpha = moonAlpha;
 
-            const moonX = canvas.width * 0.28;
-
-            // Начальная позиция 90px. Плавный параллакс-спуск вниз от сглаженной камеры
-            const moonY = 90 + Math.max(0, visualHouseHeight - 7000) * 0.00025;
-            const moonSize = 48; // Родной диаметр (в коде был радиус 24)
-
-            // Мягкое неоновое свечение — ТВОЙ ОРИГИНАЛ
+            // Мягкое рассеянное свечение вокруг Луны
             const glow = ctx.createRadialGradient(moonX, moonY, 15, moonX, moonY, 55);
             glow.addColorStop(0, 'rgba(245, 246, 250, 0.35)');
             glow.addColorStop(1, 'rgba(245, 246, 250, 0)');
@@ -3755,7 +3926,7 @@ function drawBackground() {
             ctx.arc(moonX, moonY, 55, 0, Math.PI * 2);
             ctx.fill();
 
-            // Отрисовка ассета Луны (с безопасным фолбэком на случай отсутствия файла)
+            // Отрисовка спрайта Луны
             if (moonImg.complete && moonImg.naturalWidth !== 0) {
                 ctx.drawImage(moonImg, moonX - moonSize / 2, moonY - moonSize / 2, moonSize, moonSize);
             } else {
@@ -5205,7 +5376,21 @@ for (let i = 0; i < tapsNum; i++) {
     if (currentHeight >= 500 && !radarState.prompted) {
         radarState.prompted = true;
         const radarMod = document.getElementById('radar-modal');
-        if (radarMod) radarMod.classList.remove('hidden');
+        if (radarMod) {
+            radarMod.classList.remove('hidden');
+
+            // Блокируем блок кнопок на 1 секунду от случайных тапов
+            const actionsBox = radarMod.querySelector('.shortcut-actions');
+            if (actionsBox) {
+                actionsBox.style.pointerEvents = 'none';
+                actionsBox.style.opacity = '0.5';
+                actionsBox.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => {
+                    actionsBox.style.pointerEvents = 'auto';
+                    actionsBox.style.opacity = '1';
+                }, 1000);
+            }
+        }
         saveGame();
     }
 
@@ -5271,9 +5456,9 @@ document.getElementById('buy-click').addEventListener('click', () => {
         // Пересчёт базовой силы клика по формуле
         baseClickPower = UPGRADES_CONFIG.click.basePower + (clickLevel * UPGRADES_CONFIG.click.powerPerLevel);
 
-        const currentSkin = LADDER_SKINS[currentSkinId] || {};
-        const extraClick = (currentSkin.buffs && currentSkin.buffs.click) ? currentSkin.buffs.click : 0;
-        clickPower = baseClickPower + extraClick;
+        const ladderBuffs = getActiveLadderBuffs();
+const extraClick = ladderBuffs.click || 0;
+clickPower = baseClickPower + extraClick;
 
         if (uiClickPower) uiClickPower.innerText = clickPower;
 
@@ -5672,7 +5857,7 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
         if (!window._caseAdRerollUsed) {
             const adRerollBtn = document.createElement('button');
             adRerollBtn.id = 'btn-ad-reroll';
-            adRerollBtn.innerText = '📺 Перекрутить (Реклама)';
+            adRerollBtn.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico"> Перекрутить (Реклама)';
             adRerollBtn.style.cssText = `
                 margin-top: 8px; padding: 8px 18px; font-size: 13px; font-weight: bold;
                 background: #e67e22; color: #fff; border: none; border-radius: 5px; cursor: pointer;
@@ -5804,37 +5989,30 @@ const modalNutsVal = document.getElementById('cases-modal-nuts');
 const modalGoldVal = document.getElementById('cases-modal-gold');
 
 function renderCasesShop() {
-    if (!casesContainer) return;
+    const cContainer = document.getElementById('cases-container') || (typeof casesContainer !== 'undefined' ? casesContainer : null);
+    if (!cContainer) return;
 
     userCases.wooden = boxesOwned;
-    if (modalNutsVal) modalNutsVal.innerText = nuts;
-    if (modalGoldVal) modalGoldVal.innerText = goldenNuts;
+    if (typeof modalNutsVal !== 'undefined' && modalNutsVal) modalNutsVal.innerText = nuts;
+    if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
 
-    casesContainer.innerHTML = '';
+    cContainer.innerHTML = '';
 
     for (let [caseId, c] of Object.entries(CASES_DB)) {
         const count = userCases[caseId] || 0;
-        const row = document.createElement('div');
-        row.style.cssText = `
-            display: flex; justify-content: space-between; align-items: center;
-            background: #2c3e50; padding: 10px 12px; border-radius: 8px;
-            border-left: 5px solid ${c.color}; color: #fff; flex-shrink: 0;
-        `;
 
         // Расчет цены со скидкой Готической лестницы (-20%)
         let actualPrice = c.price;
-        if (c.priceType === 'nuts' && hasMech('goth')) {
+        if (c.priceType === 'nuts' && typeof hasMech === 'function' && hasMech('goth')) {
             actualPrice = Math.floor(c.price * 0.8);
         }
 
-        let costLabel = 'Бесплатно (дроп)';
         let canBuy = false;
-
+        let costIcon = 'assets/nut.webp';
         if (c.priceType === 'nuts') {
-            costLabel = `${actualPrice} <img src="assets/nut.webp" class="ui-ico-sm">`;
             canBuy = nuts >= actualPrice;
         } else if (c.priceType === 'goldenNuts') {
-            costLabel = `${actualPrice} <img src="assets/golden_nut.webp" class="ui-ico-sm">`;
+            costIcon = 'assets/golden_nut.webp';
             canBuy = goldenNuts >= actualPrice;
         }
 
@@ -5842,60 +6020,81 @@ function renderCasesShop() {
         if (caseId === 'iron') caseIcon = 'assets/iron_box.webp';
         if (caseId === 'gold') caseIcon = 'assets/golden_box.webp';
 
-        row.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <img src="${caseIcon}" style="width: 32px; height: 32px; object-fit: contain;">
-                <div>
-                    <div style="font-weight: bold; color: ${c.color}; font-size: 14px;">${c.name}</div>
-                    <div style="font-size: 11px; color: #bdc3c7;">Цена: ${costLabel} | У тебя: <b style="color:#fff;">${count} шт.</b></div>
-                </div>
+        // Текстовая метка редкости вместо налипшей плашки на картинке
+        let rarityLabel = '<span class="case-rarity-sub" style="color:#8b9bb4;">Обычный</span>';
+        let cardClass = 'case-shop-card';
+        if (caseId === 'iron') {
+            rarityLabel = '<span class="case-rarity-sub" style="color:#3498db;">Редкий</span>';
+            cardClass += ' featured';
+        } else if (caseId === 'gold') {
+            rarityLabel = '<span class="case-rarity-sub" style="color:#f1c40f;">Легендарный</span>';
+            cardClass += ' gold-border';
+        }
+
+        const isFreeDropOnly = (c.priceType === 'free');
+
+        const card = document.createElement('div');
+        card.className = cardClass;
+
+        card.innerHTML = `
+            <div class="case-art-box">
+                <img src="${caseIcon}" class="case-main-img" alt="${c.name}" onerror="if(this.src.includes('golden_box')) this.src='assets/gold_box.webp'">
             </div>
-            <div style="display: flex; gap: 6px;">
-                ${c.priceType !== 'free' ? `
-                    <button class="buy-c-btn" style="padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; background: ${canBuy ? '#e67e22' : '#555'}; color: #fff;" ${!canBuy ? 'disabled' : ''}>
-                        Купить
+            <div class="case-meta">
+                ${rarityLabel}
+                <div class="case-name">${c.name}</div>
+                <div class="case-desc">У тебя: <b style="color: #fff;">${count} шт.</b></div>
+            </div>
+            <div class="case-actions-group ${isFreeDropOnly ? 'single-btn' : ''}">
+                ${!isFreeDropOnly ? `
+                    <button class="buy-c-btn" ${!canBuy ? 'disabled' : ''}>
+                        ${actualPrice} <img src="${costIcon}" class="ui-ico-sm">
                     </button>
                 ` : ''}
-                <button class="open-c-btn" style="padding: 6px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; background: ${count > 0 ? '#27ae60' : '#555'}; color: #fff;" ${count <= 0 ? 'disabled' : ''}>
+                <button class="open-c-btn" ${count <= 0 ? 'disabled' : ''}>
                     Открыть
                 </button>
             </div>
         `;
 
-        const buyBtn = row.querySelector('.buy-c-btn');
+        // Клик покупки
+        const buyBtn = card.querySelector('.buy-c-btn');
         if (buyBtn) {
             buyBtn.onclick = () => {
-                // Списываем именно actualPrice со скидкой!
                 if (c.priceType === 'nuts' && nuts >= actualPrice) {
                     nuts -= actualPrice;
                     userCases[caseId] = (userCases[caseId] || 0) + 1;
-                    AudioEngine.play('gaiki', 0.8);
+                    if (typeof AudioEngine !== 'undefined') AudioEngine.play('gaiki', 0.8);
                 } else if (c.priceType === 'goldenNuts' && goldenNuts >= actualPrice) {
                     goldenNuts -= actualPrice;
                     userCases[caseId] = (userCases[caseId] || 0) + 1;
-                    AudioEngine.play('gaiki', 0.8);
+                    if (typeof AudioEngine !== 'undefined') AudioEngine.play('gaiki', 0.8);
                 }
-                uiNuts.innerText = `${nuts}`;
+                if (typeof uiNuts !== 'undefined' && uiNuts) uiNuts.innerText = `${nuts}`;
+                if (typeof updateHeaderUI === 'function') updateHeaderUI();
                 renderCasesShop();
+                saveGame();
             };
         }
 
-        const openBtn = row.querySelector('.open-c-btn');
+        // Клик открытия
+        const openBtn = card.querySelector('.open-c-btn');
         if (openBtn) {
             openBtn.onclick = () => {
                 if ((userCases[caseId] || 0) > 0) {
                     userCases[caseId]--;
                     if (caseId === 'wooden') {
                         boxesOwned = userCases.wooden;
-                        uiCasesCount.innerText = boxesOwned;
+                        if (typeof uiCasesCount !== 'undefined' && uiCasesCount) uiCasesCount.innerText = boxesOwned;
                     }
                     renderCasesShop();
+                    saveGame();
                     startCaseOpening(caseId);
                 }
             };
         }
 
-        casesContainer.appendChild(row);
+        cContainer.appendChild(card);
     }
 
     updateAdFreeRewardsUI();
@@ -5920,15 +6119,25 @@ if (btnCloseDeal && dailyDealModal) {
     };
 }
 
-document.getElementById('btn-open-cases').onclick = () => {
-    casesModal.classList.remove('hidden');
-    renderCasesShop();
-};
+// Открытие окна кейсов (надежный поиск без null)
+const btnOpenCases = document.getElementById('btn-open-cases');
+if (btnOpenCases) {
+    btnOpenCases.onclick = () => {
+        const modal = document.getElementById('cases-modal') || document.getElementById('gachaModal');
+        if (modal) modal.classList.remove('hidden');
+        if (typeof renderCasesShop === 'function') renderCasesShop();
+    };
+}
 
-document.getElementById('btn-close-cases').onclick = () => {
-    AudioEngine.stop('jacpot');
-    casesModal.classList.add('hidden');
-};
+// Закрытие окна кейсов
+const btnCloseCases = document.getElementById('btn-close-cases');
+if (btnCloseCases) {
+    btnCloseCases.onclick = () => {
+        if (typeof AudioEngine !== 'undefined') AudioEngine.stop('jacpot');
+        const modal = document.getElementById('cases-modal') || document.getElementById('gachaModal');
+        if (modal) modal.classList.add('hidden');
+    };
+}
 
 // === 7. ПОЛНЫЙ ИНВЕНТАРЬ (ВКЛАДКИ И ЭКИПИРОВКА) ===
 let currentInventoryTab = 'ladders';
@@ -6430,13 +6639,6 @@ function startMainGame() {
     gameLoop();
 }
 
-ladderImg.onload = () => {
-    startMainGame();
-};
-
-if (ladderImg.complete) {
-    startMainGame();
-}
 
 window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -7014,7 +7216,7 @@ function updateAdFreeRewardsUI() {
             safeTimerEl.innerText = `${Math.floor(leftSafe / 60000)}:${String(Math.floor((leftSafe % 60000) / 1000)).padStart(2, '0')}`;
             safeBtn.style.opacity = '0.5'; safeBtn.disabled = true;
         } else {
-            safeTimerEl.innerText = '📺 Забрать';
+            safeTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
             safeBtn.style.opacity = '1'; safeBtn.disabled = false;
         }
     }
@@ -7027,7 +7229,7 @@ function updateAdFreeRewardsUI() {
             nutsTimerEl.innerText = `${Math.floor(leftNuts / 60000)}:${String(Math.floor((leftNuts % 60000) / 1000)).padStart(2, '0')}`;
             nutsBtn.style.opacity = '0.5'; nutsBtn.disabled = true;
         } else {
-            nutsTimerEl.innerText = '📺 Забрать';
+            nutsTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
             nutsBtn.style.opacity = '1'; nutsBtn.disabled = false;
         }
     }
@@ -7064,7 +7266,10 @@ function renderDailyDealUI() {
     if (!container || !dailyDeal.id) return;
 
     // 1. Таймер (без дублирования "Смена через")
-    const timeLeft = Math.max(0, (24 * 60 * 60 * 1000) - (Date.now() - dailyDeal.lastRefresh));
+    const now = new Date();
+const midnight = new Date(now);
+midnight.setHours(24, 0, 0, 0);
+const timeLeft = Math.max(0, midnight - now);
     const h = String(Math.floor(timeLeft / 3600000)).padStart(2, '0');
     const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, '0');
     const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0');
@@ -7100,14 +7305,14 @@ function renderDailyDealUI() {
             </button>`;
     } else if (canAfford) {
         buttonHtml = `
-            <button id="btn-buy-deal" style="width: 100%; background: #f1c40f; color: #111; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 3px 10px rgba(241,196,15,0.3);">
-                Купить: <s style="color: #666; font-size: 12px; margin-right: 4px;">${dailyDeal.basePrice}</s> ${dailyDeal.salePrice} 🟡
+            <button id="btn-buy-deal" style="width: 100%; background: #f1c40f; color: #111; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 3px 10px rgba(241,196,15,0.3); display: flex; align-items: center; justify-content: center; gap: 4px;">
+                Купить: <s style="color: #666; font-size: 12px; margin-right: 4px;">${dailyDeal.basePrice}</s> ${dailyDeal.salePrice} <img src="assets/golden_nut.webp" class="ui-ico-sm">
             </button>`;
     } else {
         const needGold = dailyDeal.salePrice - goldenNuts;
         buttonHtml = `
-            <button id="btn-buy-deal" style="width: 100%; background: #e67e22; color: #fff; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer;">
-                Не хватает ${needGold} 🟡 → Получить
+            <button id="btn-buy-deal" style="width: 100%; background: #e67e22; color: #fff; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                Не хватает ${needGold} <img src="assets/golden_nut.webp" class="ui-ico-sm"> → Получить
             </button>`;
     }
 
@@ -7148,7 +7353,10 @@ function renderDailyDealUI() {
                     if (typeof renderInventory === 'function') renderInventory();
                 });
             } else {
-                alert(`Вам не хватает ${dailyDeal.salePrice - goldenNuts} 🟡. Здесь откроется просмотр рекламы/магазин.`);
+                // Закрываем окно сделки и открываем магазин доната
+                if (dailyDealModal) dailyDealModal.classList.add('hidden');
+                if (donateModal) donateModal.classList.remove('hidden');
+                if (typeof AudioEngine !== 'undefined') AudioEngine.play('click', 0.5);
             }
         };
     }
@@ -7300,9 +7508,11 @@ if (day7Box) {
                 // Начиная со 2-й недели День 7 МОЖНО удваивать за рекламу!
                 if (btnClaimX2) {
                     btnClaimX2.style.display = 'block';
-                    btnClaimX2.innerText = '▶ Удвоить за рекламу (+150 🟡, 2 🧰)';
+                    btnClaimX2.innerHTML = `▶ Удвоить за рекламу (+150 <img src="assets/golden_nut.webp" class="ui-ico-sm">, 2 <img src="assets/iron_box.webp" class="ui-ico-sm">)`;
                 }
-                if (btnClaimNormal) btnClaimNormal.innerText = 'Забрать обычную (+75 🟡, 1 🧰)';
+                if (btnClaimNormal) {
+                    btnClaimNormal.innerHTML = `Забрать обычную (+75 <img src="assets/golden_nut.webp" class="ui-ico-sm">, 1 <img src="assets/iron_box.webp" class="ui-ico-sm">)`;
+                }
             } else {
                 // На 1-й неделе скин выдается строго в 1 экземпляре
                 if (btnClaimX2) btnClaimX2.style.display = 'none';
@@ -7545,6 +7755,37 @@ function updateBoostsUI() {
             zBtn.style.background = 'rgba(30, 39, 46, 0.95)'; zBtn.style.color = '#f1c40f'; zBtn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
         }
     }
+
+    // Обновление таймеров внутри открывающейся шторки баффов
+    const icoStopwatch = '<img src="assets/stopwatch.webp" class="ui-ico-sm">';
+
+    const dFortune = document.getElementById('drawer-timer-fortune');
+    if (dFortune) {
+        dFortune.innerHTML = adState.fortuneTimer > 0 
+            ? `${icoStopwatch} ${formatTime(adState.fortuneTimer)}` 
+            : `${icoStopwatch} 10:00`;
+    }
+
+    const dTurbo = document.getElementById('drawer-timer-turbo');
+    if (dTurbo) {
+        dTurbo.innerHTML = adState.turboTimer > 0 
+            ? `${icoStopwatch} ${formatTime(adState.turboTimer)}` 
+            : `${icoStopwatch} 01:00`;
+    }
+
+    const dFrenzy = document.getElementById('drawer-timer-frenzy');
+    if (dFrenzy) {
+        dFrenzy.innerHTML = adState.frenzyTimer > 0 
+            ? `${icoStopwatch} ${formatTime(adState.frenzyTimer)}` 
+            : `${icoStopwatch} 00:30`;
+    }
+
+    const dAuto = document.getElementById('drawer-timer-autotap');
+    if (dAuto) {
+        dAuto.innerHTML = adState.autotapTimer > 0 
+            ? `${icoStopwatch} ${formatTime(adState.autotapTimer)}` 
+            : `${icoStopwatch} 00:40`;
+    }
 }
 
 // Живой отсчет таймера каждую секунду при открытом окне
@@ -7603,36 +7844,93 @@ window.addEventListener('visibilitychange', () => {
     }
 });
 
-// === РАДАР БАЗЫ И DEEP LINKING ===
+// === ОКНО ЯРЛЫКА ПРИЛОЖЕНИЯ И ОКНО УДЕРЖАНИЯ (SHORTCUT FLOW) ===
 const radarModal = document.getElementById('radar-modal');
 const btnEnableRadar = document.getElementById('btn-enable-radar');
 const btnSkipRadar = document.getElementById('btn-skip-radar');
 
-if (btnSkipRadar && radarModal) {
-    btnSkipRadar.onclick = () => radarModal.classList.add('hidden');
+const declineModal = document.getElementById('shortcut-decline-modal');
+const btnDeclineClaim = document.getElementById('btn-decline-claim');
+const btnDeclineClose = document.getElementById('btn-decline-close');
+
+// 1. Выдача награды и открытие окна благодарности со счастливой стремянкой
+function grantShortcutReward() {
+    radarState.enabled = true;
+    addGoldenNuts(100);
+
+    const rModal = document.getElementById('radar-modal');
+    const dModal = document.getElementById('shortcut-decline-modal');
+    if (rModal) rModal.classList.add('hidden');
+    if (dModal) dModal.classList.add('hidden');
+
+    saveGame();
+
+    showThankYouModal(
+        'ЗОЛОТО НАЧИСЛЕНО!',
+        '+100 <img src="assets/golden_nut.webp" class="ui-ico"> уже на балансе!<br><span style="color: #f1c40f; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 6px;">Спасибо, что ты с нами! ❤️</span>',
+        false
+    );
 }
 
-if (btnEnableRadar && radarModal) {
-    btnEnableRadar.onclick = () => {
-        // Запрос системных пушей браузера (или SDK VK/Яндекс)
-        if ('Notification' in window && Notification.permission !== 'granted') {
-            Notification.requestPermission();
+// 2. Логика запроса установки ярлыка
+function startShortcutInstall() {
+    if (window.ysdk && window.ysdk.shortcut && window.ysdk.shortcut.showPrompt) {
+        window.ysdk.shortcut.showPrompt()
+            .then(result => {
+                if (result && result.outcome === 'accepted') {
+                    grantShortcutReward();
+                } else {
+                    const rModal = document.getElementById('radar-modal');
+                    const dModal = document.getElementById('shortcut-decline-modal');
+                    if (rModal) rModal.classList.add('hidden');
+                    if (dModal) dModal.classList.add('hidden');
+                }
+            })
+            .catch(() => grantShortcutReward());
+    } else {
+        grantShortcutReward();
+    }
+}
+
+// 3. Кнопка «ДОБАВИТЬ» в первом окне
+if (btnEnableRadar) {
+    btnEnableRadar.onclick = () => startShortcutInstall();
+}
+
+// 4. Кнопка «Позже» -> скрываем первое окно и ПОКАЗЫВАЕМ ГРУСТНОГО МАСКОТА
+if (btnSkipRadar) {
+    btnSkipRadar.onclick = () => {
+        const rModal = document.getElementById('radar-modal');
+        const dModal = document.getElementById('shortcut-decline-modal');
+
+        if (rModal) rModal.classList.add('hidden');
+        if (dModal) {
+            dModal.classList.remove('hidden');
+
+            const actions = dModal.querySelector('.decline-actions');
+            if (actions) {
+                actions.style.pointerEvents = 'none';
+                actions.style.opacity = '0.5';
+                actions.style.transition = 'opacity 0.25s ease';
+                setTimeout(() => {
+                    actions.style.pointerEvents = 'auto';
+                    actions.style.opacity = '1';
+                }, 500);
+            }
         }
+    };
+}
 
-        radarState.enabled = true;
-        goldenNuts += 25;
-        AudioEngine.play('win', 0.85);
-        particles.push({
-            x: canvas.width / 2,
-            y: canvas.height * 0.4,
-            text: '📡 РАДАР ВКЛЮЧЕН! +25 🟡',
-            color: '#f1c40f',
-            font: 'bold 22px sans-serif',
-            alpha: 2.2,
-            speed: 1.8
-        });
+// 5. Кнопка «Забрать 100» в окне грустного маскота
+if (btnDeclineClaim) {
+    btnDeclineClaim.onclick = () => startShortcutInstall();
+}
 
-        radarModal.classList.add('hidden');
+// 6. Кнопка «Не сейчас» в окне грустного маскота
+if (btnDeclineClose) {
+    btnDeclineClose.onclick = () => {
+        const dModal = document.getElementById('shortcut-decline-modal');
+        if (dModal) dModal.classList.add('hidden');
         saveGame();
     };
 }
@@ -7981,17 +8279,6 @@ if (btnToggleBuffs && buffsDrawer) {
 if (btnCloseBuffs && buffsDrawer) {
     btnCloseBuffs.onclick = () => {
         buffsDrawer.style.transform = 'translateX(105%)';
-    };
-}
-
-// Настройки
-const btnSettingsEl = document.getElementById('btn-open-settings');
-const modalSettingsEl = document.getElementById('settings-modal');
-if (btnSettingsEl && modalSettingsEl) {
-    btnSettingsEl.onclick = (e) => {
-        e.stopPropagation();
-        modalSettingsEl.classList.remove('hidden');
-        if (typeof AudioEngine !== 'undefined') AudioEngine.play('click', 0.5);
     };
 }
 
@@ -8374,7 +8661,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
         // Окно закрывается ТОЛЬКО если и нажал, и отпустил строго по темному фону
         if (e.target === overlay && overlayMouseDownTarget === overlay) {
-            const protectedModals = ['milestone-modal', 'calendar-modal', 'offline-modal', 'thank-you-modal', 'gachaModal'];
+            const protectedModals = ['milestone-modal', 'calendar-modal', 'offline-modal', 'thank-you-modal', 'gachaModal', 'radar-modal', 'shortcut-decline-modal'];
 
             if (!protectedModals.includes(overlay.id)) {
                 overlay.classList.add('hidden');
@@ -8642,9 +8929,16 @@ enableDragScroll(document.getElementById('luck-talismans-list'));
 enableDragScroll(document.getElementById('cust-items-list'));
 
 // --- ИНИЦИАЛИЗАЦИЯ ИГРЫ ПРИ СТАРТЕ ---
-loadGame();      // Сначала грузим сейв
-updateShopUI();  // Затем пересчитываем и рисуем цены в магазине
-updateAltitudeTrackerUI(); // Первичное обновление шкалы высоты
+loadGame();      // 1. Сначала загружаем все данные и высоту
+updateShopUI();  // 2. Считаем цены
+updateAltitudeTrackerUI(); // 3. Ставим бегунок на сохраненное место
+
+// 4. И только теперь запускаем игровой цикл:
+if (ladderImg.complete) {
+    startMainGame();
+} else {
+    ladderImg.onload = () => startMainGame();
+}
 
 // Кнопка переключения Zen-режима (Скрытие UI)
 const btnToggleZen = document.getElementById('btn-toggle-zen');

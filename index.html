@@ -192,7 +192,7 @@
                     <div class="bd-tile" style="--bd-accent:#2ecc71;">
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/clover_lucky.webp" class="drawer-buff-ico"> УДАЧА</span>
-                            <span id="drawer-timer-fortune" class="bd-timer">⏱️ 10:00</span>
+                            <span id="drawer-timer-fortune" class="bd-timer"><img src="assets/stopwatch.webp" class="ui-ico-sm"> 10:00</span>
                         </div>
                         <div class="bd-tile-desc">+15 к показателю удачи</div>
                         <div class="bd-tile-btns">
@@ -205,7 +205,7 @@
                     <div class="bd-tile" style="--bd-accent:#e67e22;">
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/x3_bust.webp" class="drawer-buff-ico"> ТУРБО-ДОХОД</span>
-                            <span id="drawer-timer-turbo" class="bd-timer">⏱️ 01:00</span>
+                            <span id="drawer-timer-turbo" class="bd-timer"><img src="assets/stopwatch.webp" class="ui-ico-sm"> 01:00</span>
                         </div>
                         <div class="bd-tile-desc">x3 ко всем источникам дохода</div>
                         <div class="bd-tile-btns">
@@ -218,7 +218,7 @@
                     <div class="bd-tile" style="--bd-accent:#f1c40f;">
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/nut_rain.webp" class="drawer-buff-ico"> ГАЙКОПАД</span>
-                            <span id="drawer-timer-frenzy" class="bd-timer">⏱️ 00:30</span>
+                            <span id="drawer-timer-frenzy" class="bd-timer"><img src="assets/stopwatch.webp" class="ui-ico-sm"> 00:30</span>
                         </div>
                         <div class="bd-tile-desc">Гайки летят градом с неба</div>
                         <div class="bd-tile-btns">
@@ -231,7 +231,7 @@
                     <div class="bd-tile" style="--bd-accent:#00d2ff;">
                         <div class="bd-tile-top">
                             <span class="bd-tile-name"><img src="assets/robot_hand.webp" class="drawer-buff-ico"> АВТОПИЛОТ</span>
-                            <span id="drawer-timer-autotap" class="bd-timer">⏱️ 00:40</span>
+                            <span id="drawer-timer-autotap" class="bd-timer"><img src="assets/stopwatch.webp" class="ui-ico-sm"> 00:40</span>
                         </div>
                         <div class="bd-tile-desc">Авто-клики 15 раз/сек по лестнице</div>
                         <div class="bd-tile-btns">
@@ -672,63 +672,150 @@
                 </div>
             </div>
 
-            <!-- Модальное окно: Радар базы (Пуши за +25 🟡) -->
+            <!-- Модальное окно: Установка ярлыка на экран (Яндекс.Игры) -->
             <div id="radar-modal" class="modal-overlay hidden" style="z-index: 26000;">
-                <div class="modal-card"
-                    style="max-width: 310px; text-align: center; border: 2px solid #3498db; border-radius: 16px; padding: 20px; background: radial-gradient(circle, #2c3e50 0%, #1a1a2e 100%);">
-                    <div style="font-size: 38px; margin-bottom: 8px;">📡</div>
-                    <h2 style="color: #3498db; font-size: 18px; margin: 0 0 8px 0;">Включить радар базы?</h2>
-                    <p style="font-size: 12px; color: #bdc3c7; line-height: 1.4; margin-bottom: 16px;">
-                        Мы сообщим, когда Колонка забьет склад оффлайна на 100% и откатится бесплатный сейф. За
-                        включение дарим бонус прямо сейчас!
-                    </p>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button id="btn-enable-radar"
-                            style="background: #f1c40f; color: #111; border: none; padding: 11px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(241, 196, 15, 0.4);">
-                            Включить (+25 🟡)
-                        </button>
-                        <button id="btn-skip-radar"
-                            style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 11px; cursor: pointer;">
-                            Позже
-                        </button>
+                <div class="shortcut-offer-card">
+                    
+                    <!-- 1. АРТ-БАННЕР (Пропорция 16:9 как у оригинала) -->
+                    <div class="shortcut-banner-wrap">
+                        <img src="assets/mini_icon_offer.webp" alt="Ярлык игры" class="shortcut-banner-img">
+                        <div class="shortcut-banner-glow"></div>
+                        <span class="shortcut-tag-badge">
+                            <img src="assets/crown.webp" class="ui-ico-sm"> БОНУС
+                        </span>
                     </div>
-                </div>
-            </div>
 
-            <!-- Модальное окно кейсов -->
-            <div id="cases-modal" class="modal-overlay hidden">
-                <div class="modal-card"
-                    style="max-width: 360px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 18px; border: 2px solid #9b59b6; border-radius: 16px; box-shadow: 0 0 25px rgba(155, 89, 182, 0.25);">
-                    <div class="modal-header"
-                        style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <h2
-                            style="color: #9b59b6; font-size: 18px; margin: 0; display: flex; align-items: center; gap: 6px;">
-                            <img src="assets/wooden_box.webp" class="ui-ico"> Магазин и Склад Кейсов
+                    <!-- 2. ТЕКСТОВЫЙ БЛОК -->
+                    <div class="shortcut-body">
+                        <h2 class="shortcut-title">
+                            Добавь игру на экран телефона и поднимайся в один тап!
                         </h2>
-                        <button id="btn-close-cases" class="modal-close-btn">&times;</button>
+                        
+                        <p class="shortcut-desc">
+                            В следующем окне нажмите «Добавить», и награда твоя
+                        </p>
+
+                        <!-- Плашка награды -->
+                        <div class="shortcut-reward-pill">
+                            <span class="shortcut-reward-label">Награда за установку:</span>
+                            <div class="shortcut-reward-val">
+                                +100 <img src="assets/golden_nut.webp" class="ui-ico-lg">
+                            </div>
+                        </div>
+
+                        <!-- 3. КНОПКИ ДЕЙСТВИЯ -->
+                        <div class="shortcut-actions">
+                            <button id="btn-enable-radar" class="shortcut-btn-claim">
+                                <span class="shortcut-btn-shine"></span>
+                                ДОБАВИТЬ (+100 <img src="assets/golden_nut.webp" class="ui-ico-sm">)
+                            </button>
+                            <button id="btn-skip-radar" class="shortcut-btn-skip">
+                                Позже
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="modal-currency-bar" style="margin-bottom: 12px;">
-                        <span><img src="assets/nut.webp" class="ui-ico"> Гайки: <b id="cases-modal-nuts"
-                                style="color: #3498db;">0</b></span>
-                        <span><img src="assets/golden_nut.webp" class="ui-ico"> Золотые: <b id="cases-modal-gold"
-                                style="color: #f1c40f;">0</b></span>
-                    </div>
-
-                    <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-                        <button id="btn-ad-free-safe"
-                            style="flex: 1; padding: 8px 6px; background: rgba(127, 140, 141, 0.2); border: 1px solid #7f8c8d; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer;">
-                            <img src="assets/iron_box.webp" class="ui-ico"> Сейф: <span id="ad-safe-timer">Готово</span>
-                        </button>
-                        <button id="btn-ad-free-nuts"
-                            style="flex: 1; padding: 8px 6px; background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; border-radius: 8px; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer;">
-                            <img src="assets/nut.webp" class="ui-ico"> Гайки: <span id="ad-nuts-timer">Готово</span>
-                        </button>
-                    </div>
-                    <div id="cases-list-container" class="modal-scroll-list"
-                        style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;"></div>
                 </div>
             </div>
+
+<!-- Модальное окно удержания при отказе (Грустный маскот) -->
+<div id="shortcut-decline-modal" class="modal-overlay hidden" style="z-index: 32000 !important;">
+    <div class="modal-card"
+        style="max-width: 315px; width: 92%; height: auto !important; min-height: auto !important; text-align: center; border: 2px solid #5f6f94; border-radius: 20px; padding: 20px 18px 16px 18px; background: radial-gradient(circle at 50% 20%, #172236 0%, #0a0e17 100%); box-shadow: 0 0 30px rgba(95, 111, 148, 0.25), 0 20px 60px rgba(0,0,0,0.95);">
+
+        <!-- Арт грустного маскота с мягким лунным ореолом -->
+        <div style="width: 100%; height: 165px; margin: 0 auto 10px auto; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; width: 125px; height: 125px; background: radial-gradient(circle, rgba(95, 111, 148, 0.3) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+            <img src="assets/sad_mascote.webp" alt="Грустная стремяночка"
+                style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.8)); z-index: 2;">
+        </div>
+
+        <!-- Текст: светлый и чёткий заголовок -->
+        <h2 style="color: #f1f5f9; font-size: 17px; font-weight: 900; margin: 0 0 8px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.9); letter-spacing: 0.3px;">
+            Точно не хочешь награду?
+        </h2>
+
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.45; margin: 0 0 16px 0;">
+            Тебя ждут 100 <img src="assets/golden_nut.webp" class="ui-ico">. Ярлык добавится за пару секунд, и игра всегда будет под рукой.
+        </p>
+
+        <!-- Кнопки: золотая кнопка — главный световой фокус окна -->
+        <div class="decline-actions" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <button id="btn-decline-claim" class="shortcut-btn-claim" style="height: 42px; font-size: 13px;">
+                Забрать 100 <img src="assets/golden_nut.webp" class="ui-ico-sm">
+            </button>
+            <button id="btn-decline-close" class="shortcut-btn-skip" style="font-size: 11px; color: #64748b; padding: 6px;">
+                Не сейчас
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: Подпольный склад кейсов -->
+<div id="cases-modal" class="modal-overlay hidden" style="z-index: 25000;">
+    <div class="cases-modal-card">
+
+        <!-- 1. АРТ-БАННЕР С ДИЛЕРОМ -->
+        <div class="cases-banner-wrap">
+            <img src="assets/case_window.webp" alt="Склад кейсов" class="cases-banner-img">
+            <div class="cases-banner-gradient"></div>
+            
+            <div class="cases-header-bar">
+                <div class="cases-header-title">
+                    <span class="cases-badge">ТАЙНИК</span>
+                    <h2>СКЛАД КЕЙСОВ</h2>
+                </div>
+                <button id="btn-close-cases" class="cases-close-btn">&times;</button>
+            </div>
+        </div>
+
+        <!-- 2. СКРОЛЛ-ЗОНА -->
+        <div class="cases-content-scroll">
+
+            <!-- БЛОК 1: ЕЖЕДНЕВНЫЙ ЗАПАС ЗА РЕКЛАМУ -->
+            <div class="cases-section-title">ЕЖЕДНЕВНЫЙ ЗАПАС</div>
+            <div class="cases-free-grid">
+                
+                <!-- Бесплатные гайки -->
+                <div class="free-reward-card">
+                    <img src="assets/golden_nut.webp" class="free-reward-icon" alt="Гайки">
+                    <div class="free-reward-info">
+                        <div class="free-reward-name">+15 Гаек</div>
+                        <div class="free-reward-sub">Каждые 2 часа</div>
+                    </div>
+                    <button id="btn-ad-free-nuts" class="btn-touch-action">
+                        <span id="ad-nuts-timer">
+                            <img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Бесплатный сейф -->
+                <div class="free-reward-card">
+                    <img src="assets/iron_box.webp" class="free-reward-icon" alt="Сейф">
+                    <div class="free-reward-info">
+                        <div class="free-reward-name">Железный сейф</div>
+                        <div class="free-reward-sub">Раз в 4 часа</div>
+                    </div>
+                    <button id="btn-ad-free-safe" class="btn-touch-action">
+                        <span id="ad-safe-timer">
+                            <img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать
+                        </span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- БЛОК 2: АССОРТИМЕНТ КЕЙСОВ (ГЕНЕРИРУЕТСЯ КОДОМ) -->
+            <div class="cases-section-title">ОСНОВНОЙ АССОРТИМЕНТ</div>
+            <div id="cases-container" class="cases-cards-grid">
+                <!-- Карточки кейсов генерируются динамически через renderCasesShop() -->
+            </div>
+
+        </div>
+
+    </div>
+</div>
 
             <!-- Модальное окно гардероба скинов -->
             <div id="inventory-modal" class="modal-overlay hidden">
@@ -740,9 +827,9 @@
 
                     <div class="inventory-tabs inv-tab-rail">
                         <button class="inv-tab active" data-tab="ladders">
-                            <span class="inv-tab-icon"><img src="assets/wood_stair-removebg-preview.png" class="ui-ico-sm"></span>
-                            <span class="inv-tab-label">Лестницы</span>
-                        </button>
+    <span class="inv-tab-icon"><img src="assets/icon_stair.webp" class="ui-ico-sm"></span>
+    <span class="inv-tab-label">Лестницы</span>
+</button>
                         <button class="inv-tab" data-tab="speakers">
                             <span class="inv-tab-icon"><img src="assets/old_speaker.webp" class="ui-ico-sm"></span>
                             <span class="inv-tab-label">Колонки</span>
@@ -1063,15 +1150,18 @@
                 </div>
             </div>
 
-            <!-- Модальное окно благодарности за покупку -->
+<!-- Модальное окно благодарности (Маскот) -->
             <div id="thank-you-modal" class="modal-overlay hidden" style="z-index: 30000;">
                 <div class="modal-card"
                     style="max-width: 320px; width: 92%; height: auto !important; min-height: auto !important; text-align: center; border: 2px solid #f1c40f; border-radius: 20px; padding: 22px 18px 18px 18px; background: radial-gradient(circle, #2c3e50 0%, #151922 100%); box-shadow: 0 0 40px rgba(241, 196, 15, 0.45);">
 
                     <div
-                        style="width: 100%; height: 185px; margin: 0 auto 10px auto; position: relative; display: flex; align-items: center; justify-content: center;">
-                        <img id="thank-img" src="assets/mascot.webp"
-                            style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(241, 196, 15, 0.4));"
+                        style="width: 100%; height: 195px; margin: 0 auto 10px auto; position: relative; display: flex; align-items: center; justify-content: center;">
+                        <!-- Мягкий ореол за сердечком стремянки -->
+                        <div style="position: absolute; width: 130px; height: 130px; background: radial-gradient(circle, rgba(241, 196, 15, 0.35) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+                        
+                        <img id="thank-img" src="assets/mascot.webp" alt="Спасибо!"
+                            style="max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 8px 16px rgba(241, 196, 15, 0.45)); z-index: 2;"
                             onerror="this.style.display='none'; document.getElementById('thank-fallback').style.display='flex';">
                         <div id="thank-fallback"
                             style="display: none; width: 90px; height: 90px; border-radius: 50%; background: rgba(241, 196, 15, 0.15); border: 2px solid #f1c40f; align-items: center; justify-content: center; font-size: 42px;">
@@ -1081,13 +1171,13 @@
 
                     <h2 id="thank-title"
                         style="color: #f1c40f; font-size: 19px; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">
-                        ЗОЛОТО ЗАЧИСЛЕНО!</h2>
+                        ЗОЛОТО НАЧИСЛЕНО!</h2>
                     <div id="thank-desc"
-                        style="font-size: 12px; color: #ecf0f1; margin-bottom: 14px; line-height: 1.4;">
-                        Покупка успешно совершена!
+                        style="font-size: 13px; color: #ecf0f1; margin-bottom: 14px; line-height: 1.45;">
+                        Спасибо, что ты с нами!
                     </div>
 
-                    <div
+                    <div id="thank-vip-badge" class="hidden"
                         style="background: rgba(241, 196, 15, 0.15); border: 1px dashed #f1c40f; border-radius: 10px; padding: 8px; margin-bottom: 16px;">
                         <span style="font-size: 12px; color: #f1c40f; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px;">
                             <img src="assets/crown.webp" class="ui-ico-sm"> СТАТУС VIP АКТИВИРОВАН
@@ -1126,13 +1216,13 @@
                         <div id="ms-buttons-box"
                             style="display: flex; flex-direction: column; gap: 8px; pointer-events: none; opacity: 0.5; transition: opacity 0.3s ease;">
                             <button id="btn-ms-claim-x2"
-                                style="background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241, 196, 15, 0.4);">
-                                ▶ Удвоить за рекламу (+0 🟡)
-                            </button>
+    style="background: linear-gradient(135deg, #f1c40f, #e67e22); color: #111; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241, 196, 15, 0.4); display: flex; align-items: center; justify-content: center; gap: 4px;">
+    ▶ Удвоить за рекламу (+0 <img src="assets/golden_nut.webp" class="ui-ico-sm">)
+</button>
                             <button id="btn-ms-claim-normal"
-                                style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer;">
-                                Забрать обычную (+0 🟡)
-                            </button>
+    style="background: transparent; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 8px; border-radius: 8px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+    Забрать обычную (+0 <img src="assets/golden_nut.webp" class="ui-ico-sm">)
+</button>
                         </div>
                     </div>
                 </div>
