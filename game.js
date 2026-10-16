@@ -45,15 +45,26 @@ let radarState = {
     enabled: false   // Согласился ли игрок
 };
 
-// Функция вызова окна благодарности
-function showThankYouModal(title, desc, showVip = true) {
+// Функция вызова окна благодарности / начисления награды (с поддержкой кастомного арта)
+function showThankYouModal(title, desc, showVip = true, customImg = 'assets/mascot.webp') {
     const modal = document.getElementById('thank-you-modal');
     const titleEl = document.getElementById('thank-title');
     const descEl = document.getElementById('thank-desc');
     const closeBtn = document.getElementById('btn-close-thank');
     const vipEl = document.getElementById('thank-vip-badge');
+    const imgEl = document.getElementById('thank-img');
 
     if (!modal) return;
+
+    if (imgEl) {
+        imgEl.style.display = 'block';
+        imgEl.onerror = () => {
+            if (!imgEl.src.includes('mascot.webp')) {
+                imgEl.src = 'assets/mascot.webp';
+            }
+        };
+        imgEl.src = customImg;
+    }
 
     if (titleEl) titleEl.innerText = title;
     if (descEl) descEl.innerHTML = desc;
@@ -63,15 +74,10 @@ function showThankYouModal(title, desc, showVip = true) {
         else vipEl.classList.add('hidden');
     }
 
-    // Блокируем кнопку закрытия на 1 секунду от случайного нажатия
+    // Кнопка активна сразу без задержек и таймеров
     if (closeBtn) {
-        closeBtn.style.pointerEvents = 'none';
-        closeBtn.style.opacity = '0.5';
-        closeBtn.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            closeBtn.style.pointerEvents = 'auto';
-            closeBtn.style.opacity = '1';
-        }, 1000);
+        closeBtn.style.pointerEvents = 'auto';
+        closeBtn.style.opacity = '1';
         closeBtn.onclick = () => modal.classList.add('hidden');
     }
 
@@ -115,13 +121,22 @@ if (btnConfirmCancel) {
 }
 
 // === МОНЕТИЗАЦИЯ И ДОНАТ ===
+// === МОНЕТИЗАЦИЯ И ДОНАТ ===
 const donateModal = document.getElementById('donate-modal');
 const btnOpenDonate = document.getElementById('btn-open-donate');
 const btnCloseDonate = document.getElementById('btn-close-donate');
+const btnPlusGold = document.getElementById('btn-plus-gold');
+const goldClickZone = document.getElementById('gold-click-zone');
 
 if (btnOpenDonate && donateModal) {
     btnOpenDonate.onclick = () => donateModal.classList.remove('hidden');
 }
+const handleOpenDonate = (e) => {
+    if (e) e.stopPropagation();
+    if (donateModal) donateModal.classList.remove('hidden');
+};
+if (btnPlusGold) btnPlusGold.onclick = handleOpenDonate;
+if (goldClickZone) goldClickZone.onclick = handleOpenDonate;
 if (btnCloseDonate && donateModal) {
     btnCloseDonate.onclick = () => donateModal.classList.add('hidden');
 }
@@ -137,22 +152,31 @@ if (btnCloseStarter && starterModal) {
     btnCloseStarter.onclick = () => starterModal.classList.add('hidden');
 }
 
-// Покупка Starter Pack
-// Покупка Starter Pack (убираем эмодзи и дублированную строку)
+// Покупка Starter Pack (39₽: 25 деревянных, 10 железных, 5 золотых + Без рекламы)
 const btnBuyStarter = document.getElementById('btn-buy-starter');
 if (btnBuyStarter) {
     btnBuyStarter.onclick = () => {
         starterPack.purchased = true;
         isVip = true;
+        hasAdFree = true; // Отключение рекламы навсегда!
 
         goldenNuts += 179;
         nuts += 1799;
-        boxesOwned += 10;
+        boxesOwned += 25; // 25 деревянных ящиков
         userCases.wooden = boxesOwned;
-        userCases.iron = (userCases.iron || 0) + 5;
+        userCases.iron = (userCases.iron || 0) + 10; // 10 железных сейфов
+        userCases.gold = (userCases.gold || 0) + 5;  // 5 золотых контейнеров
 
         if (!ownedSpeakerSkins.includes('cyber')) {
             ownedSpeakerSkins.push('cyber');
+        }
+
+        // Обновляем статус кнопки "Без рекламы" в Золотом Банке, если она есть
+        const adFreeBtn = document.querySelector('.mock-buy-btn[data-type="adfree"]');
+        if (adFreeBtn) {
+            adFreeBtn.innerText = 'Куплено';
+            adFreeBtn.disabled = true;
+            adFreeBtn.style.opacity = '0.5';
         }
 
         particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: 'НАБОР НОВИЧКА ПОЛУЧЕН!', color: '#f1c40f', alpha: 2.5, speed: 2 });
@@ -161,12 +185,32 @@ if (btnBuyStarter) {
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
         starterModal.classList.add('hidden');
         if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
-        showThankYouModal('НАБОР НОВИЧКА!', 'Гора ресурсов и легендарный скин «Кибер» твои! Спасибо за поддержку <img src="assets/crown.webp" class="ui-ico-sm">');
+        showThankYouModal('НАБОР НОВИЧКА!', 'Гора кейсов, ресурсы, отключение рекламы и скин «Кибер» твои! Спасибо за поддержку <img src="assets/crown.webp" class="ui-ico-sm">');
         saveGame();
     };
 }
 
-// Покупки золота и AdFree
+// Бесплатные +15 золотых гаек за рекламу в Золотом Банке (с окном получения!)
+const btnBankAdGold = document.getElementById('btn-bank-ad-gold');
+if (btnBankAdGold) {
+    btnBankAdGold.onclick = () => {
+        watchRewardedAd('bank_free_gold', () => {
+            const gained = addGoldenNuts(15);
+            AudioEngine.play('pickupCoin5', 1.0);
+
+            // Если захочешь, закинь потом в папку assets/reward_gold_mascot.webp!
+            showThankYouModal(
+                'ЗОЛОТО ПОЛУЧЕНО!',
+                `Тебе начислено <b style="color:#f1c40f;">+${gained} <img src="assets/golden_nut.webp" class="ui-ico"></b> за просмотр рекламы!`,
+                false,
+                'assets/reward_gold_mascot.webp'
+            );
+            saveGame();
+        });
+    };
+}
+
+// Покупки золота и AdFree (донат-окно теперь ОСТАЁТСЯ открытым)
 document.querySelectorAll('.mock-buy-btn').forEach(btn => {
     btn.onclick = () => {
         const type = btn.dataset.type;
@@ -177,13 +221,13 @@ document.querySelectorAll('.mock-buy-btn').forEach(btn => {
             btn.innerText = 'Куплено';
             btn.disabled = true;
             btn.style.opacity = '0.5';
-            if (donateModal) donateModal.classList.add('hidden');
+            // donateModal НЕ закрываем — окно благодарности появится поверх него
             showThankYouModal('БЕЗ РЕКЛАМЫ!', 'Баннеры отключены навсегда! Спасибо за вклад в развитие игры ❤️');
         } else if (type === 'gold') {
             const amount = parseInt(btn.dataset.amount, 10);
             goldenNuts += amount;
-            if (donateModal) donateModal.classList.add('hidden');
-            showThankYouModal('ЗОЛОТО ЗАЧИСЛЕНО!', `+${amount} <img src="assets/golden_nut.webp" class="ui-ico"> уже на балансе. Приятных покупок!`);
+            // donateModal НЕ закрываем — окно благодарности появится поверх него
+            showThankYouModal('ЗОЛОТО ЗАЧИСЛЕНО!', `+${amount} <img src="assets/golden_nut.webp" class="ui-ico"> уже на балансе. Спасибо за вклад в развитие игры ❤️! Приятных покупок!`);
         }
 
         saveGame();
@@ -828,12 +872,12 @@ function getActiveTemporaryBuffsCount() {
     return count;
 }
 
-// Множитель +25% за каждый бафф для шаров «Земля»
+// Множитель +100% (x2, x3, x4, x5) за каждый активный бафф для шаров «Земля»
 function getPlanetBuffMultiplier() {
     const isPlanet = currentNewtonSkin === 'planet' || 
         (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'planet');
     if (!isPlanet) return 1.0;
-    return 1.0 + (getActiveTemporaryBuffsCount() * 0.25);
+    return 1.0 + (getActiveTemporaryBuffsCount() * 1.0); // +100% за каждый активный бафф
 }
 
 // --- ТАЙМЕРЫ И ПЕРЕМЕННЫЕ ДЛЯ МЕХАНИК ЛЕСТНИЦ ---
@@ -1181,50 +1225,52 @@ const AudioEngine = {
         default: 'base_tup'
     },
 
-    activeSounds: [],
+    pool: {},
+    maxPoolPerSound: 4,
 
-
-
-    // Добавили флаг isTap (по умолчанию false)
     play: function (soundName, vol = 1.0, channel = 'sfx') {
         try {
-            if (this.sounds[soundName]) {
-                this.sounds[soundName].pause();
-                this.sounds[soundName].currentTime = 0;
+            if (!this.pool[soundName]) {
+                this.pool[soundName] = [];
             }
 
-            const audio = new Audio(`assets/sounds/${soundName}.ogg`);
+            const soundList = this.pool[soundName];
+            // Ищем готовый свободный элемент
+            let audio = soundList.find(a => a.paused || a.ended);
 
-            // Выбираем множитель строго под свой звуковой канал
+            // Если все заняты, но лимит пула не исчерпан — создаём новый
+            if (!audio && soundList.length < this.maxPoolPerSound) {
+                audio = new Audio(`assets/sounds/${soundName}.ogg`);
+                soundList.push(audio);
+            }
+
+            // Если лимит достигнут — переиспользуем самый первый
+            if (!audio) {
+                audio = soundList[0];
+            }
+
             let multiplier = 1.0;
             if (channel === 'tap') multiplier = settingsState.tapVol !== undefined ? settingsState.tapVol : 1.0;
             else if (channel === 'speaker') multiplier = settingsState.speakerVol !== undefined ? settingsState.speakerVol : 1.0;
             else if (channel === 'newton') multiplier = settingsState.newtonVol !== undefined ? settingsState.newtonVol : 1.0;
-            else multiplier = settingsState.sfxVol !== undefined ? settingsState.sfxVol : 1.0; // обычные sfx
+            else multiplier = settingsState.sfxVol !== undefined ? settingsState.sfxVol : 1.0;
 
             audio.volume = Math.max(0, Math.min(1, vol * multiplier));
-
-            this.sounds[soundName] = audio;
-            audio.onended = () => {
-                if (this.sounds[soundName] === audio) {
-                    delete this.sounds[soundName];
-                }
-            };
-
-            audio.play().catch(e => console.warn(`[AudioEngine] Ошибка воспроизведения ${soundName}.ogg:`, e));
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
         } catch (e) {
-            console.error(`[AudioEngine] Сбой вызова звука:`, e);
+            console.warn(`[AudioEngine] Сбой воспроизведения ${soundName}:`, e);
         }
     },
 
     stop: function (soundName) {
-        if (this.sounds[soundName]) {
-            this.sounds[soundName].pause();
-            this.sounds[soundName].currentTime = 0;
-            delete this.sounds[soundName];
+        if (this.pool[soundName]) {
+            this.pool[soundName].forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+            });
         }
     },
-
     // Воспроизведение звука тапа
     playTap: function (skinId) {
         let soundName = this.ladderSounds.default;
@@ -2819,12 +2865,18 @@ document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРО�
             saveGame();
         };
     } else {
-        // Покупка
+        // Покупка (ассеты гаек вместо эмодзи)
         const isGold = skinData.priceType === 'goldenNuts';
-        const currencyIcon = isGold ? '🟡' : '🔩';
+        const currencyIcon = isGold 
+            ? '<img src="assets/golden_nut.webp" class="ui-ico">' 
+            : '<img src="assets/nut.webp" class="ui-ico">';
         const canAfford = isGold ? (goldenNuts >= skinData.price) : (nuts >= skinData.price);
 
-        actionBtn.innerText = `КУПИТЬ ЗА ${skinData.price} ${currencyIcon}`;
+        actionBtn.innerHTML = `КУПИТЬ ЗА ${skinData.price} ${currencyIcon}`;
+        actionBtn.style.display = 'flex';
+        actionBtn.style.alignItems = 'center';
+        actionBtn.style.justifyContent = 'center';
+        actionBtn.style.gap = '6px';
         actionBtn.style.background = canAfford ? (isGold ? '#f1c40f' : '#e67e22') : '#555';
         actionBtn.style.color = canAfford ? '#111' : '#bdc3c7';
         actionBtn.disabled = !canAfford;
@@ -2846,7 +2898,7 @@ document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРО�
             };
 
             if (isGold && goldenNuts >= skinData.price) {
-                showConfirmPurchase('Покупка обвеса', `Купить "${skinData.name}" за ${skinData.price} 🟡?`, skinData.price, processPurchase);
+                showConfirmPurchase('Покупка обвеса', `Купить "${skinData.name}" за ${skinData.price} <img src="assets/golden_nut.webp" class="ui-ico">?`, skinData.price, processPurchase);
             } else if (!isGold && nuts >= skinData.price) {
                 processPurchase();
             }
@@ -2973,7 +3025,7 @@ function renderLuckModal() {
             btn.disabled = !canAfford;
             btn.onclick = () => {
                 if (goldenNuts >= item.price) {
-                    showConfirmPurchase('Новый талисман', `Купить талисман "${item.name}" за ${item.price} 🟡?`, item.price, () => {
+                    showConfirmPurchase('Новый талисман', `Купить талисман "${item.name}" за ${item.price} <img src="assets/golden_nut.webp" class="ui-ico">?`, item.price, () => {
                         goldenNuts -= item.price;
                         ownedTalismans.push(id);
                         equipItem('talismans', id);
@@ -3160,7 +3212,7 @@ if (mGold) mGold.innerText = goldenNuts;
                     triggerCaseGainedPopup();
                 }
                 if (uiBoxText) {
-                    uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
+                    uiBoxText.innerText = `${clicksForBox}/${actualNeeded}`;
                 }
                 if (uiBoxProgress) {
                     uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
@@ -3943,34 +3995,33 @@ function drawBackground() {
     // === ГЛУБОКИЙ КОСМИЧЕСКИЙ ЗАДНИК (НЕБУЛА И ЧЕРНАЯ ДЫРА) ==
     // ========================================================
 
-    // 1. МЛЕЧНЫЙ ПУТЬ И ДАЛЕЕ (>= 800 000 м): Бесшовная сияющая туманность
+    // 1. МЛЕЧНЫЙ ПУТЬ И ДАЛЕЕ (>= 800 000 м): 1 гигантская туманность на экран + концы соседних
     if (currentHeight >= 800000) {
-        // Проявление на Млечном Пути, легкое приглушение возле Черной Дыры для атмосферы бездны
         let nebFade = Math.min(1, Math.max(0, (currentHeight - 800000) / 400000));
         if (currentHeight >= 8500000) {
-            nebFade *= 0.55; // У черной дыры туманность становится темнее и глубже
+            nebFade *= 0.55;
         }
 
-        const nebPulse = 0.42 + Math.sin(Date.now() * 0.0006) * 0.06;
+        const nebPulse = 0.46 + Math.sin(Date.now() * 0.0006) * 0.06;
         const finalNebAlpha = nebFade * nebPulse;
 
         if (finalNebAlpha > 0 && nebulaImg.complete && nebulaImg.naturalWidth !== 0) {
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
 
-            const nebW = canvas.width * 2.5;
-            const nebH = nebW * (1097 / 3168);
+            // Крупный масштаб: одна туманность по диагонали накрывает почти весь экран
+            const nebW = canvas.width * 4.2;
+            const nebH = nebW * (nebulaImg.naturalHeight / nebulaImg.naturalWidth) * 1.15;
 
-            // Мягкий непрерывный микро-дрейф плазмы
-            const timeFloatX = Math.sin(Date.now() * 0.00025) * 12;
-            const timeFloatY = Math.cos(Date.now() * 0.0002) * 8;
-            const liveScale = 1.0 + Math.sin(Date.now() * 0.00035) * 0.02;
+            const timeFloatX = Math.sin(Date.now() * 0.00025) * 14;
+            const timeFloatY = Math.cos(Date.now() * 0.0002) * 10;
+            const liveScale = 1.05 + Math.sin(Date.now() * 0.00035) * 0.03;
 
-            // БЕСШОВНЫЙ ШАГ: шаг равен 75% экрана
-            const stepY = canvas.height * 0.75;
-const nebulaSpeedFactor = 0.015; // Было 0.035 (уменьшили в 2.3 раза)
-const scrollY = (visualHouseHeight * nebulaSpeedFactor) % stepY;
-const blockIndex = Math.floor((visualHouseHeight * nebulaSpeedFactor) / stepY);
+            // Шаг 0.82 высоты экрана: в кадре всегда 1 целая + 2 конца (или 2 половинки на стыке)
+            const stepY = Math.max(320, canvas.height * 0.82);
+            const nebulaSpeedFactor = 0.015;
+            const scrollY = (visualHouseHeight * nebulaSpeedFactor) % stepY;
+            const blockIndex = Math.floor((visualHouseHeight * nebulaSpeedFactor) / stepY);
 
             const drawNebulaArm = (posX, posY, rotDeg, flip = false) => {
                 ctx.save();
@@ -3979,24 +4030,22 @@ const blockIndex = Math.floor((visualHouseHeight * nebulaSpeedFactor) / stepY);
                 if (flip) ctx.scale(-1, 1);
                 ctx.scale(liveScale, liveScale);
 
-                // Внешнее рассеянное свечение (Bloom)
-                ctx.globalAlpha = finalNebAlpha * 0.35;
-                ctx.drawImage(nebulaImg, -nebW * 1.08 / 2, -nebH * 1.08 / 2, nebW * 1.08, nebH * 1.08);
+                ctx.globalAlpha = finalNebAlpha * 0.4;
+                ctx.drawImage(nebulaImg, -nebW * 1.1 / 2, -nebH * 1.1 / 2, nebW * 1.1, nebH * 1.1);
 
-                // Основное тело газового рукава
                 ctx.globalAlpha = finalNebAlpha;
                 ctx.drawImage(nebulaImg, -nebW / 2, -nebH / 2, nebW, nebH);
 
                 ctx.restore();
             };
 
-            // Рисуем непрерывные слои без скачков ориентации при переходе
+            // Достаточно диапазона от -1 до 2 при большом шаге
             for (let i = -1; i <= 2; i++) {
                 const curY = scrollY + (i * stepY);
-                // ИСПРАВЛЕНО: ориентация привязана к глобальному положению слоя в космосе
                 const globalLayer = i - blockIndex;
                 const isFlipped = Math.abs(globalLayer) % 2 === 1;
-                drawNebulaArm(canvas.width * 0.5, curY, isFlipped ? 22 : -22, isFlipped);
+                const offsetX = isFlipped ? (canvas.width * 0.06) : -(canvas.width * 0.06);
+                drawNebulaArm(canvas.width * 0.5 + offsetX, curY, isFlipped ? 22 : -22, isFlipped);
             }
 
             ctx.restore();
@@ -4313,7 +4362,9 @@ function drawLadder() {
     const targetHeight = targetWidth / imgAspect;
     if (isNaN(targetHeight) || targetHeight <= 0) return;
 
-    ladderYOffset = ((ladderYOffset % targetHeight) + targetHeight) % targetHeight;
+    // Шаг тайлинга с микро-нахлестом 2px против щелей
+    const stepH = Math.max(20, targetHeight - 2);
+    ladderYOffset = ((ladderYOffset % stepH) + stepH) % stepH;
 
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2 + ladderDropY);
@@ -4322,18 +4373,26 @@ function drawLadder() {
     const x = -targetWidth / 2;
     const baseY = -targetHeight / 2 + ladderYOffset;
 
-    // === ОБЫЧНЫЕ ЛЕСТНИЦЫ ===
+    // Сколько сегментов нужно вверх и вниз, чтобы перекрыть экран даже при сильном сжатии ladderScaleY
+    const neededTiles = Math.ceil((canvas.height * 1.5) / stepH) + 1;
+
+    // Вспомогательная функция бесконечной отрисовки любого изображения/маски по всей высоте
+    const drawInfiniteTiles = (imgSource, offsetX = 0, offsetY = 0) => {
+        for (let k = -neededTiles; k <= neededTiles; k++) {
+            ctx.drawImage(imgSource, x + offsetX, baseY + k * stepH + offsetY, targetWidth, targetHeight);
+        }
+    };
+
+    // === ОБЫЧНЫЕ И ЭНДГЕЙМ ЛЕСТНИЦЫ ===
     if (currentSkinId !== 'quant') {
-        ctx.drawImage(ladderImg, x, baseY, targetWidth, targetHeight);
-        ctx.drawImage(ladderImg, x, baseY - targetHeight + 2, targetWidth, targetHeight);
-        ctx.drawImage(ladderImg, x, baseY + targetHeight - 2, targetWidth, targetHeight);
+        drawInfiniteTiles(ladderImg);
 
         // === ЖИВОЙ НЕОН ДЛЯ НЛО, МЛЕЧНОГО ПУТИ И АБСОЛЮТА ===
         const isEndgameSkin = ['ufo', 'milkyway', 'endless', 'absolute'].includes(currentSkinId);
 
         if (isEndgameSkin) {
             if (!ufoGlowCanvas && ladderImg.complete && ladderImg.naturalWidth) {
-                initUfoGlowMask(); // Создаем маску для текущей надетой лестницы
+                initUfoGlowMask();
             }
 
             if (ufoGlowCanvas) {
@@ -4342,16 +4401,12 @@ function drawLadder() {
                 const sx = targetWidth / ladderImg.naturalWidth;
                 const sy = targetHeight / ladderImg.naturalHeight;
 
-                // 1. ОСНОВНОЕ ТЕЛО РЕАКТОРА
                 ctx.globalCompositeOperation = 'screen';
                 const maskPulse = 0.34 + Math.sin(now / 420) * 0.18;
                 ctx.globalAlpha = maskPulse;
 
-                ctx.drawImage(ufoGlowCanvas, x, baseY, targetWidth, targetHeight);
-                ctx.drawImage(ufoGlowCanvas, x, baseY - targetHeight + 2, targetWidth, targetHeight);
-                ctx.drawImage(ufoGlowCanvas, x, baseY + targetHeight - 2, targetWidth, targetHeight);
+                drawInfiniteTiles(ufoGlowCanvas);
 
-                // 2. ЧЁТКИЙ ОСТРЫЙ ТРЕЗУБЕЦ (Только для НЛО!)
                 if (currentSkinId === 'ufo') {
                     ctx.globalCompositeOperation = 'lighter';
                     const lights = [
@@ -4405,9 +4460,9 @@ function drawLadder() {
                         }
                     };
 
-                    drawTridents(0);
-                    drawTridents(-targetHeight + 2);
-                    drawTridents(targetHeight - 2);
+                    for (let k = -neededTiles; k <= neededTiles; k++) {
+                        drawTridents(k * stepH);
+                    }
                 }
                 ctx.restore();
             }
@@ -4419,28 +4474,24 @@ function drawLadder() {
             const now = Date.now();
             const sx = targetWidth / ladderImg.naturalWidth;
             const sy = targetHeight / ladderImg.naturalHeight;
-            const intensity = blackHoleBonus / 10.0; // от 0.1 до 1.0
+            const intensity = blackHoleBonus / 10.0;
 
-            // ТВОИ ТОЧНЫЕ Y-КООРДИНАТЫ ЦЕНТРОВ РАЗЛОМОВ
             const holeYs = [208, 440, 670, 894, 1123, 1353, 1806, 2033, 2257];
 
             const drawSingularities = (offsetY) => {
                 for (let i = 0; i < holeYs.length; i++) {
                     const hy = baseY + holeYs[i] * sy + offsetY;
-                    const hx = 0; // X=208 находится ровно по центру спрайта
-
-                    // Габариты вертикальной щели: узкая по X, вытянутая по Y
+                    const hx = 0;
                     const slitRx = 9 * sx;
                     const slitRy = 26 * sy;
 
-                    // 1. ПУЛЬСИРУЮЩАЯ БЕЗДНА ИЗНУТРИ ЩЕЛИ (Режим Screen)
                     ctx.save();
                     ctx.globalCompositeOperation = 'screen';
 
                     const breathe = 0.5 + Math.sin(now / 300 + i) * 0.35;
                     const auraGrad = ctx.createRadialGradient(hx, hy, 2 * sx, hx, hy, slitRy * 1.5);
-                    auraGrad.addColorStop(0, `rgba(255, 120, 30, ${0.4 + intensity * 0.6})`); // Горячее ядро
-                    auraGrad.addColorStop(0.4, `rgba(142, 68, 173, ${0.3 + intensity * 0.4})`); // Фиолетовый горизонт
+                    auraGrad.addColorStop(0, `rgba(255, 120, 30, ${0.4 + intensity * 0.6})`);
+                    auraGrad.addColorStop(0.4, `rgba(142, 68, 173, ${0.3 + intensity * 0.4})`);
                     auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
                     ctx.fillStyle = auraGrad;
@@ -4448,14 +4499,12 @@ function drawLadder() {
                     ctx.ellipse(hx, hy, slitRx * 1.6, slitRy * 1.3, 0, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // 2. ФОТОННОЕ КОЛЬЦО ЭЙНШТЕЙНА (Тончайшая дуга по кромке щели)
                     ctx.lineWidth = 1.8 * sx;
                     ctx.strokeStyle = `rgba(255, 180, 50, ${0.4 + breathe * 0.5 * intensity})`;
                     ctx.beginPath();
                     ctx.ellipse(hx, hy, slitRx * 0.95, slitRy * 0.95, 0, 0, Math.PI * 2);
                     ctx.stroke();
 
-                    // Внутренний квантовый циановый контур
                     ctx.lineWidth = 1.0 * sx;
                     ctx.strokeStyle = `rgba(0, 240, 255, ${0.3 + intensity * 0.5})`;
                     ctx.beginPath();
@@ -4463,15 +4512,12 @@ function drawLadder() {
                     ctx.stroke();
                     ctx.restore();
 
-                    // 3. ЗАСАСЫВАНИЕ КВАНТОВЫХ ЧАСТИЦ (Спираль аккреции)
                     ctx.save();
                     ctx.globalCompositeOperation = 'lighter';
                     const swirlSpeed = now * 0.005;
 
                     for (let s = 0; s < 3; s++) {
-                        // Каждая частица крутится на своей фазе
                         const phase = swirlSpeed + (s * (Math.PI * 2 / 3)) + i;
-                        // Спираль: расстояние до центра плавно сжимается в ноль
                         const distP = (swirlSpeed * 0.6 + s * 0.33) % 1;
                         const curDistX = (1 - distP) * (slitRx * 2.5);
                         const curDistY = (1 - distP) * (slitRy * 1.8);
@@ -4489,11 +4535,9 @@ function drawLadder() {
                 }
             };
 
-            // Отрисовываем на всех 3-х тайлах лестницы
-            drawSingularities(0);
-            drawSingularities(-targetHeight + 2);
-            drawSingularities(targetHeight - 2);
-
+            for (let k = -neededTiles; k <= neededTiles; k++) {
+                drawSingularities(k * stepH);
+            }
             ctx.restore();
         }
 
@@ -4509,18 +4553,12 @@ function drawLadder() {
     const glitchActive = isBurst || isPassiveTwitch;
     const splitDist = isBurst ? (5 + Math.random() * 7) : (glitchActive ? 3 : 1.5);
 
-    const drawSegments = (offsetX = 0, offsetY = 0) => {
-        ctx.drawImage(ladderImg, x + offsetX, baseY + offsetY, targetWidth, targetHeight);
-        ctx.drawImage(ladderImg, x + offsetX, baseY - targetHeight + 2 + offsetY, targetWidth, targetHeight);
-        ctx.drawImage(ladderImg, x + offsetX, baseY + targetHeight - 2 + offsetY, targetWidth, targetHeight);
-    };
-
     ctx.save();
     ctx.shadowColor = 'rgba(255, 0, 85, 0.75)';
     ctx.shadowOffsetX = -splitDist;
     ctx.shadowOffsetY = (Math.random() - 0.5) * (isBurst ? 3 : 0);
     ctx.shadowBlur = isBurst ? 4 : 1;
-    drawSegments();
+    drawInfiniteTiles(ladderImg);
     ctx.restore();
 
     ctx.save();
@@ -4528,23 +4566,23 @@ function drawLadder() {
     ctx.shadowOffsetX = splitDist;
     ctx.shadowOffsetY = (Math.random() - 0.5) * (isBurst ? 3 : 0);
     ctx.shadowBlur = isBurst ? 4 : 1;
-    drawSegments();
+    drawInfiniteTiles(ladderImg);
     ctx.restore();
 
-    drawSegments();
+    drawInfiniteTiles(ladderImg);
 
     if (isBurst) {
         const sliceCount = 3 + Math.floor(Math.random() * 3);
         for (let s = 0; s < sliceCount; s++) {
             const sliceH = 10 + Math.random() * 25;
-            const sliceY = -targetHeight / 2 + Math.random() * targetHeight;
+            const sliceY = -canvas.height / 2 + Math.random() * canvas.height;
             const sliceShift = (Math.random() - 0.5) * 18;
 
             ctx.save();
             ctx.beginPath();
             ctx.rect(x - 30, sliceY, targetWidth + 60, sliceH);
             ctx.clip();
-            ctx.drawImage(ladderImg, x + sliceShift, baseY, targetWidth, targetHeight);
+            drawInfiniteTiles(ladderImg, sliceShift, 0);
             ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0, 255, 255, 0.25)' : 'rgba(255, 0, 120, 0.25)';
             ctx.fillRect(x - 30, sliceY, targetWidth + 60, sliceH);
             ctx.restore();
@@ -4816,36 +4854,33 @@ function drawParticles() {
             p.x += dx * 0.04 * pullForce;
         }
 
-        p.y -= p.speed;
+        p.y -= (p.speed || 2.5);
         p.alpha -= 0.02;
 
         ctx.save();
         ctx.globalAlpha = Math.max(0, p.alpha);
 
-        // Крупный базовый размер (30px)
-        ctx.font = p.font || 'bold 30px sans-serif';
-        ctx.lineWidth = 3.5;
-        ctx.textBaseline = 'middle'; // Центрирует текст по вертикали с иконкой
+        // Аккуратный фиксированный размер шрифта
+        ctx.font = p.font || 'bold 22px sans-serif';
+        ctx.lineWidth = 3;
+        ctx.textBaseline = 'middle';
         ctx.strokeStyle = `rgba(0, 0, 0, ${p.alpha})`;
         ctx.fillStyle = p.color ? p.color.replace('ALPHA', p.alpha) : `rgba(255, 255, 255, ${p.alpha})`;
 
-        // Если есть и иконка, и текст (связка молния + цифры)
+        const s = p.imgSize || 22;
+        const gap = 6;
+
         if (p.img && p.img.complete && p.img.naturalWidth !== 0 && p.text) {
-            const s = p.imgSize || 26;
             const textW = ctx.measureText(p.text).width;
-            const gap = 8;
             const totalW = s + gap + textW;
             const startX = p.x - totalW / 2;
 
-            // Молния
             ctx.drawImage(p.img, startX, p.y - s / 2, s, s);
 
-            // Текст очков
             ctx.textAlign = 'left';
             ctx.strokeText(p.text, startX + s + gap, p.y);
             ctx.fillText(p.text, startX + s + gap, p.y);
         } else if (p.img && p.img.complete && p.img.naturalWidth !== 0) {
-            const s = p.imgSize || 26;
             ctx.drawImage(p.img, p.x - s / 2, p.y - s / 2, s, s);
         } else if (p.text) {
             ctx.textAlign = 'center';
@@ -5307,7 +5342,7 @@ for (let i = 0; i < tapsNum; i++) {
 
     // Обновление текста и вертикальной шкалы прогресса
     if (uiBoxText) {
-        uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualClicksNeeded}`;
+        uiBoxText.innerText = `${clicksForBox}/${actualClicksNeeded}`;
     }
     if (uiBoxProgress) {
         uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualClicksNeeded) * 100)}%`;
@@ -5508,13 +5543,6 @@ document.getElementById('buy-newton').addEventListener('click', () => {
 // --- КЕЙСЫ, РУЛЕТКА-ЛЕСТНИЦА И ИНВЕНТАРЬ ---
 // ===================================================
 
-const GACHA_CELL_H = 100;
-const GACHA_WIN_INDEX = 42;
-let currentGachaY = 0;
-let targetGachaY = 0;
-let pendingPrize = null;
-let lastGachaRung = 0;
-
 const RARITY_COLORS = {
     common: '#bdc3c7',
     rare: '#3498db',
@@ -5523,67 +5551,101 @@ const RARITY_COLORS = {
     special: '#e74c3c'
 };
 
+// === БАЗОВЫЕ ВЕЛИЧИНЫ РУЛЕТКИ (п. 0 ТЗ) ===
+let GACHA_CELL_H = 112;
+let GACHA_K = 1.0;
+const GACHA_WIN_INDEX = 42;
+
+let currentGachaY = 0;
+let targetGachaY = 0;
+let pendingPrize = null;
+let rewardGranted = false;
+let lastGachaRung = 0;
+let lastGachaPhysTime = 0;
+let lastDrumCenterIdx = -1;
+let justSkippedGacha = false;
+
+function updateGachaDimensions() {
+    const vh = window.innerHeight;
+    GACHA_CELL_H = Math.max(80, Math.min(120, Math.floor((0.62 * vh) / 5)));
+    GACHA_K = GACHA_CELL_H / 112;
+    document.documentElement.style.setProperty('--cell-h', `${GACHA_CELL_H}px`);
+}
+
+window.addEventListener('resize', () => {
+    if (!isGachaSpinning) updateGachaDimensions();
+});
+updateGachaDimensions();
 
 function createGachaItemCard(item, caseId = 'wooden') {
-    const card = document.createElement('div');
-    card.style.position = 'relative';
-    card.style.width = '100%';
-    card.style.height = `${GACHA_CELL_H}px`;
-    card.style.boxSizing = 'border-box';
-    card.style.display = 'flex';
-    card.style.flexDirection = 'column';
-    card.style.justifyContent = 'center';
-    card.style.alignItems = 'center';
+    const cell = document.createElement('div');
+    cell.className = 'gacha-cell is-far';
 
+    // 1. БОКОВЫЕ СТОЙКИ (п. 3: ширина 14px, отступ 4px, без K)
     const leftRail = document.createElement('div');
     const rightRail = document.createElement('div');
     const rung = document.createElement('div');
+    rung.className = 'gacha-rung';
 
     if (caseId === 'gold') {
-        // === ЗОЛОТАЯ ЛЕСТНИЦА-КЕЙС ===
-        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#d4ac0d 0%,#fff9d2 30%,#f1c40f 65%,#9a7d0a 100%);box-shadow:inset 1px 0 4px #ffffff,inset -2px 0 5px rgba(0,0,0,0.7),0 0 8px rgba(241,196,15,0.35);border-right:1px solid #7d6608;';
-        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#9a7d0a 0%,#f1c40f 35%,#fff9d2 70%,#d4ac0d 100%);box-shadow:inset 2px 0 5px rgba(0,0,0,0.7),inset -1px 0 4px #ffffff,0 0 8px rgba(241,196,15,0.35);border-left:1px solid #7d6608;';
-        rung.style.cssText = 'position:absolute;bottom:4px;left:14px;right:14px;height:16px;background:linear-gradient(180deg,#fffdf0 0%,#f9e79f 20%,#f1c40f 50%,#b7950b 80%,#7d6608 100%);box-shadow:0 4px 12px rgba(0,0,0,0.9),0 0 10px rgba(241,196,15,0.5),inset 0 1px 2px #fff;border-radius:3px;border-top:1px solid #fff;border-bottom:1px solid #564805;';
-        // Рубиновые заклёпки на золоте
+        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#d4ac0d 0%,#fff9d2 30%,#f1c40f 65%,#9a7d0a 100%);box-shadow:inset 1px 0 3px #ffffff,inset -2px 0 4px rgba(0,0,0,0.7);border-right:1px solid #7d6608;z-index:3;';
+        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#9a7d0a 0%,#f1c40f 35%,#fff9d2 70%,#d4ac0d 100%);box-shadow:inset 2px 0 4px rgba(0,0,0,0.7),inset -1px 0 3px #ffffff;border-left:1px solid #7d6608;z-index:3;';
+        rung.style.cssText = 'position:absolute;bottom:-5.5px;left:14px;right:14px;height:11px;background:linear-gradient(180deg,#fffdf0 0%,#f9e79f 25%,#f1c40f 55%,#b7950b 80%,#7d6608 100%);box-shadow:0 3px 6px rgba(0,0,0,0.85),inset 0 1px 2px #fff;border-radius:2px;z-index:3;';
         rung.innerHTML = `
-            <div style="position:absolute;left:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#ff7675 25%,#d63031 75%,#2d3436 100%);border-radius:50%;box-shadow:0 0 6px #ff7675,0 1px 2px #000;"></div>
-            <div style="position:absolute;right:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#ff7675 25%,#d63031 75%,#2d3436 100%);border-radius:50%;box-shadow:0 0 6px #ff7675,0 1px 2px #000;"></div>
+            <div style="position:absolute;left:4px;top:3px;width:5px;height:5px;background:radial-gradient(circle,#ff7675 25%,#d63031 75%,#2d3436 100%);border-radius:50%;"></div>
+            <div style="position:absolute;right:4px;top:3px;width:5px;height:5px;background:radial-gradient(circle,#ff7675 25%,#d63031 75%,#2d3436 100%);border-radius:50%;"></div>
         `;
     } else if (caseId === 'iron') {
-        // === ЖЕЛЕЗНАЯ ЛЕСТНИЦА-СЕЙФ ===
-        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#636e72 0%,#b2bec3 35%,#4b5358 80%,#2d3436 100%);box-shadow:inset 1px 0 3px rgba(255,255,255,0.6),inset -2px 0 4px rgba(0,0,0,0.8);border-right:1px solid #1e272e;';
-        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#2d3436 0%,#4b5358 20%,#b2bec3 65%,#636e72 100%);box-shadow:inset 2px 0 4px rgba(0,0,0,0.8),inset -1px 0 3px rgba(255,255,255,0.6);border-left:1px solid #1e272e;';
-        rung.style.cssText = 'position:absolute;bottom:4px;left:14px;right:14px;height:16px;background:repeating-linear-gradient(90deg,#3d454d,#3d454d 3px,#636e72 3px,#636e72 6px),linear-gradient(180deg,#dfe6e9 0%,#636e72 40%,#2d3436 100%);background-blend-mode:overlay;box-shadow:0 4px 10px rgba(0,0,0,0.9),inset 0 1px 2px rgba(255,255,255,0.6);border-radius:3px;border-top:1px solid #dfe6e9;border-bottom:1px solid #111;';
-        // Стальные болты-шестигранники
+        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#636e72 0%,#b2bec3 35%,#4b5358 80%,#2d3436 100%);box-shadow:inset 1px 0 3px rgba(255,255,255,0.6),inset -2px 0 4px rgba(0,0,0,0.8);border-right:1px solid #1e272e;z-index:3;';
+        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#2d3436 0%,#4b5358 20%,#b2bec3 65%,#636e72 100%);box-shadow:inset 2px 0 4px rgba(0,0,0,0.8),inset -1px 0 3px rgba(255,255,255,0.6);border-left:1px solid #1e272e;z-index:3;';
+        rung.style.cssText = 'position:absolute;bottom:-5.5px;left:14px;right:14px;height:11px;background:repeating-linear-gradient(90deg,#3d454d,#3d454d 3px,#636e72 3px,#636e72 6px),linear-gradient(180deg,#dfe6e9 0%,#636e72 40%,#2d3436 100%);background-blend-mode:overlay;box-shadow:0 3px 6px rgba(0,0,0,0.85);border-radius:2px;z-index:3;';
         rung.innerHTML = `
-            <div style="position:absolute;left:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#dfe6e9 30%,#2d3436 90%);border:1px solid #111;border-radius:2px;box-shadow:0 1px 2px #000;"></div>
-            <div style="position:absolute;right:3px;top:3px;width:8px;height:8px;background:radial-gradient(circle,#dfe6e9 30%,#2d3436 90%);border:1px solid #111;border-radius:2px;box-shadow:0 1px 2px #000;"></div>
+            <div style="position:absolute;left:4px;top:3px;width:5px;height:5px;background:radial-gradient(circle,#dfe6e9 30%,#2d3436 90%);border-radius:2px;"></div>
+            <div style="position:absolute;right:4px;top:3px;width:5px;height:5px;background:radial-gradient(circle,#dfe6e9 30%,#2d3436 90%);border-radius:2px;"></div>
         `;
     } else {
-        // === ДЕРЕВЯННАЯ СТРЕМЯНКА ===
-        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#5c3a21 0%,#8d5524 45%,#4a2e1b 100%);box-shadow:inset 1px 0 2px rgba(255,255,255,0.15),inset -2px 0 4px rgba(0,0,0,0.8);border-right:1px solid #341a0b;';
-        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#4a2e1b 0%,#7d4820 45%,#3c1e0e 100%);box-shadow:inset 2px 0 4px rgba(0,0,0,0.8),inset -1px 0 2px rgba(255,255,255,0.1);border-left:1px solid #341a0b;';
-        rung.style.cssText = 'position:absolute;bottom:4px;left:14px;right:14px;height:16px;background:linear-gradient(180deg,#965b2d 0%,#6d3d19 50%,#43220c 100%);box-shadow:0 4px 8px rgba(0,0,0,0.85),inset 0 1px 1px rgba(255,255,255,0.25);border-radius:2px;';
-        // Тёмные кованые гвозди
+        leftRail.style.cssText = 'position:absolute;left:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#5c3a21 0%,#8d5524 45%,#4a2e1b 100%);box-shadow:inset 1px 0 2px rgba(255,255,255,0.15),inset -2px 0 4px rgba(0,0,0,0.8);border-right:1px solid #341a0b;z-index:3;';
+        rightRail.style.cssText = 'position:absolute;right:4px;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#4a2e1b 0%,#7d4820 45%,#3c1e0e 100%);box-shadow:inset 2px 0 4px rgba(0,0,0,0.8),inset -1px 0 2px rgba(255,255,255,0.1);border-left:1px solid #341a0b;z-index:3;';
+        rung.style.cssText = 'position:absolute;bottom:-5.5px;left:14px;right:14px;height:11px;background:linear-gradient(180deg,#965b2d 0%,#6d3d19 50%,#43220c 100%);box-shadow:0 3px 5px rgba(0,0,0,0.85);border-radius:2px;z-index:3;';
         rung.innerHTML = `
-            <div style="position:absolute;left:3px;top:4px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#7f8c8d 30%,#2c3e50 90%);box-shadow:0 1px 2px #000;"></div>
-            <div style="position:absolute;right:3px;top:4px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#7f8c8d 30%,#2c3e50 90%);box-shadow:0 1px 2px #000;"></div>
+            <div style="position:absolute;left:4px;top:2px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#7f8c8d 30%,#2c3e50 90%);"></div>
+            <div style="position:absolute;right:4px;top:2px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#7f8c8d 30%,#2c3e50 90%);"></div>
         `;
     }
 
-    card.appendChild(leftRail);
-    card.appendChild(rightRail);
-    card.appendChild(rung);
+    cell.appendChild(leftRail);
+    cell.appendChild(rightRail);
+    cell.appendChild(rung);
 
-    // Контент награды между перекладинами
+    // 2. КОНТЕНТ (п. 2: overflow:hidden, opacity барабана)
     const content = document.createElement('div');
-    content.style.cssText = 'display:flex;flex-direction:column;align-items:center;margin-bottom:14px;z-index:2;';
+    content.className = 'gacha-item-content';
 
+    const aura = document.createElement('div');
+    aura.className = 'gacha-item-aura';
+    content.appendChild(aura);
+
+    // 3. ВНУТРЕННИЙ БЛОК (scale 1.1 при центрировании)
+    const inner = document.createElement('div');
+    inner.className = 'gacha-item-inner';
+
+    // 4. СОДЕРЖИМОЕ С МАСШТАБОМ K (Увеличенные превью и цветная подсветка редкости)
     if (item.type === 'nuts') {
-        content.innerHTML = `
-            <img src="assets/nut.webp" style="width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
-            <div style="color: #f1c40f; font-size: 11px; font-weight: bold; margin-top: 2px;">+${item.amount}</div>
-        `;
+        // Теплая золотая аура для гаек
+        aura.style.background = 'radial-gradient(circle, rgba(241, 196, 15, 0.42) 0%, rgba(241, 196, 15, 0.1) 50%, transparent 72%)';
+        aura.style.opacity = '0.45';
+
+        const nutSize = Math.round(64 * GACHA_K);
+        const nutImg = document.createElement('img');
+        nutImg.src = 'assets/nut.webp';
+        nutImg.style.cssText = `width: ${nutSize}px; height: ${nutSize}px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.9)); z-index: 2;`;
+
+        const valText = document.createElement('div');
+        valText.style.cssText = `color: #f1c40f; font-size: ${Math.round(16 * GACHA_K)}px; font-weight: 900; margin-top: ${Math.round(4 * GACHA_K)}px; z-index: 2; text-shadow: 0 2px 4px #000;`;
+        valText.innerText = `+${item.amount}`;
+
+        inner.appendChild(nutImg);
+        inner.appendChild(valText);
     } else {
         let meta = { name: 'Предмет', rarity: 'common', file: '' };
         if (item.type === 'skin') meta = LADDER_SKINS[item.id] || meta;
@@ -5593,18 +5655,32 @@ function createGachaItemCard(item, caseId = 'wooden') {
 
         const color = RARITY_COLORS[meta.rarity] || '#bdc3c7';
 
-        content.innerHTML = `
-            <div style="width: 32px; height: 42px; display: flex; justify-content: center; align-items: center; filter: drop-shadow(0 0 6px ${color});">
-                <img src="${meta.file || 'assets/wood_stair-removebg-preview.png'}" style="width: 26px; max-height: 38px; object-fit: contain;" onerror="this.style.display='none'">
-            </div>
-            <div style="color: ${color}; font-size: 10px; font-weight: bold; margin-top: 2px; max-width: 95px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px #000;">${meta.name}</div>
-        `;
+        // Подсвечиваем слот рулетки цветом редкости предмета ДАЖЕ во время вращения!
+        aura.style.background = `radial-gradient(circle, ${color}55 0%, ${color}18 52%, transparent 72%)`;
+        aura.style.opacity = '0.65';
+
+        // Увеличили размер контейнера и спрайта лестницы, чтобы они читались четко
+        const boxW = Math.round(76 * GACHA_K);
+        const boxH = Math.round(80 * GACHA_K);
+        const imgW = Math.round(62 * GACHA_K);
+        const imgMaxH = Math.round(76 * GACHA_K);
+
+        const iconBox = document.createElement('div');
+        iconBox.style.cssText = `width: ${boxW}px; height: ${boxH}px; display: flex; justify-content: center; align-items: center; filter: drop-shadow(0 0 10px ${color}); z-index: 2;`;
+        iconBox.innerHTML = `<img src="${meta.file || 'assets/wood_stair-removebg-preview.png'}" style="width: ${imgW}px; max-height: ${imgMaxH}px; object-fit: contain;" onerror="this.style.display='none'">`;
+
+        const nameText = document.createElement('div');
+        nameText.style.cssText = `color: ${color}; font-size: ${(14 * GACHA_K).toFixed(1)}px; font-weight: 900; margin-top: ${Math.round(3 * GACHA_K)}px; max-width: ${Math.round(190 * GACHA_K)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 4px #000; z-index: 2;`;
+        nameText.innerText = meta.name;
+
+        inner.appendChild(iconBox);
+        inner.appendChild(nameText);
     }
 
-    card.appendChild(content);
-    return card;
+    content.appendChild(inner);
+    cell.appendChild(content);
+    return cell;
 }
-
 // 2. Определение победителя по весам
 function rollLootFromCase(caseId) {
     const caseData = CASES_DB[caseId] || CASES_DB.wooden;
@@ -5619,11 +5695,21 @@ function rollLootFromCase(caseId) {
             const bonusMult = 1 + (totalLuck * 0.01); // +1% за единицу удачи
             const finalNuts = Math.floor(baseAmount * bonusMult);
 
-            // Микро-джекпот: 3% шанс на +1 🟡 при 30+ удачи
+            // Микро-джекпот: 3% шанс на +1 золото при 30+ удачи
             if (totalLuck >= 30 && Math.random() < 0.03) {
                 goldenNuts += 1;
                 if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
-                particles.push({ x: canvas.width / 2, y: canvas.height * 0.3, text: '✨ ДЖЕКПОТ: +1 🟡!', color: '#f1c40f', alpha: 2, speed: 1.5 });
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height * 0.3,
+                    img: canvasIcoGold,
+                    imgSize: 24,
+                    text: 'ДЖЕКПОТ: +1!',
+                    color: '#f1c40f',
+                    font: 'bold 22px sans-serif',
+                    alpha: 2,
+                    speed: 1.5
+                });
             }
 
             return { type: 'nuts', amount: finalNuts, name: `${finalNuts} Гаек` };
@@ -5710,221 +5796,34 @@ if (btnClaimTimedBox) {
     };
 }
 
-// 3. Запуск анимации вращения
+// ===================================================
+// --- РУЛЕТКА И ОТКРЫТИЕ КЕЙСОВ ---
+// ===================================================
+
 let isGachaSpinning = false;
+let currentActiveCaseId = 'wooden';
+let gachaAnimFrameId = null;
+let gachaFinishTimeoutId = null;
 
-function startCaseOpening(caseId = 'wooden', isReroll = false) {
-    // 1. Сразу глушим все победные звуки предыдущего дропа
+// Единая функция фиксации выигрыша
+// Фиксация выигрыша (строго один раз при закрытии / переходе / сворачивании)
+function claimPendingGachaPrize() {
+    if (rewardGranted || !pendingPrize) return;
+    rewardGranted = true;
+
     AudioEngine.stop('jacpot');
     AudioEngine.stop('win');
     AudioEngine.stop('gaiki');
     AudioEngine.stop('open_case_end');
 
-    // 2. Сразу убираем кнопки реролла с экрана, пока крутится лента
-    const oldNeonBtn = document.getElementById('btn-neon-reroll');
-    if (oldNeonBtn) oldNeonBtn.remove();
-    const oldAdBtn = document.getElementById('btn-ad-reroll');
-    if (oldAdBtn) oldAdBtn.remove();
-
-    // 3. Сбрасываем попытки только если это абсолютно новый кейс
-    if (!isReroll) {
-        window._caseAdRerollUsed = false;
-        neonRerollUsed = false;
-    }
-
-    const modal = document.getElementById('gachaModal');
-    const tape = document.getElementById('gachaTape');
-    const claimBtn = document.getElementById('gachaClaimBtn');
-    const title = document.getElementById('gachaTitle');
-
-    // Прячем окно со списком кейсов, чтобы не мешало
-    if (casesModal) casesModal.classList.add('hidden');
-
-    const caseData = CASES_DB[caseId] || CASES_DB.wooden;
-    title.innerText = `Открываем: ${caseData.name}`;
-    title.style.color = caseData.color;
-
-    // Подсвечиваем саму рамку рулетки под цвет текущего кейса
-    if (tape && tape.parentElement) {
-        tape.parentElement.style.borderColor = caseData.color;
-        tape.parentElement.style.boxShadow = `0 0 25px ${caseData.color}66`;
-    }
-
-    modal.style.display = 'flex';
-    claimBtn.style.display = 'none';
-    tape.innerHTML = '';
-    isGachaSpinning = true;
-
-    pendingPrize = rollLootFromCase(caseId);
-
-    // Сборка 50 ступеней лестницы (передаем caseId для отрисовки дерева/железа/золота)
-    for (let i = 0; i < 50; i++) {
-        const item = (i === GACHA_WIN_INDEX)
-            ? pendingPrize
-            : caseData.loot[Math.floor(Math.random() * caseData.loot.length)];
-        tape.appendChild(createGachaItemCard(item, caseId));
-    }
-
-    currentGachaY = 0;
-    lastGachaRung = 0;
-    const spinTickSound = Math.random() > 0.5 ? 'click' : 'click_3';
-    const offset = (Math.random() - 0.5) * 36;
-    targetGachaY = -(GACHA_WIN_INDEX * GACHA_CELL_H) + 100 + offset;
-
-    function finishSpin() {
-        if (!isGachaSpinning) return;
-        isGachaSpinning = false;
-        currentGachaY = targetGachaY;
-        tape.style.transform = `translateY(${currentGachaY}px)`;
-        claimBtn.style.display = 'block';
-
-        let prizeRarity = 'common';
-        let isDuplicate = false;
-        let prizeName = '';
-
-        // Определение типа выигрыша
-        if (pendingPrize.type === 'nuts') {
-            title.innerHTML = `ВЫИГРЫШ: +${pendingPrize.amount} <img src="assets/nut.webp" class="ui-ico-title">`;
-            title.style.color = '#54a0ff';
-            AudioEngine.play('open_case_end', 0.8);
-        } else {
-            if (pendingPrize.type === 'skin') {
-                const s = LADDER_SKINS[pendingPrize.id] || {};
-                prizeRarity = s.rarity || 'common';
-                prizeName = s.name || pendingPrize.id;
-                isDuplicate = ownedSkins.includes(pendingPrize.id);
-            } else if (pendingPrize.type === 'speaker') {
-                const s = SPEAKER_SKINS[pendingPrize.id] || {};
-                prizeRarity = s.rarity || 'common';
-                prizeName = s.name || pendingPrize.id;
-                isDuplicate = ownedSpeakerSkins.includes(pendingPrize.id);
-            } else if (pendingPrize.type === 'newton') {
-                const s = NEWTON_SKINS[pendingPrize.id] || {};
-                prizeRarity = s.rarity || 'common';
-                prizeName = s.name || pendingPrize.id;
-                isDuplicate = ownedNewtonSkins.includes(pendingPrize.id);
-            } else if (pendingPrize.type === 'talisman') {
-                const s = TALISMANS[pendingPrize.id] || {};
-                prizeRarity = s.rarity || 'common';
-                prizeName = s.name || pendingPrize.id;
-                isDuplicate = ownedTalismans.includes(pendingPrize.id);
-            }
-
-            const goldReward = DUPLICATE_GOLD_REWARDS[prizeRarity] || 5;
-
-            if (isDuplicate) {
-                title.innerHTML = `ПОВТОРКА: ${prizeName} (+${goldReward} <img src="assets/golden_nut.webp" class="ui-ico-title">)`;
-                title.style.color = '#e67e22';
-                AudioEngine.play('gaiki', 0.8);
-            } else {
-                title.innerText = `НОВЫЙ ПРЕДМЕТ: ${prizeName}!`;
-                title.style.color = RARITY_COLORS[prizeRarity] || '#fff';
-
-                if (prizeRarity === 'legendary' || prizeRarity === 'epic') {
-                    AudioEngine.play('jacpot', 1.0);
-                } else {
-                    AudioEngine.play('win', 0.85);
-                }
-            }
-        }
-
-        // 1. Механика Неоновой лестницы (1 бесплатный реролл)
-        const oldReroll = document.getElementById('btn-neon-reroll');
-        if (oldReroll) oldReroll.remove();
-
-        if (hasMech('neon') && !neonRerollUsed) {
-            const rerollBtn = document.createElement('button');
-            rerollBtn.id = 'btn-neon-reroll';
-            rerollBtn.innerText = '🎲 Перекрутить (Неон)';
-            rerollBtn.style.cssText = `
-                margin-top: 10px; padding: 8px 20px; font-size: 15px; font-weight: bold;
-                background: #ff00ff; color: #fff; border: none; border-radius: 5px;
-                cursor: pointer; box-shadow: 0 0 12px #ff00ff;
-            `;
-            rerollBtn.onclick = (e) => {
-                e.stopPropagation();
-                neonRerollUsed = true;
-                rerollBtn.remove();
-                startCaseOpening(caseId, true); // <-- Передаем true (isReroll)
-            };
-            claimBtn.parentNode.insertBefore(rerollBtn, claimBtn.nextSibling);
-        }
-
-        // 2. Реролл кейса за рекламу (строго 1 раз за открытие!)
-        const oldAdReroll = document.getElementById('btn-ad-reroll');
-        if (oldAdReroll) oldAdReroll.remove();
-
-        if (!window._caseAdRerollUsed) {
-            const adRerollBtn = document.createElement('button');
-            adRerollBtn.id = 'btn-ad-reroll';
-            adRerollBtn.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico"> Перекрутить (Реклама)';
-            adRerollBtn.style.cssText = `
-                margin-top: 8px; padding: 8px 18px; font-size: 13px; font-weight: bold;
-                background: #e67e22; color: #fff; border: none; border-radius: 5px; cursor: pointer;
-            `;
-            adRerollBtn.onclick = (e) => {
-                e.stopPropagation();
-                watchRewardedAd('case_reroll', () => {
-                    window._caseAdRerollUsed = true;
-                    adRerollBtn.remove();
-                    startCaseOpening(caseId, true); // <-- Передаем true (isReroll)
-                });
-            };
-            claimBtn.parentNode.insertBefore(adRerollBtn, claimBtn.nextSibling);
-        }
-    }
-
-    function renderGachaPhysics() {
-        if (!isGachaSpinning) return;
-
-        currentGachaY += (targetGachaY - currentGachaY) * 0.032;
-        tape.style.transform = `translateY(${currentGachaY}px)`;
-
-        const currentRung = Math.floor(-currentGachaY / GACHA_CELL_H);
-        if (currentRung !== lastGachaRung) {
-            lastGachaRung = currentRung;
-            AudioEngine.play(spinTickSound, 0.35);
-        }
-
-        if (Math.abs(targetGachaY - currentGachaY) > 0.6) {
-            requestAnimationFrame(renderGachaPhysics);
-        } else {
-            setTimeout(finishSpin, 80);
-        }
-    }
-
-    modal.onclick = (e) => {
-        if (isGachaSpinning) {
-            finishSpin();
-        } else if (e.target === modal) {
-            claimBtn.click();
-        }
-    };
-
-    requestAnimationFrame(renderGachaPhysics);
-}
-
-// Забор награды
-document.getElementById('gachaClaimBtn').onclick = () => {
-    AudioEngine.stop('jacpot');
-    AudioEngine.stop('win');
-    AudioEngine.stop('gaiki');
-    AudioEngine.stop('open_case_end');
-
-    const oldReroll = document.getElementById('btn-neon-reroll');
-    if (oldReroll) oldReroll.remove();
-    const oldAdReroll = document.getElementById('btn-ad-reroll');
-    if (oldAdReroll) oldAdReroll.remove();
-
-    if (!pendingPrize) return;
-
-    // === ПАССИВКА КРИСТАЛЬНОЙ ЛЕСТНИЦЫ (+3 ЗОЛОТА ЗА ЛЮБОЙ КЕЙС) ===
-    if (hasMech('crystal')) {
-        const actualCrystalGold = addGoldenNuts(3); // С 1 колонкой даст 4, с 2 колонками даст 5
+    if (typeof hasMech === 'function' && hasMech('crystal')) {
+        const actualCrystalGold = addGoldenNuts(3);
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.32,
-            text: `💎 +${actualCrystalGold} 🟡 (Кристалл)!`,
+            img: canvasIcoGold,
+            imgSize: 24,
+            text: `+${actualCrystalGold} (Кристалл)!`,
             color: '#00ffff',
             font: 'bold 22px sans-serif',
             alpha: 2.2,
@@ -5969,25 +5868,749 @@ document.getElementById('gachaClaimBtn').onclick = () => {
             }
         }
     }
-    checkAbsoluteUnlock();
 
-    uiNuts.innerText = `${nuts}`;
-    document.getElementById('gachaModal').style.display = 'none';
+    if (typeof checkAbsoluteUnlock === 'function') checkAbsoluteUnlock();
+    if (typeof updateHeaderUI === 'function') updateHeaderUI();
     pendingPrize = null;
+    saveGame();
+}
 
-    // Снова открываем окно кейсов с обновленными балансами
-    if (casesModal) {
-        casesModal.classList.remove('hidden');
-        renderCasesShop();
+// 8. ЕДИНАЯ МАШИНА СОСТОЯНИЙ КНОПОК РУЛЕТКИ (п. 8 ТЗ)
+function setGachaState(state, data = null) {
+    const titleEl = document.getElementById('gachaPrizeTitle');
+    const againBtn = document.getElementById('gachaOpenAgainBtn');
+    const batchBtn = document.getElementById('gachaBatchBtn');
+    const actionBtn = document.getElementById('gachaClaimBtn');
+    const rerollBtn = document.getElementById('gachaRerollBtn');
+    const rerollText = document.getElementById('gachaRerollText');
+    const btnsRow = document.querySelector('.gacha-btns-row');
+
+    if (!btnsRow || !actionBtn) return;
+
+    const remaining = userCases[currentActiveCaseId] || 0;
+    const neonAvailable = (typeof hasMech === 'function' && hasMech('neon') && !neonRerollUsed);
+    const adAvailable = !window._caseAdRerollUsed;
+
+    // Вспомогательная настройка кнопки реролла (с кастомными иконками вместо эмодзи)
+    const updateRerollButton = (canClick) => {
+        if (!rerollBtn || !rerollText) return;
+        if (neonAvailable) {
+            rerollBtn.classList.remove('is-hidden');
+            rerollBtn.disabled = false;
+            rerollBtn.style.background = 'linear-gradient(180deg, #9b59b6 0%, #8e44ad 100%)';
+            rerollBtn.style.borderColor = '#e056fd';
+            rerollText.innerHTML = '<img src="assets/perk.webp" class="ui-ico-sm"> Перекрутить (Неон)';
+        } else if (adAvailable) {
+            rerollBtn.classList.remove('is-hidden');
+            rerollBtn.disabled = false;
+            rerollBtn.style.background = ''; // Берет 3D-градиент из нашего нового CSS
+            rerollBtn.style.borderColor = '';
+            rerollText.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Перекрутить за рекламу';
+        } else {
+            rerollBtn.classList.add('is-hidden');
+        }
+    };
+
+    if (state === 'SPINNING') {
+        if (titleEl) {
+            titleEl.innerText = '...';
+            titleEl.style.color = '#8a97a8';
+        }
+        // Во время вращения включаем класс одной широкой кнопки
+        btnsRow.classList.add('is-spinning');
+        btnsRow.classList.remove('no-more', 'has-batch');
+
+        actionBtn.disabled = false;
+        actionBtn.innerText = 'Пропустить ⏩';
+
+        updateRerollButton(false);
+    } 
+    else if (state === 'RESULT' || state === 'RESULT_DUPLICATE') {
+        // После остановки выключаем режим одной кнопки
+        btnsRow.classList.remove('is-spinning');
+        if (titleEl && data) {
+            if (data.type === 'nuts') {
+                titleEl.innerHTML = `+${data.amount} <img src="assets/nut.webp" class="ui-ico">`;
+                titleEl.style.color = '#54a0ff';
+            } else if (data.isDuplicate) {
+                titleEl.innerHTML = `Повторка → +${data.goldReward} <img src="assets/golden_nut.webp" class="ui-ico">`;
+                titleEl.style.color = '#f1c40f';
+            } else {
+                titleEl.innerText = data.name;
+                titleEl.style.color = RARITY_COLORS[data.rarity] || '#ffffff';
+            }
+        }
+
+        if (remaining > 0) {
+            btnsRow.classList.remove('no-more');
+            btnsRow.classList.toggle('has-batch', remaining >= 10);
+
+            if (againBtn) {
+                againBtn.disabled = false;
+                againBtn.innerText = `Ещё (${remaining})`;
+            }
+            if (batchBtn) batchBtn.disabled = false;
+
+            actionBtn.disabled = false;
+            actionBtn.innerText = 'Закрыть';
+        } else {
+            // NO_MORE: кнопка «Закрыть» на 100% ширины
+            btnsRow.classList.add('no-more');
+            btnsRow.classList.remove('has-batch');
+
+            actionBtn.disabled = false;
+            actionBtn.innerText = 'Закрыть';
+        }
+
+        updateRerollButton(true);
     }
-};
+}
 
+function startCaseOpening(caseId = 'wooden', isReroll = false) {
+    currentActiveCaseId = caseId;
+
+    if (gachaAnimFrameId) cancelAnimationFrame(gachaAnimFrameId);
+    if (gachaFinishTimeoutId) clearTimeout(gachaFinishTimeoutId);
+
+    AudioEngine.stop('jacpot');
+    AudioEngine.stop('win');
+    AudioEngine.stop('gaiki');
+    AudioEngine.stop('open_case_end');
+
+    if (!isReroll) {
+        window._caseAdRerollUsed = false;
+        neonRerollUsed = false;
+    }
+
+    const modal = document.getElementById('gachaModal');
+    const tape = document.getElementById('gachaTape');
+    const title = document.getElementById('gachaTitle');
+    const gWindow = document.getElementById('gachaWindow');
+
+    if (!modal || !tape) return;
+
+    if (casesModal) casesModal.classList.add('hidden');
+
+    // Пересчёт размеров при открытии
+    updateGachaDimensions();
+
+    const caseData = CASES_DB[caseId] || CASES_DB.wooden;
+
+    // 6. Заголовок рулетки (п. 6: цвет редкости, тень, без серого)
+    if (title) {
+        title.innerText = `Открываем: ${caseData.name}`;
+        title.style.color = (caseId === 'wooden') ? '#f39c12' : (caseData.color || '#ffffff');
+    }
+
+    if (gWindow) {
+        gWindow.style.borderColor = (caseId === 'wooden') ? '#e67e22' : (caseData.color || '#3d5068');
+        gWindow.style.boxShadow = `0 0 30px ${caseData.color || '#3498db'}66, inset 0 0 15px rgba(0,0,0,0.85)`;
+    }
+
+    modal.style.display = 'flex';
+    tape.innerHTML = '';
+    tape.style.transform = 'translateY(0px)';
+    currentGachaY = 0;
+    lastGachaRung = 0;
+    lastDrumCenterIdx = -1;
+    isGachaSpinning = true;
+    rewardGranted = false;
+
+    // Генерируем приз (сохраняется как pendingPrize)
+    pendingPrize = rollLootFromCase(caseId);
+
+    // Сборка 50 ступеней (GACHA_WIN_INDEX = 42)
+    for (let i = 0; i < 50; i++) {
+        const item = (i === GACHA_WIN_INDEX)
+            ? pendingPrize
+            : caseData.loot[Math.floor(Math.random() * caseData.loot.length)];
+        const cardNode = createGachaItemCard(item, caseId);
+        if (i === GACHA_WIN_INDEX) {
+            cardNode.id = 'gacha-winning-card';
+        }
+        tape.appendChild(cardNode);
+    }
+
+    // Состояние SPINNING
+    setGachaState('SPINNING');
+
+    const spinTickSound = Math.random() > 0.5 ? 'click' : 'click_3';
+
+    // Точная центровка: центр окна (2.5 * H) совпадает с центром выигрышной ячейки
+    targetGachaY = -(GACHA_WIN_INDEX - 2) * GACHA_CELL_H;
+
+    function finishSpin() {
+        if (!isGachaSpinning) return;
+        isGachaSpinning = false;
+        justSkippedGacha = true;
+        setTimeout(() => { justSkippedGacha = false; }, 350);
+
+        if (gachaAnimFrameId) cancelAnimationFrame(gachaAnimFrameId);
+        if (gachaFinishTimeoutId) clearTimeout(gachaFinishTimeoutId);
+
+        currentGachaY = targetGachaY;
+        tape.style.transform = `translateY(${currentGachaY}px)`;
+        tape.classList.remove('fast-spin');
+
+        // Фиксируем эффект барабана на выигрышной ячейке
+        applyDrumEffect(GACHA_WIN_INDEX);
+
+        // Включаем ореол победителя
+        const winCard = document.getElementById('gacha-winning-card');
+        if (winCard) {
+            const aura = winCard.querySelector('.gacha-item-aura');
+            if (aura) aura.classList.add('win-active');
+        }
+
+        // Подготовка данных для отображения результата
+        let prizeRarity = 'common';
+        let isDuplicate = false;
+        let prizeName = '';
+
+        if (pendingPrize.type === 'nuts') {
+            AudioEngine.play('open_case_end', 0.8);
+            setGachaState('RESULT', { type: 'nuts', amount: pendingPrize.amount });
+        } else {
+            if (pendingPrize.type === 'skin') {
+                const s = LADDER_SKINS[pendingPrize.id] || {};
+                prizeRarity = s.rarity || 'common';
+                prizeName = s.name || pendingPrize.id;
+                isDuplicate = ownedSkins.includes(pendingPrize.id);
+            } else if (pendingPrize.type === 'speaker') {
+                const s = SPEAKER_SKINS[pendingPrize.id] || {};
+                prizeRarity = s.rarity || 'common';
+                prizeName = s.name || pendingPrize.id;
+                isDuplicate = ownedSpeakerSkins.includes(pendingPrize.id);
+            } else if (pendingPrize.type === 'newton') {
+                const s = NEWTON_SKINS[pendingPrize.id] || {};
+                prizeRarity = s.rarity || 'common';
+                prizeName = s.name || pendingPrize.id;
+                isDuplicate = ownedNewtonSkins.includes(pendingPrize.id);
+            } else if (pendingPrize.type === 'talisman') {
+                const s = TALISMANS[pendingPrize.id] || {};
+                prizeRarity = s.rarity || 'common';
+                prizeName = s.name || pendingPrize.id;
+                isDuplicate = ownedTalismans.includes(pendingPrize.id);
+            }
+
+            const goldReward = DUPLICATE_GOLD_REWARDS[prizeRarity] || 5;
+
+            if (isDuplicate) {
+                AudioEngine.play('gaiki', 0.8);
+                setGachaState('RESULT_DUPLICATE', { isDuplicate: true, goldReward });
+            } else {
+                if (prizeRarity === 'legendary' || prizeRarity === 'epic') {
+                    AudioEngine.play('jacpot', 1.0);
+                } else {
+                    AudioEngine.play('win', 0.85);
+                }
+                setGachaState('RESULT', { name: prizeName, rarity: prizeRarity });
+            }
+        }
+    }
+
+    // Покадровое применение классов эффекта барабана (п. 5 ТЗ)
+    function applyDrumEffect(centerIdx) {
+        if (centerIdx === lastDrumCenterIdx) return;
+
+        const cells = tape.children;
+        // Снимаем классы у предыдущих ячеек
+        if (lastDrumCenterIdx >= 0) {
+            for (let off = -2; off <= 2; off++) {
+                const prev = cells[lastDrumCenterIdx + off];
+                if (prev) prev.classList.remove('is-center', 'is-near', 'is-far');
+            }
+        }
+
+        lastDrumCenterIdx = centerIdx;
+
+        for (let off = -2; off <= 2; off++) {
+            const c = cells[centerIdx + off];
+            if (!c) continue;
+            c.classList.remove('is-center', 'is-near', 'is-far');
+            if (off === 0) c.classList.add('is-center');
+            else if (Math.abs(off) === 1) c.classList.add('is-near');
+            else c.classList.add('is-far');
+        }
+    }
+
+    function renderGachaPhysics(timestamp) {
+        if (!isGachaSpinning) return;
+
+        const now = timestamp || performance.now();
+        const dt = Math.min(50, now - (lastGachaPhysTime || now));
+        lastGachaPhysTime = now;
+
+        const diff = targetGachaY - currentGachaY;
+        const frameDecay = 1 - Math.pow(1 - 0.034, dt / 16.667);
+        const deltaMove = diff * frameDecay;
+        currentGachaY += deltaMove;
+        tape.style.transform = `translateY(${currentGachaY}px)`;
+
+        // Отключаем transition при быстром движении (быстрее 1 ячейки за 100мс)
+        const isFast = Math.abs(deltaMove / (dt || 16)) > (GACHA_CELL_H / 100);
+        tape.classList.toggle('fast-spin', isFast);
+
+        // Индекс центральной ячейки
+        const centerIdx = Math.max(0, Math.min(49, Math.round(2 - currentGachaY / GACHA_CELL_H)));
+        applyDrumEffect(centerIdx);
+
+        // Звуковой щелчок перекладины
+        const currentRung = Math.floor(-currentGachaY / GACHA_CELL_H);
+        if (currentRung !== lastGachaRung) {
+            lastGachaRung = currentRung;
+            AudioEngine.play(spinTickSound, 0.35);
+        }
+
+        if (Math.abs(diff) > 0.6) {
+            gachaAnimFrameId = requestAnimationFrame(renderGachaPhysics);
+        } else {
+            gachaFinishTimeoutId = setTimeout(finishSpin, 80);
+        }
+    }
+
+    window._finishGachaSpin = finishSpin;
+
+    // Универсальный скип на фазе погружения
+    const skipOnAnyTouch = (e) => {
+        if (isGachaSpinning) {
+            e.stopPropagation();
+            finishSpin();
+        }
+    };
+
+    modal.removeEventListener('pointerdown', modal._skipHandler, true);
+    modal._skipHandler = skipOnAnyTouch;
+    modal.addEventListener('pointerdown', skipOnAnyTouch, true);
+
+    // Закрытие окна по клику на темный фон
+    modal.onclick = (e) => {
+        if (e.target !== modal) return;
+        if (isGachaSpinning) {
+            finishSpin();
+            return;
+        }
+        if (justSkippedGacha) return; // Игнорируем остаточный клик от скипа
+
+        claimPendingGachaPrize();
+        modal.style.display = 'none';
+        if (casesModal) {
+            casesModal.classList.remove('hidden');
+            renderCasesShop();
+        }
+    };
+
+    lastGachaPhysTime = performance.now();
+    gachaAnimFrameId = requestAnimationFrame(renderGachaPhysics);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ОБРАБОТЧИКИ КНОПОК НОВОЙ РУЛЕТКИ
+// ══════════════════════════════════════════════════════════════
+
+// 1. Кнопка «Пропустить ⏩ / Закрыть»
+const gachaActionBtnEl = document.getElementById('gachaClaimBtn');
+if (gachaActionBtnEl) {
+    gachaActionBtnEl.onclick = (e) => {
+        if (e) e.stopPropagation();
+
+        if (isGachaSpinning) {
+            if (typeof window._finishGachaSpin === 'function') {
+                window._finishGachaSpin();
+            }
+            return;
+        }
+
+        // Если это тот же самый клик, которым только что скипнули — не закрываем!
+        if (justSkippedGacha) return;
+
+        // Настоящий клик игрока после остановки — закрываем окно
+        claimPendingGachaPrize();
+        document.getElementById('gachaModal').style.display = 'none';
+        if (casesModal) {
+            casesModal.classList.remove('hidden');
+            renderCasesShop();
+        }
+    };
+}
+
+// 2. Кнопка «Ещё (N)»
+const gachaAgainBtnEl = document.getElementById('gachaOpenAgainBtn');
+if (gachaAgainBtnEl) {
+    gachaAgainBtnEl.onclick = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (isGachaSpinning) return;
+
+        claimPendingGachaPrize();
+
+        if ((userCases[currentActiveCaseId] || 0) > 0) {
+            userCases[currentActiveCaseId]--;
+            if (currentActiveCaseId === 'wooden') {
+                boxesOwned = userCases.wooden;
+                if (typeof uiCasesCount !== 'undefined' && uiCasesCount) uiCasesCount.innerText = boxesOwned;
+            }
+            startCaseOpening(currentActiveCaseId);
+        } else {
+            document.getElementById('gachaModal').style.display = 'none';
+            if (casesModal) {
+                casesModal.classList.remove('hidden');
+                renderCasesShop();
+            }
+        }
+    };
+}
+
+// 3. Кнопка «×10» (пакетное открытие прямо из рулетки)
+const gachaBatchBtnEl = document.getElementById('gachaBatchBtn');
+if (gachaBatchBtnEl) {
+    gachaBatchBtnEl.onclick = (e) => {
+        if (e) e.stopPropagation();
+        if (isGachaSpinning) return;
+
+        claimPendingGachaPrize();
+        document.getElementById('gachaModal').style.display = 'none';
+        
+        // Сначала возвращаем видимость складу, внутри которого лежит окно результатов
+        if (casesModal) {
+            casesModal.classList.remove('hidden');
+            renderCasesShop();
+        }
+        
+        openBatchCases(currentActiveCaseId, 10);
+    };
+}
+
+// 4. Кнопка реролла Неон / Реклама
+const gachaRerollBtnEl = document.getElementById('gachaRerollBtn');
+if (gachaRerollBtnEl) {
+    gachaRerollBtnEl.onclick = (e) => {
+        if (e) e.stopPropagation();
+        if (isGachaSpinning) return;
+
+        const neonAvailable = (typeof hasMech === 'function' && hasMech('neon') && !neonRerollUsed);
+
+        if (neonAvailable) {
+            neonRerollUsed = true;
+            pendingPrize = null;
+            rewardGranted = false;
+            startCaseOpening(currentActiveCaseId, true);
+        } else if (!window._caseAdRerollUsed) {
+            if (typeof watchRewardedAd === 'function') {
+                watchRewardedAd('case_reroll', () => {
+                    window._caseAdRerollUsed = true;
+                    pendingPrize = null;
+                    rewardGranted = false;
+                    startCaseOpening(currentActiveCaseId, true);
+                });
+            }
+        }
+    };
+}
+
+// 3. Закрытие магазина кейсов по клику вне окна
+const casesModalEl = document.getElementById('cases-modal');
+if (casesModalEl) {
+    const modalCard = casesModalEl.querySelector('.cases-modal-card');
+    if (modalCard) {
+        modalCard.onclick = (e) => e.stopPropagation();
+    }
+
+    casesModalEl.onclick = (e) => {
+        if (typeof isGachaSpinning !== 'undefined' && isGachaSpinning) return;
+        if (e.target === casesModalEl) {
+            casesModalEl.classList.add('hidden');
+        }
+    };
+}
 // === УПРАВЛЕНИЕ ОКНОМ КЕЙСОВ ===
 const casesModal = document.getElementById('cases-modal');
 const casesContainer = document.getElementById('cases-list-container');
 const modalNutsVal = document.getElementById('cases-modal-nuts');
 const modalGoldVal = document.getElementById('cases-modal-gold');
 
+
+
+// === ЕДИНОЕ ОКНО ПОКУПКИ КЕЙСОВ (МУЛЬТИПОКУПКА И ПРОВЕРКА БАЛАНСА) ===
+let multiBuyState = {
+    caseId: 'iron',
+    amount: 1
+};
+
+function openMultiBuyDialog(caseId) {
+    const c = CASES_DB[caseId];
+    if (!c || c.priceType === 'free') return;
+
+    multiBuyState.caseId = caseId;
+    multiBuyState.amount = 1;
+
+    const modal = document.getElementById('multi-buy-modal');
+    if (!modal) return;
+
+    let caseIcon = 'assets/wooden_box.webp';
+    if (caseId === 'iron') caseIcon = 'assets/iron_box.webp';
+    if (caseId === 'gold') caseIcon = 'assets/golden_box.webp';
+
+    const nameEl = document.getElementById('mb-item-name');
+    const iconEl = document.getElementById('mb-item-icon');
+    if (nameEl) nameEl.innerText = c.name;
+    if (iconEl) iconEl.src = caseIcon;
+
+    // Сброс активного чипа на x1
+    modal.querySelectorAll('.mb-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.count === '1');
+    });
+
+    updateMultiBuyTotal();
+    modal.classList.remove('hidden');
+}
+
+function updateMultiBuyTotal() {
+    const c = CASES_DB[multiBuyState.caseId];
+    if (!c) return;
+
+    let basePrice = c.price;
+    const hasGothDiscount = (typeof hasMech === 'function' && hasMech('goth') && c.priceType === 'nuts');
+    if (hasGothDiscount) {
+        basePrice = Math.floor(c.price * 0.8);
+    }
+
+    const currentBal = c.priceType === 'nuts' ? nuts : goldenNuts;
+    const modal = document.getElementById('multi-buy-modal');
+
+    // Проверка доступности кнопок x1, x5, x10
+    if (modal) {
+        modal.querySelectorAll('.mb-chip').forEach(chip => {
+            const cnt = parseInt(chip.dataset.count, 10) || 1;
+            const costForChip = basePrice * cnt;
+            chip.disabled = (currentBal < costForChip);
+        });
+    }
+
+    const total = basePrice * multiBuyState.amount;
+    const costIcon = c.priceType === 'nuts' ? 'assets/nut.webp' : 'assets/golden_nut.webp';
+    const canAfford = currentBal >= total;
+
+    const totalEl = document.getElementById('mb-total-cost');
+    if (totalEl) {
+        totalEl.innerHTML = `${total} <img src="${costIcon}" class="ui-ico-sm">${hasGothDiscount ? ' <span style="color:#2ecc71;font-size:11px;">(-20%)</span>' : ''}`;
+        totalEl.classList.toggle('cant-afford', !canAfford);
+    }
+
+    const buyBtn = document.getElementById('mb-btn-buy');
+    if (buyBtn) {
+        buyBtn.disabled = !canAfford;
+    }
+}
+
+// Привязка чипов количества (x1, x5, x10)
+document.querySelectorAll('.mb-chip').forEach(chip => {
+    chip.onclick = () => {
+        if (chip.disabled) return;
+        document.querySelectorAll('.mb-chip').forEach(b => b.classList.remove('active'));
+        chip.classList.add('active');
+        multiBuyState.amount = parseInt(chip.dataset.count, 10) || 1;
+        updateMultiBuyTotal();
+    };
+});
+
+const mbCancelBtn = document.getElementById('mb-btn-cancel');
+const multiBuyModalEl = document.getElementById('multi-buy-modal');
+
+if (mbCancelBtn && multiBuyModalEl) {
+    mbCancelBtn.onclick = () => {
+        multiBuyModalEl.classList.add('hidden');
+    };
+}
+
+// Закрытие окна покупки при клике на затемнённый фон вокруг него
+if (multiBuyModalEl) {
+    multiBuyModalEl.onclick = (e) => {
+        if (e.target === multiBuyModalEl) {
+            multiBuyModalEl.classList.add('hidden');
+        }
+    };
+}
+
+const mbBuyBtn = document.getElementById('mb-btn-buy');
+if (mbBuyBtn) {
+    mbBuyBtn.onclick = () => {
+        const c = CASES_DB[multiBuyState.caseId];
+        if (!c) return;
+
+        let basePrice = c.price;
+        if (c.priceType === 'nuts' && typeof hasMech === 'function' && hasMech('goth')) {
+            basePrice = Math.floor(c.price * 0.8);
+        }
+
+        const totalCost = basePrice * multiBuyState.amount;
+        const canAfford = c.priceType === 'nuts' ? (nuts >= totalCost) : (goldenNuts >= totalCost);
+        if (!canAfford) return;
+
+        if (c.priceType === 'nuts') nuts -= totalCost;
+        else goldenNuts -= totalCost;
+
+        userCases[multiBuyState.caseId] = (userCases[multiBuyState.caseId] || 0) + multiBuyState.amount;
+
+        if (typeof AudioEngine !== 'undefined') AudioEngine.play('gaiki', 0.8);
+        if (typeof uiNuts !== 'undefined' && uiNuts) uiNuts.innerText = `${nuts}`;
+        if (typeof updateHeaderUI === 'function') updateHeaderUI();
+
+        const modal = document.getElementById('multi-buy-modal');
+        if (modal) modal.classList.add('hidden');
+
+        renderCasesShop();
+        saveGame();
+    };
+}
+
+let currentBatchCaseId = 'wooden';
+
+// Пакетное открытие ящиков (с поддержкой повторных серий «Ещё ×10»)
+function openBatchCases(caseId, count = 10) {
+    currentBatchCaseId = caseId;
+    const available = userCases[caseId] || 0;
+    const toOpen = Math.min(available, count);
+    if (toOpen <= 0) return;
+
+    userCases[caseId] -= toOpen;
+    if (caseId === 'wooden') {
+        boxesOwned = userCases.wooden;
+        if (typeof uiCasesCount !== 'undefined' && uiCasesCount) uiCasesCount.innerText = boxesOwned;
+    }
+
+    let totalNuts = 0;
+    let totalGold = 0;
+    let droppedLadders = [];
+
+    if (typeof hasMech === 'function' && hasMech('crystal')) {
+        totalGold += (toOpen * 3);
+    }
+
+    for (let i = 0; i < toOpen; i++) {
+        const prize = rollLootFromCase(caseId);
+        if (prize.type === 'nuts') {
+            totalNuts += prize.amount;
+        } else if (prize.type === 'skin') {
+            const s = LADDER_SKINS[prize.id] || { name: prize.id, rarity: 'common' };
+            const isDup = ownedSkins.includes(prize.id);
+            if (isDup) {
+                const rGold = DUPLICATE_GOLD_REWARDS[s.rarity] || 5;
+                totalGold += rGold;
+                droppedLadders.push({ ...s, isDuplicate: true, goldVal: rGold });
+            } else {
+                ownedSkins.push(prize.id);
+                droppedLadders.push({ ...s, isDuplicate: false });
+            }
+        }
+    }
+
+    if (totalNuts > 0) addNuts(totalNuts);
+    if (totalGold > 0) addGoldenNuts(totalGold);
+
+    checkAbsoluteUnlock();
+    saveGame();
+    renderCasesShop();
+
+    const modal = document.getElementById('batch-result-modal');
+    const list = document.getElementById('batch-result-list');
+    const headerTitle = document.getElementById('batch-result-title');
+    const closeBtn = document.getElementById('btn-batch-result-close');
+    const againBtn = document.getElementById('btn-batch-result-again');
+    const actionsBox = modal ? modal.querySelector('.batch-result-actions') : null;
+
+    if (modal && list) {
+        if (headerTitle) headerTitle.innerText = `ОТКРЫТО ${toOpen} ЯЩИКОВ`;
+        list.innerHTML = '';
+
+        // Подсчёт количества новых предметов
+        const newItemsCount = droppedLadders.filter(i => !i.isDuplicate).length;
+
+        // Компактная плашка сводки прямо под заголовком
+        let summaryHtml = '<div class="batch-summary-strip">';
+        if (totalNuts > 0) summaryHtml += `<span>+${totalNuts} <img src="assets/nut.webp" class="ui-ico-sm"></span>`;
+        if (totalGold > 0) summaryHtml += `<span>+${totalGold} <img src="assets/golden_nut.webp" class="ui-ico-sm"></span>`;
+        if (newItemsCount > 0) {
+            summaryHtml += `<span style="color:#2ecc71;">Новых: ${newItemsCount} 🪜</span>`;
+        } else {
+            summaryHtml += `<span style="color:#7f8c8d;">Новых: 0</span>`;
+        }
+        summaryHtml += '</div>';
+        list.innerHTML += summaryHtml;
+
+        // СОРТИРОВКА: Новые предметы идут первыми, повторки опускаются вниз
+        const sortedLadders = [...droppedLadders].sort((a, b) => {
+            if (!a.isDuplicate && b.isDuplicate) return -1;
+            if (a.isDuplicate && !b.isDuplicate) return 1;
+            return 0;
+        });
+
+        sortedLadders.forEach(item => {
+            const col = RARITY_COLORS[item.rarity] || '#fff';
+            const isNew = !item.isDuplicate;
+            const rightText = isNew 
+                ? `<span style="color:#2ecc71; font-size:11.5px; font-weight:900;">★ НОВАЯ!</span>`
+                : `<span style="color:#e67e22; font-size:11.5px; font-weight:800;">Повтор (+${item.goldVal} <img src="assets/golden_nut.webp" class="ui-ico-sm">)</span>`;
+
+            list.innerHTML += `
+                <div class="batch-item-row ${isNew ? 'is-new-item' : ''}">
+                    <div class="batch-item-left">
+                        <img src="${item.file || 'assets/wood_stair-removebg-preview.png'}" class="batch-item-img" alt="${item.name}">
+                        <span class="batch-item-name" style="color:${col};">${item.name}</span>
+                    </div>
+                    <div class="batch-item-val">${rightText}</div>
+                </div>
+            `;
+        });
+
+
+        // Настройка кнопки «Ещё ×N»
+        const remaining = userCases[caseId] || 0;
+        if (actionsBox && againBtn) {
+            if (remaining >= 10) {
+                actionsBox.classList.remove('no-more');
+                againBtn.style.display = 'flex';
+                againBtn.innerText = 'Ещё ×10';
+                againBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openBatchCases(caseId, 10);
+                };
+            } else if (remaining >= 2) {
+                actionsBox.classList.remove('no-more');
+                againBtn.style.display = 'flex';
+                againBtn.innerText = `Ещё ×${remaining}`;
+                againBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openBatchCases(caseId, remaining);
+                };
+            } else {
+                actionsBox.classList.add('no-more');
+                againBtn.style.display = 'none';
+                againBtn.onclick = null;
+            }
+        }
+
+        // Функция закрытия окна результатов с гарантированным сохранением склада
+        const closeBatchModalSafe = () => {
+            modal.classList.add('hidden');
+            if (casesModal) {
+                casesModal.classList.remove('hidden');
+                renderCasesShop();
+            }
+        };
+
+        if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); closeBatchModalSafe(); };
+        modal.onclick = (e) => { if (e.target === modal) closeBatchModalSafe(); };
+
+        AudioEngine.play('win', 0.9);
+        if (casesModal) casesModal.classList.remove('hidden');
+        modal.classList.remove('hidden');
+    }
+}
+
+// Рендер магазина кейсов
 function renderCasesShop() {
     const cContainer = document.getElementById('cases-container') || (typeof casesContainer !== 'undefined' ? casesContainer : null);
     if (!cContainer) return;
@@ -5997,11 +6620,14 @@ function renderCasesShop() {
     if (typeof modalGoldVal !== 'undefined' && modalGoldVal) modalGoldVal.innerText = goldenNuts;
 
     cContainer.innerHTML = '';
+    const renderOrder = ['gold', 'wooden', 'iron'];
 
-    for (let [caseId, c] of Object.entries(CASES_DB)) {
+    for (let caseId of renderOrder) {
+        const c = CASES_DB[caseId];
+        if (!c) continue;
+
         const count = userCases[caseId] || 0;
 
-        // Расчет цены со скидкой Готической лестницы (-20%)
         let actualPrice = c.price;
         if (c.priceType === 'nuts' && typeof hasMech === 'function' && hasMech('goth')) {
             actualPrice = Math.floor(c.price * 0.8);
@@ -6010,6 +6636,7 @@ function renderCasesShop() {
         let canBuy = false;
         let costIcon = 'assets/nut.webp';
         if (c.priceType === 'nuts') {
+            costIcon = 'assets/nut.webp';
             canBuy = nuts >= actualPrice;
         } else if (c.priceType === 'goldenNuts') {
             costIcon = 'assets/golden_nut.webp';
@@ -6017,68 +6644,59 @@ function renderCasesShop() {
         }
 
         let caseIcon = 'assets/wooden_box.webp';
-        if (caseId === 'iron') caseIcon = 'assets/iron_box.webp';
-        if (caseId === 'gold') caseIcon = 'assets/golden_box.webp';
-
-        // Текстовая метка редкости вместо налипшей плашки на картинке
-        let rarityLabel = '<span class="case-rarity-sub" style="color:#8b9bb4;">Обычный</span>';
-        let cardClass = 'case-shop-card';
+        let glowClass = 'glow-wooden';
         if (caseId === 'iron') {
-            rarityLabel = '<span class="case-rarity-sub" style="color:#3498db;">Редкий</span>';
-            cardClass += ' featured';
+            caseIcon = 'assets/iron_box.webp';
+            glowClass = 'glow-iron';
         } else if (caseId === 'gold') {
-            rarityLabel = '<span class="case-rarity-sub" style="color:#f1c40f;">Легендарный</span>';
-            cardClass += ' gold-border';
+            caseIcon = 'assets/golden_box.webp';
+            glowClass = 'glow-gold';
         }
 
-        const isFreeDropOnly = (c.priceType === 'free');
-
+        const isGold = (caseId === 'gold');
         const card = document.createElement('div');
-        card.className = cardClass;
+        card.className = `case-card-a ${isGold ? 'featured-gold' : ''}`;
+
+        let actionButtonsHtml = '';
+        const isFree = (c.priceType === 'free');
+
+        if (count > 0) {
+            // Кнопка пакетного открытия: если >=10 -> «×10», если 2..9 -> «×N»
+            const batchCount = Math.min(count, 10);
+            const batchLabel = count >= 10 ? '×10' : `×${count}`;
+            const showBatchBtn = (isFree && count >= 2);
+
+            actionButtonsHtml = `
+                <button class="case-btn-main btn-open btn-action-open">Открыть</button>
+                ${!isFree ? `<button class="case-btn-plus btn-action-plus" title="Купить еще">+</button>` : ''}
+                ${showBatchBtn ? `<button class="case-btn-x10 btn-action-batch" title="Открыть все">${batchLabel}</button>` : ''}
+            `;
+        } else if (isFree) {
+            actionButtonsHtml = `<button class="case-btn-main btn-drop-only" disabled>В игре</button>`;
+        } else {
+            const affordClass = canBuy ? '' : 'cant-afford';
+            actionButtonsHtml = `
+                <button class="case-btn-main btn-buy btn-action-single-buy ${affordClass}">
+                    Купить ${actualPrice} <img src="${costIcon}" class="ui-ico-sm">
+                </button>
+                <button class="case-btn-plus btn-action-plus" title="Купить несколько">+</button>
+            `;
+        }
 
         card.innerHTML = `
-            <div class="case-art-box">
-                <img src="${caseIcon}" class="case-main-img" alt="${c.name}" onerror="if(this.src.includes('golden_box')) this.src='assets/gold_box.webp'">
+            <div class="case-a-art-wrap">
+                <div class="case-a-glow ${glowClass}"></div>
+                <img src="${caseIcon}" class="case-a-img" alt="${c.name}" onerror="if(this.src.includes('golden_box')) this.src='assets/gold_box.webp'">
+                <div class="case-a-count-badge">${count}</div>
             </div>
-            <div class="case-meta">
-                ${rarityLabel}
-                <div class="case-name">${c.name}</div>
-                <div class="case-desc">У тебя: <b style="color: #fff;">${count} шт.</b></div>
-            </div>
-            <div class="case-actions-group ${isFreeDropOnly ? 'single-btn' : ''}">
-                ${!isFreeDropOnly ? `
-                    <button class="buy-c-btn" ${!canBuy ? 'disabled' : ''}>
-                        ${actualPrice} <img src="${costIcon}" class="ui-ico-sm">
-                    </button>
-                ` : ''}
-                <button class="open-c-btn" ${count <= 0 ? 'disabled' : ''}>
-                    Открыть
-                </button>
+            <div class="case-a-name">${c.name}</div>
+            <div class="case-card-actions">
+                ${actionButtonsHtml}
             </div>
         `;
 
-        // Клик покупки
-        const buyBtn = card.querySelector('.buy-c-btn');
-        if (buyBtn) {
-            buyBtn.onclick = () => {
-                if (c.priceType === 'nuts' && nuts >= actualPrice) {
-                    nuts -= actualPrice;
-                    userCases[caseId] = (userCases[caseId] || 0) + 1;
-                    if (typeof AudioEngine !== 'undefined') AudioEngine.play('gaiki', 0.8);
-                } else if (c.priceType === 'goldenNuts' && goldenNuts >= actualPrice) {
-                    goldenNuts -= actualPrice;
-                    userCases[caseId] = (userCases[caseId] || 0) + 1;
-                    if (typeof AudioEngine !== 'undefined') AudioEngine.play('gaiki', 0.8);
-                }
-                if (typeof uiNuts !== 'undefined' && uiNuts) uiNuts.innerText = `${nuts}`;
-                if (typeof updateHeaderUI === 'function') updateHeaderUI();
-                renderCasesShop();
-                saveGame();
-            };
-        }
-
-        // Клик открытия
-        const openBtn = card.querySelector('.open-c-btn');
+        // 1. Одиночное открытие
+        const openBtn = card.querySelector('.btn-action-open');
         if (openBtn) {
             openBtn.onclick = () => {
                 if ((userCases[caseId] || 0) > 0) {
@@ -6094,12 +6712,84 @@ function renderCasesShop() {
             };
         }
 
+        // 2. Пакетное открытие
+        const batchBtn = card.querySelector('.btn-action-batch');
+        if (batchBtn) {
+            batchBtn.onclick = () => openBatchCases(caseId, Math.min(count, 10));
+        }
+
+        // 3. Обе кнопки покупки («Купить N» и «+») открывают ЕДИНОЕ окно выбора количества
+        const singleBuyBtn = card.querySelector('.btn-action-single-buy');
+        if (singleBuyBtn) {
+            singleBuyBtn.onclick = () => openMultiBuyDialog(caseId);
+        }
+
+        const plusBtn = card.querySelector('.btn-action-plus');
+        if (plusBtn) {
+            plusBtn.onclick = () => openMultiBuyDialog(caseId);
+        }
+
         cContainer.appendChild(card);
     }
 
     updateAdFreeRewardsUI();
 }
 
+// Бесплатные рекламные награды (без кулдаунов и таймеров)
+function updateAdFreeRewardsUI() {
+    // 1. Сейф всегда доступен к получению
+    const safeTimerEl = document.getElementById('ad-safe-timer');
+    const safeBtn = document.getElementById('btn-ad-free-safe');
+    const safeTile = document.getElementById('tile-ad-safe');
+    if (safeTimerEl && safeBtn && safeTile) {
+        safeTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
+        safeTile.classList.add('is-ready');
+        safeBtn.disabled = false;
+        safeBtn.style.opacity = '1';
+    }
+
+    // 2. Гайки (+600) всегда доступны к получению
+    const nutsTimerEl = document.getElementById('ad-nuts-timer');
+    const nutsBtn = document.getElementById('btn-ad-free-nuts');
+    const nutsTile = document.getElementById('tile-ad-nuts');
+    if (nutsTimerEl && nutsBtn && nutsTile) {
+        nutsTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
+        nutsTile.classList.add('is-ready');
+        nutsBtn.disabled = false;
+        nutsBtn.style.opacity = '1';
+    }
+}
+
+// Закрытие окна по крестику и по клику на затемнение вокруг (заблокировано во время крутки)
+
+// Закрытие окна склада и его под-окон
+function closeCasesWarehouseSafe() {
+    if (typeof isGachaSpinning !== 'undefined' && isGachaSpinning) return;
+    
+    const cModal = document.getElementById('cases-modal');
+    if (cModal) cModal.classList.add('hidden');
+
+    // Обязательно гасим под-окна, чтобы при следующем открытии склада они не вылезали
+    const mbModal = document.getElementById('multi-buy-modal');
+    if (mbModal) mbModal.classList.add('hidden');
+
+    const batchModal = document.getElementById('batch-result-modal');
+    if (batchModal) batchModal.classList.add('hidden');
+}
+
+const btnCloseCasesEl = document.getElementById('btn-close-cases');
+if (btnCloseCasesEl) {
+    btnCloseCasesEl.onclick = closeCasesWarehouseSafe;
+}
+
+const casesModalElement = document.getElementById('cases-modal');
+if (casesModalElement) {
+    casesModalElement.onclick = (e) => {
+        if (e.target === casesModalElement) {
+            closeCasesWarehouseSafe();
+        }
+    };
+}
 // === УПРАВЛЕНИЕ МОДАЛКОЙ СДЕЛКИ ДНЯ ===
 const dailyDealModal = document.getElementById('daily-deal-modal');
 const btnOpenDeal = document.getElementById('btn-open-deal');
@@ -6287,7 +6977,7 @@ const NEWTON_DESC = {
     steel: 'Базовый авто-удар Колыбели Ньютона (урон x1)',
     billiard: '+25% к урону шаров. Каждый 8-й удар даёт x2.5 высоты и 3–5 <img src="assets/nut.webp" class="ui-ico">.',
     plasma: '+50% к урону шаров. Наэлектризованность: при 6+ тапах/сек удваивает высоту за каждый тап. После 5 сек бездействия — автоклик 10 тапов.',
-    planet: '×2 к урону шаров, +3 тапа к ящику за удар. +25% к силе тапа, Сабвуфера и шаров за каждый активный бафф. 1% шанс, что удар включит случайный бонус.'
+    planet: '×2 к урону шаров, +3 тапа к ящику за удар. +100% к силе тапа, Сабвуфера и шаров за каждый активный бафф. 1% шанс, что удар включит случайный бонус.'
 };
 
 function getItemBuffText(type, itemOrId) {
@@ -6336,22 +7026,41 @@ function renderInventory() {
         ownedList = ownedSkins;
         equippedId = currentSkinId;
 
-        // Плашка текущего облика и эффекта над сеткой
-        const curVisName = LADDER_SKINS[currentSkinId]?.name || 'Деревянная';
-        const curEffName = LADDER_SKINS[currentEffectId]?.name || 'Деревянная';
+        // Двойной интерактивный виджет текущего Облика и Эффекта (с превью лестниц!)
+        const curVisSkin = LADDER_SKINS[currentSkinId] || LADDER_SKINS.wood;
+        const curEffSkin = LADDER_SKINS[currentEffectId] || LADDER_SKINS.wood;
+
         const statusBox = document.createElement('div');
-        statusBox.style.cssText = 'grid-column: 1 / -1; background: rgba(0,0,0,0.5); border: 1px solid #34495e; border-radius: 8px; padding: 6px 10px; margin-bottom: 2px; font-size: 11px; display: flex; justify-content: space-between; color: #bdc3c7;';
+        statusBox.className = 'inv-equipped-banner';
         statusBox.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <img src="assets/roller.webp" class="ui-ico-sm"> Облик: <b style="color: #2ecc71;">${curVisName}</b>
+            <div class="inv-eq-slot slot-visual" id="inv-Banner-Vis">
+                <div class="inv-eq-thumb">
+                    <img src="${curVisSkin.file}" alt="">
+                </div>
+                <div class="inv-eq-info">
+                    <span class="inv-eq-label" style="color: #2ecc71;">
+                        <img src="assets/roller.webp" class="ui-ico-sm"> Облик
+                    </span>
+                    <span class="inv-eq-name">${curVisSkin.name}</span>
+                </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <img src="assets/perk.webp" class="ui-ico-sm"> Эффект: <b style="color: #9b59b6;">${curEffName}</b>
+            <div class="inv-eq-slot slot-effect" id="inv-Banner-Eff">
+                <div class="inv-eq-thumb">
+                    <img src="${curEffSkin.file}" alt="">
+                </div>
+                <div class="inv-eq-info">
+                    <span class="inv-eq-label" style="color: #e056fd;">
+                        <img src="assets/perk.webp" class="ui-ico-sm"> Эффект
+                    </span>
+                    <span class="inv-eq-name">${curEffSkin.name}</span>
+                </div>
             </div>
         `;
+        statusBox.querySelector('#inv-Banner-Vis').onclick = () => openLadderPreview(currentSkinId);
+        statusBox.querySelector('#inv-Banner-Eff').onclick = () => openLadderPreview(currentEffectId);
         inventoryItemsList.appendChild(statusBox);
 
-        // Отрисовка каждой лестницы карточкой в 2 колонки
+        // Отрисовка каждой лестницы карточкой в 2 колонки с подсветкой редкости на подиуме
         Object.keys(itemsSource).forEach(id => {
             const item = itemsSource[id];
             const isOwned = ownedList.includes(id);
@@ -6362,38 +7071,37 @@ function renderInventory() {
             const card = document.createElement('div');
             card.className = `ladder-card-tile ${!isOwned ? 'locked' : ''}`;
 
-            // Подсветка рамки активных лестниц
             if (isVis && isEff) {
                 card.style.borderColor = '#f1c40f';
-                card.style.boxShadow = '0 0 12px rgba(241,196,15,0.35)';
+                card.style.boxShadow = '0 0 15px rgba(241,196,15,0.4)';
             } else if (isVis) {
                 card.style.borderColor = '#2ecc71';
+                card.style.boxShadow = '0 0 12px rgba(46,204,113,0.3)';
             } else if (isEff) {
                 card.style.borderColor = '#9b59b6';
+                card.style.boxShadow = '0 0 12px rgba(155,89,182,0.3)';
             } else if (isOwned) {
                 card.style.borderColor = rarityColor;
             }
 
-            // Бейджи надетых свойств
             let badgesHtml = '';
             if (isVis) {
-                badgesHtml += `<div class="ladder-mini-badge" style="background: rgba(46,204,113,0.3); border: 1px solid #2ecc71;"><img src="assets/roller.webp" style="width:11px; height:11px;"></div>`;
+                badgesHtml += `<div class="ladder-mini-badge" style="background: rgba(46,204,113,0.35); border: 1px solid #2ecc71;"><img src="assets/roller.webp" style="width:11px; height:11px;"></div>`;
             }
             if (isEff) {
-                badgesHtml += `<div class="ladder-mini-badge" style="background: rgba(155,89,182,0.3); border: 1px solid #9b59b6;"><img src="assets/perk.webp" style="width:11px; height:11px;"></div>`;
+                badgesHtml += `<div class="ladder-mini-badge" style="background: rgba(155,89,182,0.35); border: 1px solid #e056fd;"><img src="assets/perk.webp" style="width:11px; height:11px;"></div>`;
             }
 
             card.innerHTML = `
                 ${badgesHtml ? `<div class="ladder-tile-badges">${badgesHtml}</div>` : ''}
                 ${!isOwned ? `<img src="assets/locker.webp" class="ladder-lock-icon">` : ''}
-                <div class="ladder-tile-pedestal">
+                <div class="ladder-tile-pedestal" style="background: radial-gradient(circle, ${rarityColor}33 0%, transparent 70%) !important;">
                     <img src="${item.file}" class="ladder-tile-img" onerror="this.style.display='none'">
                 </div>
-                <div class="ladder-tile-title" style="color: ${rarityColor};">${item.name}</div>
+                <div class="ladder-tile-title" style="color: #ffffff;">${item.name}</div>
                 <div class="ladder-tile-rarity" style="color: ${rarityColor};">${item.rarity}</div>
             `;
 
-            // Клик открывает окно детального предпросмотра
             card.onclick = () => openLadderPreview(id);
             inventoryItemsList.appendChild(card);
         });
@@ -6643,11 +7351,17 @@ function startMainGame() {
 window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
 
+    // 0. Окно благодарности: закрывается по Esc мгновенно!
+    const thankModal = document.getElementById('thank-you-modal');
+    if (thankModal && !thankModal.classList.contains('hidden')) {
+        thankModal.classList.add('hidden');
+        return;
+    }
+
     // 1. КРИТИЧЕСКИЕ ОКНА НАГРАД (Блокируют закрытие по Esc)
     const milestoneModal = document.getElementById('milestone-modal');
     const calendarModal = document.getElementById('calendar-modal');
     const offlineModal = document.getElementById('offline-modal');
-    const thankModal = document.getElementById('thank-you-modal');
 
     const isRewardModalOpen =
         (milestoneModal && !milestoneModal.classList.contains('hidden')) ||
@@ -6664,7 +7378,20 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    // 3. ПОД-ОКНА ИНВЕНТАРЯ (Закрываются в первую очередь)
+    // 3. ПОД-ОКНА СКЛАДА И ИНВЕНТАРЯ (Закрываются первыми, НЕ закрывая сам склад)
+    const mbModal = document.getElementById('multi-buy-modal');
+    if (mbModal && !mbModal.classList.contains('hidden')) {
+        mbModal.classList.add('hidden');
+        return;
+    }
+
+    const batchModal = document.getElementById('batch-result-modal');
+    if (batchModal && !batchModal.classList.contains('hidden')) {
+        batchModal.classList.add('hidden');
+        return;
+    }
+    
+
     const lpModal = document.getElementById('ladder-preview-modal');
     if (lpModal && !lpModal.classList.contains('hidden')) {
         lpModal.classList.add('hidden');
@@ -6695,10 +7422,10 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    // 4. Окно рулетки кейса
+    // 4. ОКНО РУЛЕТКИ КЕЙСА
     const gachaModal = document.getElementById('gachaModal');
     const claimBtn = document.getElementById('gachaClaimBtn');
-    if (gachaModal && gachaModal.style.display !== 'none') {
+    if (gachaModal && gachaModal.style.display === 'flex') {
         AudioEngine.stop('jacpot');
         if (isGachaSpinning) {
             gachaModal.click();
@@ -6708,11 +7435,14 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    // 5. ОСНОВНЫЕ МЕНЮ
+    // 5. ОСНОВНЫЕ МЕНЮ (Закрываются только если под-окна уже закрыты)
     const retroInfoModal = document.getElementById('retro-info-modal');
     if (retroInfoModal) retroInfoModal.classList.add('hidden');
     if (shopModal) shopModal.classList.add('hidden');
-    if (casesModal) casesModal.classList.add('hidden');
+
+    const casesModalMain = document.getElementById('cases-modal');
+    if (casesModalMain) casesModalMain.classList.add('hidden');
+
     if (inventoryModal) inventoryModal.classList.add('hidden');
     if (dailyDealModal) dailyDealModal.classList.add('hidden');
     if (adStreakModal) adStreakModal.classList.add('hidden');
@@ -6888,7 +7618,7 @@ function loadGame() {
         if (uiLvlNewton) uiLvlNewton.innerText = newtonLevel;
         if (lvlNewtonDisplay) lvlNewtonDisplay.innerText = newtonLevel;
 
-        if (uiBoxText) uiBoxText.innerText = `Ящик: ${clicksForBox}/${clicksNeeded}`;
+        if (uiBoxText) uiBoxText.innerText = `${clicksForBox}/${clicksNeeded}`;
         if (uiBoxProgress) uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / clicksNeeded) * 100)}%`;
 
         const streakBtnText = document.getElementById('ad-streak-btn-text');
@@ -7057,10 +7787,20 @@ function claimStreakReward(step) {
         const mult = hasMech('billboard') ? 1.5 : 1.0;
         adState.turboTimer += (r.durationSec * 1000 * mult);
     } else if (r.type === 'skin') {
-        if (ownedSkins.includes(r.skinId)) {
-            goldenNuts += (DUPLICATE_GOLD_REWARDS.epic || 35);
-            particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: `Повторка: +${DUPLICATE_GOLD_REWARDS.epic || 35} 🟡`, color: '#f1c40f', alpha: 2, speed: 1.5 });
-        } else {
+            if (ownedSkins.includes(r.skinId)) {
+                goldenNuts += (DUPLICATE_GOLD_REWARDS.epic || 35);
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height * 0.4,
+                    img: canvasIcoGold,
+                    imgSize: 24,
+                    text: `Повторка: +${DUPLICATE_GOLD_REWARDS.epic || 35}!`,
+                    color: '#f1c40f',
+                    font: 'bold 22px sans-serif',
+                    alpha: 2,
+                    speed: 1.5
+                });
+            } else {
             ownedSkins.push(r.skinId);
             checkAbsoluteUnlock();
             particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: '🎉 ПОЛУЧЕН СКИН БИЛБОРД!', color: '#00d2d3', alpha: 2.5, speed: 1.5 });
@@ -7205,56 +7945,76 @@ function refreshDailyDeal(isAdReroll = false) {
     saveGame();
 }
 
-// Таймеры бесплатных наград
-function updateAdFreeRewardsUI() {
-    const now = Date.now();
-    const safeTimerEl = document.getElementById('ad-safe-timer');
-    const safeBtn = document.getElementById('btn-ad-free-safe');
-    if (safeTimerEl && safeBtn) {
-        const leftSafe = Math.max(0, adState.freeIronSafeTime - now);
-        if (leftSafe > 0) {
-            safeTimerEl.innerText = `${Math.floor(leftSafe / 60000)}:${String(Math.floor((leftSafe % 60000) / 1000)).padStart(2, '0')}`;
-            safeBtn.style.opacity = '0.5'; safeBtn.disabled = true;
-        } else {
-            safeTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
-            safeBtn.style.opacity = '1'; safeBtn.disabled = false;
-        }
-    }
 
-    const nutsTimerEl = document.getElementById('ad-nuts-timer');
-    const nutsBtn = document.getElementById('btn-ad-free-nuts');
-    if (nutsTimerEl && nutsBtn) {
-        const leftNuts = Math.max(0, adState.freeNutsTime - now);
-        if (leftNuts > 0) {
-            nutsTimerEl.innerText = `${Math.floor(leftNuts / 60000)}:${String(Math.floor((leftNuts % 60000) / 1000)).padStart(2, '0')}`;
-            nutsBtn.style.opacity = '0.5'; nutsBtn.disabled = true;
-        } else {
-            nutsTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
-            nutsBtn.style.opacity = '1'; nutsBtn.disabled = false;
-        }
-    }
+
+// Универсальное всплывающее сообщение поверх всего окна
+function triggerRewardPopup(targetEl, iconSrc, text, color = '#f1c40f') {
+    const modalCard = document.querySelector('.cases-modal-card');
+    if (!targetEl || !modalCard) return;
+
+    const targetRect = targetEl.getBoundingClientRect();
+    const cardRect = modalCard.getBoundingClientRect();
+
+    const popup = document.createElement('div');
+    popup.className = 'modal-reward-popup';
+    popup.style.setProperty('--popup-color', color);
+    
+    // Координаты рассчитываются относительно всего окна, минуя срез скролла
+    popup.style.left = `${(targetRect.left - cardRect.left) + (targetRect.width / 2)}px`;
+    popup.style.top = `${(targetRect.top - cardRect.top)}px`;
+    popup.innerHTML = `<img src="${iconSrc}" alt=""> <span>${text}</span>`;
+
+    modalCard.appendChild(popup);
+
+    setTimeout(() => {
+        if (popup.parentNode) popup.parentNode.removeChild(popup);
+    }, 1250);
 }
 
+// Забор бесплатного сейфа за рекламу
 const btnAdFreeSafe = document.getElementById('btn-ad-free-safe');
 if (btnAdFreeSafe) {
     btnAdFreeSafe.onclick = () => {
-        if (Date.now() < adState.freeIronSafeTime) return;
         watchRewardedAd('free_iron_safe', () => {
-            adState.freeIronSafeTime = Date.now() + 10 * 60 * 1000;
             userCases.iron = (userCases.iron || 0) + 1;
-            renderCasesShop(); updateAdFreeRewardsUI();
+            renderCasesShop();
+            updateAdFreeRewardsUI();
+
+            AudioEngine.play('win', 0.85);
+            const tile = document.getElementById('tile-ad-safe');
+            triggerRewardPopup(tile, 'assets/iron_box.webp', '+1 Сейф!', '#3498db');
         });
     };
 }
 
+// Забор +600 гаек за рекламу
 const btnAdFreeNuts = document.getElementById('btn-ad-free-nuts');
 if (btnAdFreeNuts) {
     btnAdFreeNuts.onclick = () => {
-        if (Date.now() < adState.freeNutsTime) return;
         watchRewardedAd('free_nuts', () => {
-            adState.freeNutsTime = Date.now() + 5 * 60 * 1000;
-            addNuts(Math.floor(250 + Math.random() * 101));
-            renderCasesShop(); updateAdFreeRewardsUI();
+            addNuts(600);
+            renderCasesShop();
+            updateAdFreeRewardsUI();
+
+            AudioEngine.play('gaiki', 0.85);
+            const tile = document.getElementById('tile-ad-nuts');
+            triggerRewardPopup(tile, 'assets/nut.webp', '+600 Гаек!', '#f1c40f');
+        });
+    };
+}
+
+// Забор +15 золотых гаек за рекламу в Складе Кейсов
+const btnAdFreeGold = document.getElementById('btn-ad-free-gold');
+if (btnAdFreeGold) {
+    btnAdFreeGold.onclick = () => {
+        watchRewardedAd('cases_free_gold', () => {
+            const gained = addGoldenNuts(15);
+            renderCasesShop();
+            updateAdFreeRewardsUI();
+
+            AudioEngine.play('pickupCoin5', 1.0);
+            const tile = document.getElementById('tile-ad-gold');
+            triggerRewardPopup(tile, 'assets/golden_nut.webp', `+${gained} Золота!`, '#f1c40f');
         });
     };
 }
@@ -7294,41 +8054,45 @@ const timeLeft = Math.max(0, midnight - now);
         ? (LADDER_DESC[dailyDeal.id] || 'Уникальная лестница')
         : `+${itemData.luck} к общей удаче`;
 
-    // 3. Состояние кнопки
+    // 3. Состояние кнопки (Объемный 3D-стиль)
     const canAfford = goldenNuts >= dailyDeal.salePrice;
     let buttonHtml = '';
 
     if (isOwned) {
         buttonHtml = `
-            <button disabled style="width: 100%; background: #27ae60; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; opacity: 0.9;">
+            <button disabled style="width: 100%; height: 42px; background: linear-gradient(180deg, #27ae60, #1e8449); color: #fff; border: 1px solid #7bed9f; border-bottom: 3px solid #145a32; border-radius: 10px; font-weight: 900; font-size: 13.5px; opacity: 0.9;">
                 ✔ В КОЛЛЕКЦИИ
             </button>`;
     } else if (canAfford) {
         buttonHtml = `
-            <button id="btn-buy-deal" style="width: 100%; background: #f1c40f; color: #111; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 3px 10px rgba(241,196,15,0.3); display: flex; align-items: center; justify-content: center; gap: 4px;">
-                Купить: <s style="color: #666; font-size: 12px; margin-right: 4px;">${dailyDeal.basePrice}</s> ${dailyDeal.salePrice} <img src="assets/golden_nut.webp" class="ui-ico-sm">
+            <button id="btn-buy-deal" style="width: 100%; height: 42px; background: linear-gradient(180deg, #ffeaa7 0%, #f1c40f 45%, #e67e22 100%); color: #111; border: 1px solid #fff; border-bottom: 4px solid #9a7d0a; border-radius: 10px; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241,196,15,0.4); display: flex; align-items: center; justify-content: center; gap: 5px;">
+                КУПИТЬ: <s style="color: rgba(0,0,0,0.55); font-size: 12px;">${dailyDeal.basePrice}</s> ${dailyDeal.salePrice} <img src="assets/golden_nut.webp" class="ui-ico-sm">
             </button>`;
     } else {
         const needGold = dailyDeal.salePrice - goldenNuts;
         buttonHtml = `
-            <button id="btn-buy-deal" style="width: 100%; background: #e67e22; color: #fff; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                Не хватает ${needGold} <img src="assets/golden_nut.webp" class="ui-ico-sm"> → Получить
+            <button id="btn-buy-deal" style="width: 100%; height: 42px; background: linear-gradient(180deg, #ff9f43 0%, #d35400 100%); color: #fff; border: 1px solid #ffd54f; border-bottom: 4px solid #873600; border-radius: 10px; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.7);">
+                Не хватает ${needGold} <img src="assets/golden_nut.webp" class="ui-ico-sm"> → В Банк
             </button>`;
     }
 
-    // 4. Вертикальная сочная карточка
+    // 4. Увеличенная карточка витрины с крупным подиумом под лестницу
     container.innerHTML = `
-        <div style="width: 130px; height: 130px; background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.5) 100%); border: 2px solid ${rarityColor}; border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 16px ${rarityColor}40;">
-            <img src="${itemData.file || 'assets/wood_stair-removebg-preview.png'}" style="max-width: 90px; max-height: 105px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));" onerror="this.style.display='none'">
-        </div>
-        
-        <div style="text-align: center; margin-top: 4px;">
-            <div style="font-size: 17px; font-weight: bold; color: ${rarityColor}; margin-bottom: 2px;">${itemData.name}</div>
-            <div style="font-size: 11px; color: ${rarityColor}; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; opacity: 0.85;">${itemData.rarity || 'epic'}</div>
-            <div style="font-size: 12px; color: #bdc3c7; margin-top: 6px; line-height: 1.3; max-width: 230px;">${buffDesc}</div>
+        <div style="width: 100%; background: linear-gradient(180deg, #162030 0%, #0d131c 100%); border: 2px solid ${rarityColor}; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 16px; box-shadow: 0 0 25px ${rarityColor}35, inset 0 1px 0 rgba(255,255,255,0.1); box-sizing: border-box;">
+            <!-- Увеличенное фиолетовое/цветное окно предпросмотра (120x148px) -->
+            <div style="width: 120px; height: 148px; flex-shrink: 0; background: radial-gradient(circle, ${rarityColor}48 0%, rgba(8,12,18,0.8) 80%); border: 2px solid ${rarityColor}; border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 18px ${rarityColor}40, inset 0 0 15px ${rarityColor}25;">
+                <img src="${itemData.file || 'assets/wood_stair-removebg-preview.png'}" style="max-width: 96px; max-height: 134px; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.9)); transform: scale(1.06);" onerror="this.style.display='none'">
+            </div>
+            <div style="flex: 1; text-align: left; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                <span style="align-self: flex-start; display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 9.5px; font-weight: 900; background: rgba(0,0,0,0.6); color: ${rarityColor}; border: 1px solid ${rarityColor}; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;">
+                    ${itemData.rarity || 'epic'} • СКИДКА -${Math.round((1 - dailyDeal.salePrice / dailyDeal.basePrice) * 100)}%
+                </span>
+                <div style="font-size: 18px; font-weight: 900; color: #ffffff; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1.15;">${itemData.name}</div>
+                <div style="font-size: 12px; color: #cbd5e1; line-height: 1.4;">${buffDesc}</div>
+            </div>
         </div>
 
-        <div style="width: 100%; margin-top: 6px;">
+        <div style="width: 100%; margin-top: 4px;">
             ${buttonHtml}
         </div>
     `;
@@ -7338,7 +8102,7 @@ const timeLeft = Math.max(0, midnight - now);
     if (buyBtn && !isOwned) {
         buyBtn.onclick = () => {
             if (goldenNuts >= dailyDeal.salePrice) {
-                showConfirmPurchase('Сделка дня', `Купить "${itemData.name}" за ${dailyDeal.salePrice} 🟡?`, dailyDeal.salePrice, () => {
+                showConfirmPurchase('Сделка дня', `Купить "${itemData.name}" за ${dailyDeal.salePrice} <img src="assets/golden_nut.webp" class="ui-ico">?`, dailyDeal.salePrice, () => {
                     goldenNuts -= dailyDeal.salePrice;
                     if (dailyDeal.type === 'skin') {
                         ownedSkins.push(dailyDeal.id);
@@ -7348,6 +8112,7 @@ const timeLeft = Math.max(0, midnight - now);
                     }
 
                     AudioEngine.play('gaiki', 0.8);
+                    updateHeaderUI();
                     saveGame();
                     renderDailyDealUI();
                     if (typeof renderInventory === 'function') renderInventory();
@@ -7788,27 +8553,30 @@ function updateBoostsUI() {
     }
 }
 
-// Живой отсчет таймера каждую секунду при открытом окне
+// Секундный тикер смены дня (на кнопке и в модалке)
 setInterval(() => {
-    if (!dailyDealModal || dailyDealModal.classList.contains('hidden') || !dailyDeal.id) return;
-
-    const timerEl = document.getElementById('daily-deal-timer');
     const now = new Date();
     const midnight = new Date(now);
     midnight.setHours(24, 0, 0, 0);
     const timeLeft = Math.max(0, midnight - now);
 
-    // Если наступила полночь прямо при открытом окне — генерируем новый товар
+    const h = String(Math.floor(timeLeft / 3600000)).padStart(2, '0');
+    const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, '0');
+    const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0');
+
+    // Обновляем таймер на компактной кнопке в углу экрана
+    const miniTimerEl = document.getElementById('deal-mini-timer');
+    if (miniTimerEl) miniTimerEl.innerText = `${h}:${m}:${s}`;
+
+    if (!dailyDealModal || dailyDealModal.classList.contains('hidden') || !dailyDeal.id) return;
+
+    const timerEl = document.getElementById('daily-deal-timer');
     if (timeLeft <= 0) {
         refreshDailyDeal(false);
         renderDailyDealUI();
         return;
     }
-
-    const h = String(Math.floor(timeLeft / 3600000)).padStart(2, '0');
-    const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, '0');
-    const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0');
-    if (timerEl) timerEl.innerText = `${h}:${m}:${s}`; //f
+    if (timerEl) timerEl.innerText = `${h}:${m}:${s}`;
 }, 1000);
 
 // Автосохранение каждые 5 секунд
@@ -7824,20 +8592,46 @@ let lastVisibilityHiddenTime = 0;
 window.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
         lastVisibilityHiddenTime = Date.now();
+
+        // 1. Ставим на паузу фоновую музыку и запоминаем её состояние
+        if (AudioEngine.bgm && !AudioEngine.bgm.paused) {
+            AudioEngine.bgm.pause();
+            window._bgmWasPlaying = true;
+        }
+
+        // 2. Глушим активные звуковые эффекты из пула
+        if (AudioEngine.pool) {
+            Object.values(AudioEngine.pool).forEach(soundList => {
+                soundList.forEach(audio => {
+                    if (!audio.paused) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }
+                });
+            });
+        }
+
+        // 3. Останавливаем таймер автоклика
         if (window.autoTapInterval) {
             clearInterval(window.autoTapInterval);
             window.autoTapInterval = null;
         }
         saveGame();
     } else if (document.visibilityState === 'visible') {
-        // Если игрок был в Alt-Tab с надетой Чёрной дырой — доначисляем массу!
+        // 1. Возобновляем музыку, если она играла до сворачивания
+        if (window._bgmWasPlaying && AudioEngine.bgm) {
+            AudioEngine.bgm.play().catch(() => {});
+            window._bgmWasPlaying = false;
+        }
+
+        // 2. Доначисляем массу Чёрной дыры за время отсутствия
         if (hasMech('endless') && lastVisibilityHiddenTime > 0) {
             const awaySeconds = (Date.now() - lastVisibilityHiddenTime) / 1000;
-            // +1000% (10.0) за 1200 секунд (20 минут)
             blackHoleBonus = Math.min(10.0, blackHoleBonus + (10.0 / 1200) * awaySeconds);
             lastVisibilityHiddenTime = 0;
         }
 
+        // 3. Возобновляем автоклик, если бафф ещё активен
         if (adState.autotapTimer > 0 && !window.autoTapInterval) {
             startAutoTapInterval();
         }
@@ -7973,14 +8767,23 @@ const MOCK_LEADERS = {
         { rank: 2, name: 'CosmoClimber', score: 98200, isVip: true, avatar: null },
         { rank: 3, name: 'ApexStriker', score: 64100, isVip: false, avatar: null },
         { rank: 4, name: 'SkyWalker', score: 32000, isVip: false, avatar: null },
-        { rank: 5, name: 'StepMaster', score: 12500, isVip: false, avatar: null }
+        { rank: 5, name: 'StepMaster', score: 12500, isVip: false, avatar: null },
+        { rank: 6, name: 'AstroBoy', score: 8400, isVip: true, avatar: null },
+        { rank: 7, name: 'RoofRunner', score: 5100, isVip: false, avatar: null },
+        { rank: 8, name: 'CloudJump', score: 2900, isVip: false, avatar: null },
+        { rank: 9, name: 'IronBolt', score: 1400, isVip: false, avatar: null },
+        { rank: 10, name: 'RookieTap', score: 600, isVip: false, avatar: null }
     ],
     week: [
         { rank: 1, name: 'SpeedyTap', score: 18400, isVip: true, avatar: null },
         { rank: 2, name: 'Newbie2026', score: 11200, isVip: false, avatar: null },
         { rank: 3, name: 'StarFall', score: 7800, isVip: false, avatar: null },
         { rank: 4, name: 'LadderHero', score: 4500, isVip: false, avatar: null },
-        { rank: 5, name: 'Volt', score: 2100, isVip: false, avatar: null }
+        { rank: 5, name: 'Volt', score: 2100, isVip: false, avatar: null },
+        { rank: 6, name: 'NeonKid', score: 1500, isVip: true, avatar: null },
+        { rank: 7, name: 'PixelClimber', score: 950, isVip: false, avatar: null },
+        { rank: 8, name: 'NightOwl', score: 500, isVip: false, avatar: null },
+        { rank: 9, name: 'SunnyStep', score: 250, isVip: false, avatar: null }
     ]
 };
 
@@ -8052,55 +8855,69 @@ async function renderLeaderboardUI() {
 
     listEl.innerHTML = '';
 
-    // Отрисовка списка
-    entries.slice(0, 10).forEach(p => {
+    // Отрисовка списка ТОП-10 с выделением 1, 2 и 3 места и поддержкой венков rank_1..3.webp
+    entries.forEach(p => {
         const row = document.createElement('div');
-        let borderStyle = 'border: 1px solid #34495e;';
-        let bgStyle = 'background: rgba(30, 39, 46, 0.85);';
+        let rankClass = '';
+        if (p.rank === 1) rankClass = 'lb-row-top1';
+        else if (p.rank === 2) rankClass = 'lb-row-top2';
+        else if (p.rank === 3) rankClass = 'lb-row-top3';
 
-        if (p.isPlayer) {
-            borderStyle = 'border: 2px solid #2ecc71;';
-            bgStyle = 'background: rgba(46, 204, 113, 0.2);';
-        } else if (p.isVip) {
-            borderStyle = 'border: 1px solid #f1c40f; box-shadow: 0 0 6px rgba(241,196,15,0.3);';
+        if (p.isPlayer) rankClass += ' lb-row-me';
+
+        row.className = `lb-row-card ${rankClass}`;
+
+        // Иконка ранга (подхватывает assets/rank_1.webp, rank_2.webp, rank_3.webp или рисует 3D-медаль)
+        let rankBadgeHtml = `<div class="lb-rank-num">#${p.rank}</div>`;
+        if (p.rank <= 3) {
+            rankBadgeHtml = `
+                <div class="lb-medal-box lb-medal-${p.rank}">
+                    <img src="assets/rank_${p.rank}.webp" class="lb-wreath-img" alt="#${p.rank}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="lb-medal-fallback" style="display:none;">${p.rank}</span>
+                </div>
+            `;
         }
 
-        row.style.cssText = `
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-bottom: 4px;
-            ${bgStyle} ${borderStyle}
-        `;
-
-        const avatarHtml = p.avatar 
-            ? `<img src="${p.avatar}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">`
-            : '';
+        // Если игрок VIP — оборачиваем его ник в дизайнерскую капсулу с короной на углу
+        const nameContentHtml = p.isVip
+            ? `<div class="lb-vip-pill">
+                   <span>${p.name}</span>
+                   <img src="assets/cut_crown.webp" class="lb-vip-corner-crown" alt="VIP" onerror="this.src='assets/crown.webp'">
+               </div>`
+            : `<span>${p.name}</span>`;
 
         row.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: bold; width: 24px; color: ${p.rank <= 3 ? '#f1c40f' : '#bdc3c7'};">#${p.rank}</span>
-                ${avatarHtml}
-                <span style="color: ${p.isPlayer ? '#2ecc71' : (p.isVip ? '#f1c40f' : '#fff')}; font-weight: bold;">
-                    ${p.isVip ? '<img src="assets/crown.webp" class="ui-ico-sm" style="margin-right: 3px;"> ' : ''}${p.name}
-                </span>
+            <div class="lb-row-left">
+                ${rankBadgeHtml}
+                <div class="lb-player-info">
+                    <div class="lb-player-name">
+                        ${nameContentHtml}
+                    </div>
+                </div>
             </div>
-            <b style="color: ${p.rank <= 3 ? '#f1c40f' : '#3498db'};">${p.score.toLocaleString('ru-RU')} м</b>
+            <div class="lb-row-score">${p.score.toLocaleString('ru-RU')} м</div>
         `;
+
         listEl.appendChild(row);
     });
 
-    // Нижняя плашка игрока
     if (playerCardEl) {
-        playerCardEl.style.borderColor = isVip ? '#f1c40f' : '#2ecc71';
-        playerCardEl.style.boxShadow = isVip ? '0 0 10px rgba(241,196,15,0.4)' : 'none';
+        const rankTxt = myRank ? `#${myRank}` : '—';
+        const myNameHtml = isVip
+            ? `<div class="lb-vip-pill">
+                   <span>Ты (VIP)</span>
+                   <img src="assets/cut_crown.webp" class="lb-vip-corner-crown" alt="VIP" onerror="this.src='assets/crown.webp'">
+               </div>`
+            : `<span>Ты</span>`;
 
         playerCardEl.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: bold; color: #f1c40f;">#${myRank || '—'}</span>
-                <span style="color: ${isVip ? '#f1c40f' : '#fff'}; font-weight: bold;">
-                    ${isVip ? '<img src="assets/crown.webp" class="ui-ico-sm" style="margin-right: 3px;"> ' : ''}Ты ${isVip ? '(VIP)' : ''}
-                </span>
+            <div class="lb-row-left">
+                <div class="lb-my-rank-pill">${rankTxt}</div>
+                <div class="lb-player-name">
+                    ${myNameHtml}
+                </div>
             </div>
-            <b style="color: #f1c40f; font-size: 13px;">${myScore.toLocaleString('ru-RU')} м</b>
+            <div class="lb-row-score" style="color:#f1c40f;">${myScore.toLocaleString('ru-RU')} м</div>
         `;
     }
 }
@@ -8260,6 +9077,20 @@ function triggerCaseGainedPopup() {
 // ==========================================================
 function formatFullCurrency(num) {
     return Math.floor(num || 0).toLocaleString('ru-RU');
+}
+
+function formatShortVal(val) {
+    const n = Math.floor(val || 0);
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 10000) return (n / 1000).toFixed(1) + 'K';
+    return `${n}`;
+}
+
+function updateHeaderUI() {
+    const uiNutsEl = document.getElementById('nuts-display');
+    const uiGoldEl = document.getElementById('gold-display');
+    if (uiNutsEl) uiNutsEl.innerText = formatShortVal(nuts);
+    if (uiGoldEl) uiGoldEl.innerText = formatShortVal(goldenNuts);
 }
 
 // ==========================================================
