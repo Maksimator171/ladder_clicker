@@ -9,6 +9,12 @@
 </head>
 
 <body>
+    <!-- Размытый атмосферный фон локации для ПК -->
+    <div id="pc-ambient-bg" aria-hidden="true">
+        <div id="ambient-layer-1" class="ambient-bg-layer active" style="background-image: url('assets/loc_0.webp');"></div>
+        <div id="ambient-layer-2" class="ambient-bg-layer"></div>
+    </div>
+
     <div id="game-container">
         <canvas id="canvas"></canvas>
 
@@ -1723,11 +1729,42 @@
         </div>
     </div>
 
+    <!-- Официальный скрипт SDK Яндекс Игр -->
+    <script src="/sdk.js"></script>
     <script src="translations.js"></script>
+    <script src="game.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            applyHtmlTranslations();
-        });
+        async function initYandexGame() {
+            try {
+                if (typeof YaGames !== 'undefined') {
+                    const ysdk = await YaGames.init();
+                    window.ysdk = ysdk;
+
+                    // Пункт 2.14: автоопределение языка игрока из окружения SDK
+                    const yaLang = ysdk.environment?.i18n?.lang;
+                    if (yaLang) {
+                        const shortLang = yaLang.slice(0, 2).toLowerCase();
+                        if (typeof setGameLanguage === 'function') {
+                            setGameLanguage(shortLang);
+                        } else {
+                            window.currentLang = TRANSLATIONS[shortLang] ? shortLang : 'en';
+                            applyHtmlTranslations();
+                        }
+                    }
+
+                    // Сообщаем платформе, что игра полностью загрузилась
+                    if (ysdk.features && ysdk.features.LoadingAPI) {
+                        ysdk.features.LoadingAPI.ready();
+                    }
+                } else {
+                    applyHtmlTranslations();
+                }
+            } catch (e) {
+                console.warn('Yandex SDK init fallback:', e);
+                applyHtmlTranslations();
+            }
+        }
+        document.addEventListener('DOMContentLoaded', initYandexGame);
     </script>
     <script src="game.js"></script>
 </body>

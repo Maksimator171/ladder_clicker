@@ -8,16 +8,19 @@
 }
 
 body {
-    background-color: #111;
+    background-color: #070b12;
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(52, 152, 219, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 85% 30%, rgba(155, 89, 182, 0.12) 0%, transparent 45%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
     display: flex;
     justify-content: center;
     align-items: center;
     margin: 0;
-    /* Убирает скрытый системный отступ браузера в 8px */
     height: 100vh;
-    /* Базовый размер для старых браузеров */
     height: 100dvh;
-    /* Точный размер с учётом мобильной адресной строки */
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     user-select: none;
@@ -28,9 +31,10 @@ body {
     width: 100%;
     height: 100%;
     max-width: 540px;
-    /* Оптимальная ширина для мобильного кликера на ПК */
     background: #222;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.95), 0 0 15px rgba(0, 210, 255, 0.15);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
     overflow: hidden;
 }
 
@@ -4023,9 +4027,9 @@ canvas {
 
 .top-btn-corner-crown {
     position: absolute;
-    top: -11px;
+    top: -10px;
     left: -9px;
-    width: 24px;
+    width: 26px;
     height: 24px;
     object-fit: contain;
     transform: rotate(-18deg);
@@ -4592,10 +4596,10 @@ canvas {
 */
 .lb-vip-corner-crown {
     position: absolute;
-    top: -30px;
-    right: -24px;
+    top: -28px;
+    right: -23px;
     width: 44px;
-    height: 44px;
+    height: 41px;
     object-fit: contain;
     transform: rotate(38deg);
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9));
@@ -4988,4 +4992,148 @@ canvas {
     border-radius: 2px !important;
     z-index: 1 !important;
     transition: height 0.15s ease-out !important;
+}
+
+/* Мягкий золотой ореол под короной */
+.lb-vip-corner-crown {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 6px rgba(255, 215, 0, 0.55)) !important;
+}
+
+/* Анимированный блик на верхушке короны */
+.vip-crown-glint {
+    position: absolute;
+    /* МЕНЯЙ ЭТИ ДВА ПАРАМЕТРА ДЛЯ ПОДГОНКИ ПОЛОЖЕНИЯ БЛИКА: */
+    top: -24px;   /* Чем больше отрицательное число, тем выше блик */
+    right: -12px; /* Чем больше отрицательное число, тем правее блик */
+    
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    z-index: 6;
+    background: radial-gradient(circle, #ffffff 0%, rgba(255, 245, 160, 0.8) 35%, transparent 70%);
+    animation: crownGlintAnim 2.6s infinite ease-in-out;
+}
+
+/* Лучи звёздочки блика */
+.vip-crown-glint::before,
+.vip-crown-glint::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #ffd700;
+}
+
+.vip-crown-glint::before {
+    width: 16px;
+    height: 2px;
+}
+
+.vip-crown-glint::after {
+    width: 2px;
+    height: 16px;
+}
+
+@keyframes crownGlintAnim {
+    0%, 65%, 100% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+    }
+    80% {
+        transform: scale(1.15) rotate(45deg);
+        opacity: 1;
+    }
+    90% {
+        transform: scale(0.6) rotate(90deg);
+        opacity: 0.5;
+    }
+}
+
+/* Золотая искорка как на монетках (четырёхконечная звезда с вогнутыми дугами) */
+.vip-crown-glint {
+    position: absolute;
+    /* 👇 КООРДИНАТЫ ИСКРЫ НА КОРОНЕ (меняй при необходимости) 👇 */
+    top: -25px;   /* Выше / ниже */
+    right: -14px; /* Правее / левее */
+
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+    z-index: 6;
+    background: linear-gradient(135deg, #ffffff 20%, #fff200 80%);
+    /* Вырезаем форму классической монетной искры */
+    clip-path: polygon(
+        50% 0%, 60% 38%, 100% 50%, 60% 62%,
+        50% 100%, 40% 62%, 0% 50%, 40% 38%
+    );
+    filter: drop-shadow(0 0 5px #ffd700);
+    animation: coinSparkleAnim 2.8s infinite ease-in-out;
+}
+
+@keyframes coinSparkleAnim {
+    0%, 68%, 100% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+    }
+    80% {
+        transform: scale(1.15) rotate(25deg);
+        opacity: 1;
+    }
+    88% {
+        transform: scale(0.75) rotate(45deg);
+        opacity: 0.85;
+    }
+}
+
+/* По умолчанию на телефонах фоновый слой полностью отключён и не тратит память */
+#pc-ambient-bg {
+    display: none;
+}
+
+/* Включаем только когда экран шире игровой колонки (ПК / планшеты) */
+@media (min-width: 525px) {
+    #pc-ambient-bg {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+        pointer-events: none;
+        background: #05080e;
+    }
+
+    /* Мягкая виньетка по краям монитора, чтобы взгляд держался на центре */
+    #pc-ambient-bg::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.75) 100%);
+        z-index: 2;
+    }
+
+    .ambient-bg-layer {
+        position: absolute;
+        inset: 0;
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+        transform: scale(1.15); /* Прячем светлые края размытия */
+        filter: blur(32px) brightness(0.42) saturate(1.25);
+        opacity: 0;
+        transition: opacity 1.6s ease-in-out;
+        will-change: opacity;
+        z-index: 1;
+    }
+
+    .ambient-bg-layer.active {
+        opacity: 1;
+    }
+
+    #game-container {
+        z-index: 5;
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.95), 0 0 2px rgba(255, 255, 255, 0.2) !important;
+    }
 }

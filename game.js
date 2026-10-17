@@ -152,41 +152,63 @@ if (btnCloseStarter && starterModal) {
     btnCloseStarter.onclick = () => starterModal.classList.add('hidden');
 }
 
+
+// Универсальная покупка через Яндекс SDK (с фоллбэком для тестов на ПК)
+async function processYandexPurchase(productId, onSuccess) {
+    if (window.ysdk && typeof window.ysdk.getPayments === 'function') {
+        try {
+            const payments = await window.ysdk.getPayments({ signed: true });
+            const purchase = await payments.purchase({ id: productId });
+            // Если это расходуемый пакет золота — списываем токен покупки, чтобы его можно было покупать много раз
+            if (productId.startsWith('gold_') && typeof payments.consumePurchase === 'function') {
+                await payments.consumePurchase(purchase.purchaseToken);
+            }
+            onSuccess();
+        } catch (err) {
+            console.warn('[Payments] Покупка отменена или не удалась:', err);
+        }
+    } else {
+        // Тестовый режим на ПК (без SDK Яндекса)
+        onSuccess();
+    }
+}
+
 // Покупка Starter Pack (39₽: 25 деревянных, 10 железных, 5 золотых + Без рекламы)
 const btnBuyStarter = document.getElementById('btn-buy-starter');
 if (btnBuyStarter) {
     btnBuyStarter.onclick = () => {
-        starterPack.purchased = true;
-        isVip = true;
-        hasAdFree = true; // Отключение рекламы навсегда!
+        processYandexPurchase('starter_pack', () => {
+            starterPack.purchased = true;
+            isVip = true;
+            hasAdFree = true;
 
-        goldenNuts += 179;
-        nuts += 1799;
-        boxesOwned += 25; // 25 деревянных ящиков
-        userCases.wooden = boxesOwned;
-        userCases.iron = (userCases.iron || 0) + 10; // 10 железных сейфов
-        userCases.gold = (userCases.gold || 0) + 5;  // 5 золотых контейнеров
+            goldenNuts += 179;
+            nuts += 1799;
+            boxesOwned += 25;
+            userCases.wooden = boxesOwned;
+            userCases.iron = (userCases.iron || 0) + 10;
+            userCases.gold = (userCases.gold || 0) + 5;
 
-        if (!ownedSpeakerSkins.includes('cyber')) {
-            ownedSpeakerSkins.push('cyber');
-        }
+            if (!ownedSpeakerSkins.includes('cyber')) {
+                ownedSpeakerSkins.push('cyber');
+            }
 
-        // Обновляем статус кнопки "Без рекламы" в Золотом Банке, если она есть
-        const adFreeBtn = document.querySelector('.mock-buy-btn[data-type="adfree"]');
-        if (adFreeBtn) {
-            adFreeBtn.innerText = t('donate.purchased');
-            adFreeBtn.disabled = true;
-            adFreeBtn.style.opacity = '0.5';
-        }
+            const adFreeBtn = document.querySelector('.mock-buy-btn[data-type="adfree"]');
+            if (adFreeBtn) {
+                adFreeBtn.innerText = t('donate.purchased');
+                adFreeBtn.disabled = true;
+                adFreeBtn.style.opacity = '0.5';
+            }
 
-        particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: t('particle.starter_obtained'), color: '#f1c40f', alpha: 2.5, speed: 2 });
+            particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: t('particle.starter_obtained'), color: '#f1c40f', alpha: 2.5, speed: 2 });
 
-        uiNuts.innerText = `${nuts}`;
-        if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-        starterModal.classList.add('hidden');
-        if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
-        showThankYouModal(t('modal.starter.title'), t('modal.starter.desc'));
-        saveGame();
+            uiNuts.innerText = `${nuts}`;
+            if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+            starterModal.classList.add('hidden');
+            if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
+            showThankYouModal(t('modal.starter.title'), t('modal.starter.desc'));
+            saveGame();
+        });
     };
 }
 
@@ -215,23 +237,24 @@ if (btnBankAdGold) {
 document.querySelectorAll('.mock-buy-btn').forEach(btn => {
     btn.onclick = () => {
         const type = btn.dataset.type;
-        isVip = true;
+        const amount = parseInt(btn.dataset.amount, 10);
+        const productId = (type === 'adfree') ? 'adfree' : `gold_${amount}`;
 
-        if (type === 'adfree') {
-            hasAdFree = true;
-            btn.innerText = t('donate.purchased');
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            // donateModal НЕ закрываем — окно благодарности появится поверх него
-            showThankYouModal(t('modal.adfree.title'), t('modal.adfree.desc'));
-        } else if (type === 'gold') {
-            const amount = parseInt(btn.dataset.amount, 10);
-            goldenNuts += amount;
-            // donateModal НЕ закрываем — окно благодарности появится поверх него
-            showThankYouModal(t('modal.gold_credited.title'), t('modal.gold_credited.desc', { amount }));
-        }
-
-        saveGame();
+        processYandexPurchase(productId, () => {
+            isVip = true;
+            if (type === 'adfree') {
+                hasAdFree = true;
+                btn.innerText = t('donate.purchased');
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                showThankYouModal(t('modal.adfree.title'), t('modal.adfree.desc'));
+            } else if (type === 'gold') {
+                goldenNuts += amount;
+                updateHeaderUI();
+                showThankYouModal(t('modal.gold_credited.title'), t('modal.gold_credited.desc', { amount }));
+            }
+            saveGame();
+        });
     };
 });
 
@@ -326,7 +349,38 @@ function watchRewardedAd(placementName, onSuccess) {
         saveGame();
     };
 
-    onRewardEarned();
+    // Если игра запущена на Яндекс Играх — показываем реальный видеоролик
+    if (window.ysdk && window.ysdk.adv && typeof window.ysdk.adv.showRewardedVideo === 'function') {
+        window.ysdk.adv.showRewardedVideo({
+            callbacks: {
+                onOpen: () => {
+                    if (AudioEngine.bgm && !AudioEngine.bgm.paused) {
+                        AudioEngine.bgm.pause();
+                        window._adPausedBgm = true;
+                    }
+                },
+                onRewarded: () => {
+                    onRewardEarned();
+                },
+                onClose: () => {
+                    if (window._adPausedBgm && AudioEngine.bgm) {
+                        AudioEngine.bgm.play().catch(() => {});
+                        window._adPausedBgm = false;
+                    }
+                },
+                onError: (err) => {
+                    console.warn('[AdEngine] Ошибка рекламы:', err);
+                    if (window._adPausedBgm && AudioEngine.bgm) {
+                        AudioEngine.bgm.play().catch(() => {});
+                        window._adPausedBgm = false;
+                    }
+                }
+            }
+        });
+    } else {
+        // Локальный тест на ПК (без SDK) — выдаём награду сразу
+        onRewardEarned();
+    }
 }
 
 // Проверка сброса стрика каждые 24 часа (в полночь)
@@ -4105,6 +4159,7 @@ function drawBackground() {
             ctx.restore();
         }
     }
+    updateDesktopAmbientBG();
     locationDisplay.innerText = loc.name;
 }
 
@@ -7922,26 +7977,37 @@ function refreshDailyDeal(isAdReroll = false) {
         if (dailyDeal.adRerollsLeft <= 0) return;
         dailyDeal.adRerollsLeft--;
     }
-
+const oldId = dailyDeal.id;
+const oldType = dailyDeal.type;
     const roll = Math.random() * 100;
 
     // 10% — Легендарная лестница
     if (roll < 10) {
-        const legSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'legendary');
-        const chosen = legSkins[Math.floor(Math.random() * legSkins.length)];
+        
+        let legSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'legendary');
+if (isAdReroll && oldType === 'skin' && legSkins.length > 1) {
+    legSkins = legSkins.filter(id => id !== oldId);
+}
+const chosen = legSkins[Math.floor(Math.random() * legSkins.length)];
         dailyDeal = { ...dailyDeal, type: 'skin', id: chosen, basePrice: 450, salePrice: 219 };
     }
     // 15% — Талисман со скидкой 30%
     else if (roll < 25) {
-        const allTalismans = Object.keys(TALISMANS);
-        const chosen = allTalismans[Math.floor(Math.random() * allTalismans.length)];
+        let allTalismans = Object.keys(TALISMANS);
+if (isAdReroll && oldType === 'talisman' && allTalismans.length > 1) {
+    allTalismans = allTalismans.filter(id => id !== oldId);
+}
+const chosen = allTalismans[Math.floor(Math.random() * allTalismans.length)];
         const base = TALISMANS[chosen].price;
         dailyDeal = { ...dailyDeal, type: 'talisman', id: chosen, basePrice: base, salePrice: Math.floor(base * 0.7) };
     }
     // 75% — Эпическая лестница
     else {
-        const epicSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'epic' && k !== 'calendar_stair' && k !== 'add_stair');
-        const chosen = epicSkins[Math.floor(Math.random() * epicSkins.length)];
+        let epicSkins = Object.keys(LADDER_SKINS).filter(k => LADDER_SKINS[k].rarity === 'epic' && k !== 'calendar_stair' && k !== 'add_stair');
+if (isAdReroll && oldType === 'skin' && epicSkins.length > 1) {
+    epicSkins = epicSkins.filter(id => id !== oldId);
+}
+const chosen = epicSkins[Math.floor(Math.random() * epicSkins.length)];
         dailyDeal = { ...dailyDeal, type: 'skin', id: chosen, basePrice: 220, salePrice: 119 };
     }
 
@@ -8752,6 +8818,9 @@ let cachedYandexLeaderboard = null; // Кэш реальных данных
 
 // 1. Отправка счета в Яндекс Игры
 function submitScoreToLeaderboard(force = false) {
+    // Защита от AFK: пока игрок не сделал хотя бы 1 клик в сессии, ничего не отправляем
+    if (totalClicks <= 0) return;
+
     const now = Date.now();
     const intScore = Math.floor(currentHeight);
 
@@ -8764,12 +8833,11 @@ function submitScoreToLeaderboard(force = false) {
 
     if (window.ysdk && window.ysdk.getLeaderboards) {
         window.ysdk.getLeaderboards().then(lb => {
-            const table = currentLeaderboardTab === 'week' ? 'season_height' : 'all_time_height';
-            // В extraData упаковываем VIP-статус
             const extraData = JSON.stringify({ isVip: !!isVip });
-            lb.setLeaderboardScore(table, intScore, extraData);
+            // Отправляем рекорд сразу и в Глобальный, и в Сезонный топ активных игроков
+            lb.setLeaderboardScore('all_time_height', intScore, extraData).catch(() => {});
+            lb.setLeaderboardScore('season_height', intScore, extraData).catch(() => {});
         }).catch(err => {
-            // Ошибка нормальна, если игрок не залогинен в Яндекс
             console.warn('[Leaderboard] Запись не удалась (возможно, гость):', err);
         });
     }
@@ -8893,11 +8961,12 @@ async function renderLeaderboardUI() {
             `;
         }
 
-        // Если игрок VIP — оборачиваем его ник в дизайнерскую капсулу с короной на углу
+       // Если игрок VIP — оборачиваем его ник в дизайнерскую капсулу с короной и искрой
         const nameContentHtml = p.isVip
             ? `<div class="lb-vip-pill">
                    <span>${p.name}</span>
                    <img src="assets/cut_crown.webp" class="lb-vip-corner-crown" alt="VIP" onerror="this.src='assets/crown.webp'">
+                   <span class="vip-crown-glint"></span>
                </div>`
             : `<span>${p.name}</span>`;
 
@@ -8922,6 +8991,7 @@ async function renderLeaderboardUI() {
             ? `<div class="lb-vip-pill">
                    ${t('leaderboard.you_vip')}
                    <img src="assets/cut_crown.webp" class="lb-vip-corner-crown" alt="VIP" onerror="this.src='assets/crown.webp'">
+                   <span class="vip-crown-glint"></span>
                </div>`
             : `${t('leaderboard.you')}`;
 
@@ -9969,3 +10039,36 @@ function setGameLanguage(langCode) {
         updateDynamicTranslations();
     }
 }
+
+let currentAmbientStageIdx = 0;
+let activeAmbientLayerNum = 1;
+
+function updateDesktopAmbientBG() {
+    if (window.innerWidth < 525) return; // На телефонах не выполняем
+
+    // Определяем индекс текущей стадии (0..6) по TRACKER_STAGES
+    let stageIdx = 0;
+    for (let i = 0; i < TRACKER_STAGES.length; i++) {
+        if (currentHeight >= TRACKER_STAGES[i]) stageIdx = i;
+    }
+
+    if (stageIdx === currentAmbientStageIdx) return;
+    currentAmbientStageIdx = stageIdx;
+
+    const lore = STAGES_LORE[stageIdx];
+    if (!lore || !lore.image) return;
+
+    const layer1 = document.getElementById('ambient-layer-1');
+    const layer2 = document.getElementById('ambient-layer-2');
+    if (!layer1 || !layer2) return;
+
+    const nextLayer = (activeAmbientLayerNum === 1) ? layer2 : layer1;
+    const prevLayer = (activeAmbientLayerNum === 1) ? layer1 : layer2;
+
+    nextLayer.style.backgroundImage = `url('${lore.image}')`;
+    nextLayer.classList.add('active');
+    prevLayer.classList.remove('active');
+
+    activeAmbientLayerNum = (activeAmbientLayerNum === 1) ? 2 : 1;
+}
+
