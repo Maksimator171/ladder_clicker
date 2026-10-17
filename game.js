@@ -46,7 +46,7 @@ let radarState = {
 };
 
 // Функция вызова окна благодарности / начисления награды (с поддержкой кастомного арта)
-function showThankYouModal(title, desc, showVip = true, customImg = 'assets/mascot.webp') {
+function showThankYouModal(title, desc, showVip = true, customImg = 'assets/mascot.webp', skipSound = false) {
     const modal = document.getElementById('thank-you-modal');
     const titleEl = document.getElementById('thank-title');
     const descEl = document.getElementById('thank-desc');
@@ -82,7 +82,7 @@ function showThankYouModal(title, desc, showVip = true, customImg = 'assets/masc
     }
 
     modal.classList.remove('hidden');
-    if (typeof AudioEngine !== 'undefined') AudioEngine.play('donate_sound', 1.0);
+    if (!skipSound && typeof AudioEngine !== 'undefined') AudioEngine.play('donate_sound', 1.0);
 }
 
 // Универсальное окно подтверждения покупки за золото
@@ -174,18 +174,18 @@ if (btnBuyStarter) {
         // Обновляем статус кнопки "Без рекламы" в Золотом Банке, если она есть
         const adFreeBtn = document.querySelector('.mock-buy-btn[data-type="adfree"]');
         if (adFreeBtn) {
-            adFreeBtn.innerText = 'Куплено';
+            adFreeBtn.innerText = t('donate.purchased');
             adFreeBtn.disabled = true;
             adFreeBtn.style.opacity = '0.5';
         }
 
-        particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: 'НАБОР НОВИЧКА ПОЛУЧЕН!', color: '#f1c40f', alpha: 2.5, speed: 2 });
+        particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: t('particle.starter_obtained'), color: '#f1c40f', alpha: 2.5, speed: 2 });
 
         uiNuts.innerText = `${nuts}`;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
         starterModal.classList.add('hidden');
         if (btnOpenStarter) btnOpenStarter.classList.add('hidden');
-        showThankYouModal('НАБОР НОВИЧКА!', 'Гора кейсов, ресурсы, отключение рекламы и скин «Кибер» твои! Спасибо за поддержку <img src="assets/crown.webp" class="ui-ico-sm">');
+        showThankYouModal(t('modal.starter.title'), t('modal.starter.desc'));
         saveGame();
     };
 }
@@ -200,10 +200,11 @@ if (btnBankAdGold) {
 
             // Если захочешь, закинь потом в папку assets/reward_gold_mascot.webp!
             showThankYouModal(
-                'ЗОЛОТО ПОЛУЧЕНО!',
-                `Тебе начислено <b style="color:#f1c40f;">+${gained} <img src="assets/golden_nut.webp" class="ui-ico"></b> за просмотр рекламы!`,
+                t('modal.bank_gold.title'),
+                t('modal.bank_gold.desc', { amount: gained }),
                 false,
-                'assets/reward_gold_mascot.webp'
+                'assets/reward_gold_mascot.webp',
+                true
             );
             saveGame();
         });
@@ -218,16 +219,16 @@ document.querySelectorAll('.mock-buy-btn').forEach(btn => {
 
         if (type === 'adfree') {
             hasAdFree = true;
-            btn.innerText = 'Куплено';
+            btn.innerText = t('donate.purchased');
             btn.disabled = true;
             btn.style.opacity = '0.5';
             // donateModal НЕ закрываем — окно благодарности появится поверх него
-            showThankYouModal('БЕЗ РЕКЛАМЫ!', 'Баннеры отключены навсегда! Спасибо за вклад в развитие игры ❤️');
+            showThankYouModal(t('modal.adfree.title'), t('modal.adfree.desc'));
         } else if (type === 'gold') {
             const amount = parseInt(btn.dataset.amount, 10);
             goldenNuts += amount;
             // donateModal НЕ закрываем — окно благодарности появится поверх него
-            showThankYouModal('ЗОЛОТО ЗАЧИСЛЕНО!', `+${amount} <img src="assets/golden_nut.webp" class="ui-ico"> уже на балансе. Спасибо за вклад в развитие игры ❤️! Приятных покупок!`);
+            showThankYouModal(t('modal.gold_credited.title'), t('modal.gold_credited.desc', { amount }));
         }
 
         saveGame();
@@ -295,9 +296,9 @@ function watchRewardedAd(placementName, onSuccess) {
             adState.streakCount++;
 
             // Звук победы играет для наград, но НЕ при реролле и НЕ при рубеже (у рубежа звучит pickupCoin5)!
-            if (placementName !== 'case_reroll' && placementName !== 'milestone_x2') {
-                AudioEngine.play('win', 0.7);
-            }
+            if (!['case_reroll', 'milestone_x2', 'bank_free_gold', 'cases_free_gold', 'free_nuts'].includes(placementName)) {
+    AudioEngine.play('win', 0.7);
+}
 
             // Обновляем текст кнопки на экране [🎬 3/10]
             const streakBtnText = document.getElementById('ad-streak-btn-text');
@@ -311,7 +312,7 @@ function watchRewardedAd(placementName, onSuccess) {
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.4,
-                text: `📺 Спонсор: +${bNuts} 🔩 и +${bGold} 🟡!`,
+                text: t('particle.sponsor', { nuts: bNuts, gold: bGold }),
                 color: '#00d2d3',
                 font: 'bold 20px sans-serif',
                 alpha: 2.0,
@@ -352,7 +353,7 @@ function activateTurboBoost(customSeconds = null) {
             y: canvas.height * 0.35,
             img: canvasIcoTurbo,
             imgSize: 32,
-            text: `ТУРБО-ДОХОД x3 (${Math.round(durationMs / 1000)}с)!`,
+            text: t('particle.turbo_boost', { seconds: Math.round(durationMs / 1000) }),
             color: '#e67e22',
             font: 'bold 24px sans-serif',
             alpha: 2.2,
@@ -374,28 +375,28 @@ function getGlobalMultiplier() {
 // База 6 рубежей с иллюстрациями и текстами
 const HEIGHT_MILESTONES = [
     {
-        height: 250, reward: 5, name: 'Крыши', icon: '🏙️', file: 'assets/roofs_100.webp',
-        desc: 'Выше только птицы и цены на аренду. Первая сотня за спиной!'
+        height: 250, reward: 5, name: t('height_milestones.0.name'), icon: '🏙️', file: 'assets/roofs_100.webp',
+        desc: t('height_milestones.0.desc')
     },
     {
-        height: 1000, reward: 15, name: 'Грозовой фронт', icon: '⚡', file: 'assets/storm_1000.webp',
-        desc: 'Держись крепче за мокрые перекладины. Впереди открытый воздух!'
+        height: 1000, reward: 15, name: t('height_milestones.1.name'), icon: '⚡', file: 'assets/storm_1000.webp',
+        desc: t('height_milestones.1.desc')
     },
     {
-        height: 10000, reward: 35, name: 'Стратосфера', icon: '✈️', file: 'assets/strato10000.webp',
-        desc: 'Высота гражданской авиации. Земля уже заметно закругляется.'
+        height: 10000, reward: 35, name: t('height_milestones.2.name'), icon: '✈️', file: 'assets/strato10000.webp',
+        desc: t('height_milestones.2.desc')
     },
     {
-        height: 100000, reward: 75, name: 'Космос', icon: '🛰️', file: 'assets/cosmos_100000.webp',
-        desc: 'Гравитация сдалась. Ты официально в полной невесомости!'
+        height: 100000, reward: 75, name: t('height_milestones.3.name'), icon: '🛰️', file: 'assets/cosmos_100000.webp',
+        desc: t('height_milestones.3.desc')
     },
     {
-        height: 1000000, reward: 150, name: 'Млечный Путь', icon: '🌌', file: 'assets/milky_way_1000000.webp',
-        desc: 'Один миллион метров. Ты покинул пределы разумного.'
+        height: 1000000, reward: 150, name: t('height_milestones.4.name'), icon: '🌌', file: 'assets/milky_way_1000000.webp',
+        desc: t('height_milestones.4.desc')
     },
     {
-        height: 10000000, reward: 300, name: 'Бескрайний простор', icon: '🐋', file: 'assets/location_10000000.webp',
-        desc: 'Конец карты? Нет, только самое начало абсолютной пустоты.'
+        height: 10000000, reward: 300, name: t('height_milestones.5.name'), icon: '🐋', file: 'assets/location_10000000.webp',
+        desc: t('height_milestones.5.desc')
     }
 ];
 
@@ -413,7 +414,7 @@ function activateFortuneBoost(customMinutes = null, luckAdd = 15) {
             y: canvas.height * 0.35,
             img: canvasIcoClover,
             imgSize: 32,
-            text: `УДАЧА +${luckAdd}!`,
+            text: t('particle.luck_boost', { value: luckAdd }),
             color: '#2ecc71',
             font: 'bold 24px sans-serif',
             alpha: 2.2,
@@ -466,32 +467,32 @@ const TRACKER_STAGES = [0, 250, 1000, 10000, 100000, 1000000, 10000000];
 // === ЛОР И ДАННЫЕ ЛОКАЦИЙ ДЛЯ КАРТОЧКИ «БОРТОВОЙ ЖУРНАЛ» ===
 const STAGES_LORE = [
     {
-        id: 0, height: 0, name: 'Хрущевка', image: 'assets/loc_0.webp',
-        desc: 'Родной двор. Панельные джунгли и шуршание старых деревянных перекладин. Здесь начинается твой бесконечный путь.'
+        id: 0, height: 0, name: t('stages_lore.0.name'), image: 'assets/loc_0.webp',
+        desc: t('stages_lore.0.desc')
     },
     {
-        id: 1, height: 250, name: 'Крыши', image: 'assets/loc_250.webp',
-        desc: 'Выше антенн, голубей и городских пробок. Первая сотня метров за спиной, а воздух вокруг становится свежее.'
+        id: 1, height: 250, name: t('stages_lore.1.name'), image: 'assets/loc_250.webp',
+        desc: t('stages_lore.1.desc')
     },
     {
-        id: 2, height: 1000, name: 'Грозовой Фронт', image: 'assets/loc_1000.webp',
-        desc: 'Стены из плотных туч, ослепительные вспышки молний и запах озона. Перекладины мокрые и скользкие, держись крепче!'
+        id: 2, height: 1000, name: t('stages_lore.2.name'), image: 'assets/loc_1000.webp',
+        desc: t('stages_lore.2.desc')
     },
     {
-        id: 3, height: 10000, name: 'Стратосфера', image: 'assets/loc_10000.webp',
-        desc: 'Край атмосферы Земли. Небо темнеет до глубокого ультрамарина, а далеко внизу отчетливо виден синий изгиб планеты.'
+        id: 3, height: 10000, name: t('stages_lore.3.name'), image: 'assets/loc_10000.webp',
+        desc: t('stages_lore.3.desc')
     },
     {
-        id: 4, height: 100000, name: 'Открытый Космос', image: 'assets/loc_100000.webp',
-        desc: 'Орбита редких спутников и вечная молчаливая тишина. Гравитация сдалась — только лестница ведет все выше.'
+        id: 4, height: 100000, name: t('stages_lore.4.name'), image: 'assets/loc_100000.webp',
+        desc: t('stages_lore.4.desc')
     },
     {
-        id: 5, height: 1000000, name: 'Млечный Путь', image: 'assets/loc_1000000.webp',
-        desc: 'Спирали далеких галактик, мерцание туманностей и звездная пыль. Миллион метров над земными проблемами.'
+        id: 5, height: 1000000, name: t('stages_lore.5.name'), image: 'assets/loc_1000000.webp',
+        desc: t('stages_lore.5.desc')
     },
     {
-        id: 6, height: 10000000, name: 'Бескрайний простор', image: 'assets/loc_10000000.webp',
-        desc: 'Горизонт событий и край ведомой Вселенной. Абсолютная высота, где время сливается с космическим пространством.'
+        id: 6, height: 10000000, name: t('stages_lore.6.name'), image: 'assets/loc_10000000.webp',
+        desc: t('stages_lore.6.desc')
     }
 ];
 
@@ -524,7 +525,7 @@ function showLocationCard(stageIndex, checkpointEl) {
             imgEl.style.filter = 'none';
         }
         if (badgeEl) {
-            badgeEl.innerText = 'ИССЛЕДОВАНО';
+            badgeEl.innerText = t('location_card.explored_badge');
             badgeEl.style.background = 'rgba(46, 204, 113, 0.85)';
             badgeEl.style.color = '#fff';
             badgeEl.style.border = '1px solid #2ecc71';
@@ -534,7 +535,7 @@ function showLocationCard(stageIndex, checkpointEl) {
             titleEl.style.color = '#00d2ff';
         }
         if (heightEl) {
-            heightEl.innerText = `Высота: ${lore.height.toLocaleString('ru-RU')} м`;
+            heightEl.innerText = t('location_card.height_label', { height: lore.height.toLocaleString('ru-RU') });
             heightEl.style.color = '#f1c40f';
         }
         if (descEl) {
@@ -546,22 +547,22 @@ function showLocationCard(stageIndex, checkpointEl) {
             imgEl.style.filter = 'brightness(0.12) grayscale(1) drop-shadow(0 0 5px rgba(231, 76, 60, 0.5))';
         }
         if (badgeEl) {
-            badgeEl.innerText = 'СИГНАЛ ПОТЕРЯН';
+            badgeEl.innerText = t('location_card.signal_lost_badge');
             badgeEl.style.background = 'rgba(231, 76, 60, 0.85)';
             badgeEl.style.color = '#fff';
             badgeEl.style.border = '1px solid #e74c3c';
         }
         if (titleEl) {
-            titleEl.innerText = 'Неизвестный сектор';
+            titleEl.innerText = t('location_card.unknown_sector');
             titleEl.style.color = '#e74c3c';
         }
         const needed = Math.max(0, Math.ceil(lore.height - currentHeight));
         if (heightEl) {
-            heightEl.innerText = `Цель: ${lore.height.toLocaleString('ru-RU')} м (Осталось: ${needed.toLocaleString('ru-RU')} м)`;
+            heightEl.innerText = t('location_card.target_label', { target: lore.height.toLocaleString('ru-RU'), remaining: needed.toLocaleString('ru-RU') });
             heightEl.style.color = '#e67e22';
         }
         if (descEl) {
-            descEl.innerText = 'Датчики фиксируют аномалии на этой высоте. Продолжайте подъем, чтобы расшифровать данные.';
+            descEl.innerText = t('location_card.locked_desc');
         }
     }
 
@@ -666,7 +667,7 @@ function showMilestoneModal(m) {
 
     if (!modal) return;
 
-    title.innerText = `${m.height.toLocaleString()} м — ${m.name}`;
+    title.innerText = `${t('units.meters', { value: m.height.toLocaleString() })} — ${m.name}`;
     desc.innerText = m.desc;
     icon.innerText = m.icon;
 
@@ -678,8 +679,8 @@ function showMilestoneModal(m) {
         icon.style.display = 'none';
     };
 
-    btnX2.innerHTML = `▶ Удвоить за рекламу (+${m.reward * 2} <img src="assets/golden_nut.webp" class="ui-ico-sm">)`;
-btnNormal.innerHTML = `Забрать обычную (+${m.reward} <img src="assets/golden_nut.webp" class="ui-ico-sm">)`;
+    btnX2.innerHTML = t('milestones.double_ad', { reward: m.reward * 2 });
+    btnNormal.innerHTML = t('milestones.claim_normal', { reward: m.reward });
 
     // Блокируем кнопки на 1 секунду от случайных тапов
     if (btnBox) {
@@ -874,7 +875,7 @@ function getActiveTemporaryBuffsCount() {
 
 // Множитель +100% (x2, x3, x4, x5) за каждый активный бафф для шаров «Земля»
 function getPlanetBuffMultiplier() {
-    const isPlanet = currentNewtonSkin === 'planet' || 
+    const isPlanet = currentNewtonSkin === 'planet' ||
         (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'planet');
     if (!isPlanet) return 1.0;
     return 1.0 + (getActiveTemporaryBuffsCount() * 1.0); // +100% за каждый активный бафф
@@ -916,12 +917,12 @@ function claimUfoGift(targetX, targetY) {
         userCases.wooden = (userCases.wooden || 0) + 1;
         boxesOwned = userCases.wooden;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-        bonusTxt = "+1 КЕЙС!";
+        bonusTxt = t('particle.ufo_case');
         bonusImg = canvasIcoWoodenBox;
         AudioEngine.play('case_drop_by_click', 0.9);
     } else if (ufoGift.rewardType === 2) {
         userCases.iron = (userCases.iron || 0) + 1;
-        bonusTxt = "+1 СЕЙФ!";
+        bonusTxt = t('particle.ufo_safe');
         bonusImg = canvasIcoIronBox;
         AudioEngine.play('win', 0.85);
     } else {
@@ -1016,7 +1017,7 @@ function addNuts(amount) {
         nuts += regShare;
         goldenNuts += goldShare;
         const mGold = document.getElementById('cases-modal-gold');
-if (mGold) mGold.innerText = goldenNuts;
+        if (mGold) mGold.innerText = goldenNuts;
     } else {
         nuts += finalAmount;
     }
@@ -1038,12 +1039,12 @@ function addGoldenNuts(amount) {
     goldenNuts += finalAmount;
 
     const mGold = document.getElementById('cases-modal-gold');
-if (mGold) mGold.innerText = goldenNuts;
+    if (mGold) mGold.innerText = goldenNuts;
     const topGoldDisplay = document.getElementById('gold-display');
     if (topGoldDisplay) topGoldDisplay.innerText = `${goldenNuts}`;
 
     return finalAmount;
-}   
+}
 
 // Программный генератор идеального хромированного шара Ньютона
 function getSteelBallSprite() {
@@ -1078,7 +1079,7 @@ const STEEL_BALL_IMG_URL = getSteelBallSprite();
 // === БАЗА СКИНОВ ДЛЯ ШАРИКОВ НЬЮТОНА ===
 const NEWTON_SKINS = {
     steel: {
-        name: 'Стальные шары',
+        name: t('newton.steel.name'),
         file: STEEL_BALL_IMG_URL, // <-- Теперь здесь реальный спрайт шара!
         sound: 'newton_balls_metall',
         rarity: 'common',
@@ -1087,7 +1088,7 @@ const NEWTON_SKINS = {
         buff: { powerMult: 1.0 }
     },
     billiard: {
-        name: 'Бильярдный шар 8',
+        name: t('newton.billiard.name'),
         file: 'assets/billiard_ball.webp',
         sound: 'billiard_newton',
         rarity: 'rare',
@@ -1096,7 +1097,7 @@ const NEWTON_SKINS = {
         buff: { powerMult: 1.25 }
     },
     plasma: {
-        name: 'Плазменная сфера',
+        name: t('newton.plasma.name'),
         file: 'assets/plasma_sphere.webp',
         sound: 'neon_newton',
         rarity: 'epic',
@@ -1105,7 +1106,7 @@ const NEWTON_SKINS = {
         buff: { powerMult: 1.5 }
     },
     planet: {
-        name: 'Мини-Земля',
+        name: t('newton.planet.name'),
         file: 'assets/planet_ball.webp',
         sound: 'planet_newton',
         rarity: 'legendary',
@@ -1118,7 +1119,7 @@ const NEWTON_SKINS = {
 // === БАЗА СКИНОВ ДЛЯ КОЛОНКИ ===
 const SPEAKER_SKINS = {
     old: {
-        name: 'Советский динамик',
+        name: t('speaker.old.name'),
         file: 'assets/old_speaker.webp',
         sound: 'sabbuffer',
         rarity: 'common',
@@ -1127,7 +1128,7 @@ const SPEAKER_SKINS = {
         buff: { mpsMult: 1.0 }
     },
     monster: {
-        name: 'Монстр-стек',
+        name: t('speaker.monster.name'),
         file: 'assets/monster_speaker.webp',
         sound: 'sabbuffer',
         rarity: 'rare',
@@ -1136,7 +1137,7 @@ const SPEAKER_SKINS = {
         buff: { mpsMult: 1.2 }
     },
     cyber: {
-        name: 'Кибер-спикер',
+        name: t('speaker.cyber.name'),
         file: 'assets/cyber_speaker.webp',
         sound: 'cyber_sabbuffer',
         rarity: 'epic',
@@ -1145,7 +1146,7 @@ const SPEAKER_SKINS = {
         buff: { mpsMult: 1.4 }
     },
     cool: {
-        name: 'Абсолютный динамик',
+        name: t('speaker.cool.name'),
         file: 'assets/cool_speaker.webp',
         sound: 'stadium_bass',
         rarity: 'legendary',
@@ -1160,13 +1161,13 @@ const SPEAKER_SKINS = {
 const TALISMANS_ORDER = ['clover', 'horseshoe', 'paw', 'coin', 'star', 'key', 'sock'];
 
 const TALISMANS = {
-    clover: { name: 'Клевер-четырёхлистник', file: 'assets/lucky_4leaf.webp', rarity: 'rare', luck: 3, price: 15 },
-    horseshoe: { name: 'Золотая подкова', file: 'assets/lucky_golden_horseshoe.webp', rarity: 'rare', luck: 5, price: 40 },
-    paw: { name: 'Кроличья лапка', file: 'assets/lucky_rabbit_hand.webp', rarity: 'epic', luck: 8, price: 90 },
-    coin: { name: 'Древняя монета', file: 'assets/lucky_coin.webp', rarity: 'epic', luck: 12, price: 180 },
-    star: { name: 'Звезда удачи', file: 'assets/lucky_star.webp', rarity: 'legendary', luck: 18, price: 350 },
-    key: { name: 'Ключ от всех тайн', file: 'assets/lucky_key.webp', rarity: 'legendary', luck: 25, price: 650 },
-    sock: { name: 'Счастливый носок', file: 'assets/lucky_sock.webp', rarity: 'special', luck: 50, price: 999 }
+    clover: { name: t('talisman.clover.name'), file: 'assets/lucky_4leaf.webp', rarity: 'rare', luck: 3, price: 15 },
+    horseshoe: { name: t('talisman.horseshoe.name'), file: 'assets/lucky_golden_horseshoe.webp', rarity: 'rare', luck: 5, price: 40 },
+    paw: { name: t('talisman.paw.name'), file: 'assets/lucky_rabbit_hand.webp', rarity: 'epic', luck: 8, price: 90 },
+    coin: { name: t('talisman.coin.name'), file: 'assets/lucky_coin.webp', rarity: 'epic', luck: 12, price: 180 },
+    star: { name: t('talisman.star.name'), file: 'assets/lucky_star.webp', rarity: 'legendary', luck: 18, price: 350 },
+    key: { name: t('talisman.key.name'), file: 'assets/lucky_key.webp', rarity: 'legendary', luck: 25, price: 650 },
+    sock: { name: t('talisman.sock.name'), file: 'assets/lucky_sock.webp', rarity: 'special', luck: 50, price: 999 }
 };
 
 speakerSprite.src = SPEAKER_SKINS[currentSpeakerSkin].file;
@@ -1257,7 +1258,7 @@ const AudioEngine = {
 
             audio.volume = Math.max(0, Math.min(1, vol * multiplier));
             audio.currentTime = 0;
-            audio.play().catch(() => {});
+            audio.play().catch(() => { });
         } catch (e) {
             console.warn(`[AudioEngine] Сбой воспроизведения ${soundName}:`, e);
         }
@@ -1315,14 +1316,14 @@ const CASES_DB = {
     // 1. Обычный дроп во время кликов: гайки + ВСЕ обычные + ВСЕ редкие
     wooden: {
         id: 'wooden',
-        name: 'Деревянный ящик',
+        name: t('cases.wooden_name'),
         color: '#8d6e63',
         priceType: 'free',
         loot: [
             // Гайки (суммарно 70% шанс)
-            { type: 'nuts', amount: 50, weight: 40, name: '50 Гаек' },
-            { type: 'nuts', amount: 150, weight: 20, name: '150 Гаек' },
-            { type: 'nuts', amount: 300, weight: 10, name: '300 Гаек' },
+            { type: 'nuts', amount: 50, weight: 40, name: t('cases.nut_loot_50') },
+            { type: 'nuts', amount: 150, weight: 20, name: t('cases.nut_loot_150') },
+            { type: 'nuts', amount: 300, weight: 10, name: t('cases.nut_loot_300') },
 
             // Все Обычные лестницы (суммарно 21% шанс)
             { type: 'skin', id: 'banana', weight: 3 },
@@ -1346,7 +1347,7 @@ const CASES_DB = {
     // 2. Железный сейф: Редкие скины + ВСЕ 6 эпиков с общим шансом ровно 2%
     iron: {
         id: 'iron',
-        name: 'Железный сейф',
+        name: t('cases.iron_name'),
         color: '#7f8c8d',
         price: 799,
         priceType: 'nuts',
@@ -1381,7 +1382,7 @@ const CASES_DB = {
     // 5. Покупка за Золотые гайки (высокие шансы на эпик и легендарки)
     gold: {
         id: 'gold',
-        name: 'Золотой Контейнер',
+        name: t('cases.gold_name'),
         color: '#f1c40f',
         price: 250,
         priceType: 'goldenNuts',
@@ -1418,49 +1419,49 @@ let userCases = {
 
 const LADDER_SKINS = {
     // === ОБЫЧНЫЕ (Common) ===
-    wood: { rarity: 'common', name: 'Деревянная', file: 'assets/wood_stair-removebg-preview.png', color: '#bdc3c7', buffs: {}, mechanics: [] },
-    banana: { rarity: 'common', name: 'Банановая', file: 'assets/banana_tree.webp', color: '#f1c40f', buffs: {}, mechanics: ['banana'] },
-    beer: { rarity: 'common', name: 'Пивная', file: 'assets/beer_stair.webp', color: '#e67e22', buffs: { luck: 5 }, mechanics: [] },
-    fire: { rarity: 'common', name: 'Огненная', file: 'assets/fire_stair.webp', color: '#e74c3c', buffs: { click: 7, caseLimitMinus: 10 }, mechanics: [] },
-    fireman: { rarity: 'common', name: 'Пожарная', file: 'assets/fireman_stair.webp', color: '#c0392b', buffs: { newtonAdd: 15 }, mechanics: [] },
-    plastic: { rarity: 'common', name: 'Пластиковая', file: 'assets/plastic_stair.webp', color: '#3498db', buffs: {}, mechanics: ['plastic'] },
-    rusty: { rarity: 'common', name: 'Ржавая', file: 'assets/rusty_lader.webp', color: '#d35400', buffs: {}, mechanics: ['rusty'] },
-    tape: { rarity: 'common', name: 'Изолента', file: 'assets/tape_stair.webp', color: '#2980b9', buffs: { discount: 0.10 }, mechanics: [] },
+    wood: { rarity: 'common', name: t('ladder.wood.name'), file: 'assets/wood_stair-removebg-preview.png', color: '#bdc3c7', buffs: {}, mechanics: [] },
+    banana: { rarity: 'common', name: t('ladder.banana.name'), file: 'assets/banana_tree.webp', color: '#f1c40f', buffs: {}, mechanics: ['banana'] },
+    beer: { rarity: 'common', name: t('ladder.beer.name'), file: 'assets/beer_stair.webp', color: '#e67e22', buffs: { luck: 5 }, mechanics: [] },
+    fire: { rarity: 'common', name: t('ladder.fire.name'), file: 'assets/fire_stair.webp', color: '#e74c3c', buffs: { click: 7, caseLimitMinus: 10 }, mechanics: [] },
+    fireman: { rarity: 'common', name: t('ladder.fireman.name'), file: 'assets/fireman_stair.webp', color: '#c0392b', buffs: { newtonAdd: 15 }, mechanics: [] },
+    plastic: { rarity: 'common', name: t('ladder.plastic.name'), file: 'assets/plastic_stair.webp', color: '#3498db', buffs: {}, mechanics: ['plastic'] },
+    rusty: { rarity: 'common', name: t('ladder.rusty.name'), file: 'assets/rusty_lader.webp', color: '#d35400', buffs: {}, mechanics: ['rusty'] },
+    tape: { rarity: 'common', name: t('ladder.tape.name'), file: 'assets/tape_stair.webp', color: '#2980b9', buffs: { discount: 0.10 }, mechanics: [] },
 
     // === РЕДКИЕ (Rare) ===
-    book: { rarity: 'rare', name: 'Книжная', file: 'assets/book_stair.webp', color: '#8e44ad', buffs: { luck: 7 }, mechanics: [] },
-    cactus: { rarity: 'rare', name: 'Кактус', file: 'assets/cactus_stair.webp', color: '#2ecc71', buffs: { speakerAdd: 20, newtonAdd: 10 }, mechanics: [] },
-    cement: { rarity: 'rare', name: 'Цементная', file: 'assets/cement_stair.webp', color: '#95a5a6', buffs: { newtonMult: 1.5 }, mechanics: ['cement'] },
-    neon: { rarity: 'rare', name: 'Неоновая', file: 'assets/neon_stair.webp', color: '#ff00ff', buffs: {}, mechanics: ['neon'] },
-    scratch: { rarity: 'rare', name: 'Когтеточка', file: 'assets/scratching_post_stair.webp', color: '#d1ccc0', buffs: {}, mechanics: ['scratch'] },
-    new_year: { rarity: 'rare', name: 'Новогодняя', file: 'assets/new_year_stair.webp', color: '#27ae60', buffs: {}, mechanics: ['new_year'] },
+    book: { rarity: 'rare', name: t('ladder.book.name'), file: 'assets/book_stair.webp', color: '#8e44ad', buffs: { luck: 7 }, mechanics: [] },
+    cactus: { rarity: 'rare', name: t('ladder.cactus.name'), file: 'assets/cactus_stair.webp', color: '#2ecc71', buffs: { speakerAdd: 20, newtonAdd: 10 }, mechanics: [] },
+    cement: { rarity: 'rare', name: t('ladder.cement.name'), file: 'assets/cement_stair.webp', color: '#95a5a6', buffs: { newtonMult: 1.5 }, mechanics: ['cement'] },
+    neon: { rarity: 'rare', name: t('ladder.neon.name'), file: 'assets/neon_stair.webp', color: '#ff00ff', buffs: {}, mechanics: ['neon'] },
+    scratch: { rarity: 'rare', name: t('ladder.scratch.name'), file: 'assets/scratching_post_stair.webp', color: '#d1ccc0', buffs: {}, mechanics: ['scratch'] },
+    new_year: { rarity: 'rare', name: t('ladder.new_year.name'), file: 'assets/new_year_stair.webp', color: '#27ae60', buffs: {}, mechanics: ['new_year'] },
 
     // === ЭПИЧЕСКИЕ (Epic) ===
-    add_stair: { rarity: 'epic', name: 'Билборд', file: 'assets/add_stair.webp', color: '#00d2d3', buffs: {}, mechanics: ['billboard'] },
-    bone: { rarity: 'epic', name: 'Костяная', file: 'assets/bone_stair.webp', color: '#ecf0f1', buffs: {}, mechanics: ['bone'] },
-    crystal: { rarity: 'epic', name: 'Кристальная', file: 'assets/crystal_stair.webp', color: '#00ffff', buffs: {}, mechanics: ['crystal'] }, // <-- ДОБАВИЛИ
-    cyber: { rarity: 'epic', name: 'Киберпанк', file: 'assets/cyper_pank.webp', color: '#00ffff', buffs: {}, mechanics: ['cyber'] },
-    golden: { rarity: 'epic', name: 'Золотая', file: 'assets/golden_stair.webp', color: '#f1c40f', buffs: {}, mechanics: ['golden'] },
-    goth: { rarity: 'epic', name: 'Готическая', file: 'assets/goth_stair.webp', color: '#2c3e50', buffs: { discount: 0.20 }, mechanics: ['goth'] },
-    ice: { rarity: 'epic', name: 'Ледяная', file: 'assets/ice_stair.webp', color: '#74b9ff', buffs: {}, mechanics: ['ice'] },
-    vine: { rarity: 'epic', name: 'Лоза', file: 'assets/vine_stair.webp', color: '#22a6b3', buffs: {}, mechanics: ['vine'] },
-    calendar_stair: { rarity: 'epic', name: 'Календарь', file: 'assets/calendar_stair.webp', color: '#e74c3c', buffs: { luck: 10 }, mechanics: ['calendar'] },
+    add_stair: { rarity: 'epic', name: t('ladder.add_stair.name'), file: 'assets/add_stair.webp', color: '#00d2d3', buffs: {}, mechanics: ['billboard'] },
+    bone: { rarity: 'epic', name: t('ladder.bone.name'), file: 'assets/bone_stair.webp', color: '#ecf0f1', buffs: {}, mechanics: ['bone'] },
+    crystal: { rarity: 'epic', name: t('ladder.crystal.name'), file: 'assets/crystal_stair.webp', color: '#00ffff', buffs: {}, mechanics: ['crystal'] },
+    cyber: { rarity: 'epic', name: t('ladder.cyber.name'), file: 'assets/cyper_pank.webp', color: '#00ffff', buffs: {}, mechanics: ['cyber'] },
+    golden: { rarity: 'epic', name: t('ladder.golden.name'), file: 'assets/golden_stair.webp', color: '#f1c40f', buffs: {}, mechanics: ['golden'] },
+    goth: { rarity: 'epic', name: t('ladder.goth.name'), file: 'assets/goth_stair.webp', color: '#2c3e50', buffs: { discount: 0.20 }, mechanics: ['goth'] },
+    ice: { rarity: 'epic', name: t('ladder.ice.name'), file: 'assets/ice_stair.webp', color: '#74b9ff', buffs: {}, mechanics: ['ice'] },
+    vine: { rarity: 'epic', name: t('ladder.vine.name'), file: 'assets/vine_stair.webp', color: '#22a6b3', buffs: {}, mechanics: ['vine'] },
+    calendar_stair: { rarity: 'epic', name: t('ladder.calendar_stair.name'), file: 'assets/calendar_stair.webp', color: '#e74c3c', buffs: { luck: 10 }, mechanics: ['calendar'] },
 
     // === ЛЕГЕНДАРНЫЕ (Legendary) ===
-    marble: { rarity: 'legendary', name: 'Мраморное Золото', file: 'assets/marble_gold_stair.webp', color: '#f5f6fa', buffs: {}, mechanics: ['marble'] },
-    quant: { rarity: 'legendary', name: 'Квантовая', file: 'assets/quant_stair.webp', color: '#9c88ff', buffs: { caseLimitMinus: 50 }, mechanics: ['quant'] },
-    ufo: { rarity: 'legendary', name: 'НЛО', file: 'assets/ufo_stair.webp', color: '#4cd137', buffs: {}, mechanics: ['ufo'] },
-    mimic: { rarity: 'legendary', name: 'Мимик', file: 'assets/mimic_stair.webp', color: '#8c7ae6', buffs: {}, mechanics: ['mimic'] },
+    marble: { rarity: 'legendary', name: t('ladder.marble.name'), file: 'assets/marble_gold_stair.webp', color: '#f5f6fa', buffs: {}, mechanics: ['marble'] },
+    quant: { rarity: 'legendary', name: t('ladder.quant.name'), file: 'assets/quant_stair.webp', color: '#9c88ff', buffs: { caseLimitMinus: 50 }, mechanics: ['quant'] },
+    ufo: { rarity: 'legendary', name: t('ladder.ufo.name'), file: 'assets/ufo_stair.webp', color: '#4cd137', buffs: {}, mechanics: ['ufo'] },
+    mimic: { rarity: 'legendary', name: t('ladder.mimic.name'), file: 'assets/mimic_stair.webp', color: '#8c7ae6', buffs: {}, mechanics: ['mimic'] },
 
     // === ОСОБЕННЫЕ (Секретные) ===
-    retro: { rarity: 'special', name: 'Ретро (День 2)', file: 'assets/retro_stair.webp', color: '#ff9f43', buffs: {}, mechanics: ['retro'] },
-    storm: { rarity: 'special', name: 'Грозовой фронт', file: 'assets/storm_front_stair.webp', color: '#7f8fa6', buffs: { clickAdd: 20 }, mechanics: ['storm'] },
-    strato: { rarity: 'special', name: 'Стратосфера', file: 'assets/stratosphere_stair.webp', color: '#0097e6', buffs: {}, mechanics: ['strato'] },
-    cosmo: { rarity: 'special', name: 'Космос', file: 'assets/cosmo_stair.webp', color: '#192a56', buffs: {}, mechanics: ['cosmo'] },
-    milkyway: { rarity: 'special', name: 'Млечный Путь', file: 'assets/milkyway_stair.webp', color: '#9b59b6', buffs: {}, mechanics: ['milkyway'] }, // <-- ДОБАВИТЬ ЭТО
-    endless: { rarity: 'special', name: 'Сингулярность', file: 'assets/endless_loc_stair.webp', color: '#000000', buffs: {}, mechanics: ['endless'] }, // <-- ДОБАВИТЬ ЭТО
+    retro: { rarity: 'special', name: t('ladder.retro.name'), file: 'assets/retro_stair.webp', color: '#ff9f43', buffs: {}, mechanics: ['retro'] },
+    storm: { rarity: 'special', name: t('ladder.storm.name'), file: 'assets/storm_front_stair.webp', color: '#7f8fa6', buffs: { clickAdd: 20 }, mechanics: ['storm'] },
+    strato: { rarity: 'special', name: t('ladder.strato.name'), file: 'assets/stratosphere_stair.webp', color: '#0097e6', buffs: {}, mechanics: ['strato'] },
+    cosmo: { rarity: 'special', name: t('ladder.cosmo.name'), file: 'assets/cosmo_stair.webp', color: '#192a56', buffs: {}, mechanics: ['cosmo'] },
+    milkyway: { rarity: 'special', name: t('ladder.milkyway.name'), file: 'assets/milkyway_stair.webp', color: '#9b59b6', buffs: {}, mechanics: ['milkyway'] },
+    endless: { rarity: 'special', name: t('ladder.endless.name'), file: 'assets/endless_loc_stair.webp', color: '#000000', buffs: {}, mechanics: ['endless'] },
     absolute: {
-        rarity: 'special', name: 'АБСОЛЮТ', file: 'assets/absolute_stair.webp', color: '#ffffff', buffs: {
+        rarity: 'special', name: t('ladder.absolute.name'), file: 'assets/absolute_stair.webp', color: '#ffffff', buffs: {
             click: 7,              // Огненная (+7)
             clickAdd: 20,          // Грозовой фронт (+20)
             luck: 22,              // Пивная (5) + Книжная (7) + Календарь (10)
@@ -1727,14 +1728,14 @@ const gachaResult = document.getElementById('gacha-result');
 
 // База локаций и цветов фона
 const LOCATIONS = [
-    { h: 0, name: "Хрущевка", top: [1, 140, 197], bot: [38, 166, 219] },
-    { h: 250, name: "Крыши", top: [1, 140, 197], bot: [38, 166, 219] },
-    { h: 550, name: "Крыши", top: [1, 140, 197], bot: [50, 175, 225] },
-    { h: 1000, name: "Грозовой Фронт", top: [55, 71, 79], bot: [120, 144, 156] },
-    { h: 10000, name: "Стратосфера", top: [26, 35, 126], bot: [63, 81, 181] },
-    { h: 100000, name: "Открытый Космос", top: [0, 0, 0], bot: [15, 5, 25] },
-    { h: 1000000, name: "Млечный Путь", top: [18, 5, 38], bot: [48, 16, 78] },
-    { h: 10000000, name: "Бескрайний простор", top: [2, 1, 8], bot: [8, 12, 28] }
+    { h: 0, name: t('locations.khrushchevka'), top: [1, 140, 197], bot: [38, 166, 219] },
+    { h: 250, name: t('locations.roofs'), top: [1, 140, 197], bot: [38, 166, 219] },
+    { h: 550, name: t('locations.roofs'), top: [1, 140, 197], bot: [50, 175, 225] },
+    { h: 1000, name: t('locations.storm_front'), top: [55, 71, 79], bot: [120, 144, 156] },
+    { h: 10000, name: t('locations.stratosphere'), top: [26, 35, 126], bot: [63, 81, 181] },
+    { h: 100000, name: t('locations.open_space'), top: [0, 0, 0], bot: [15, 5, 25] },
+    { h: 1000000, name: t('locations.milky_way'), top: [18, 5, 38], bot: [48, 16, 78] },
+    { h: 10000000, name: t('locations.endless'), top: [2, 1, 8], bot: [8, 12, 28] }
 ];
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -1754,7 +1755,7 @@ function resizeCanvas() {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     starfieldBackCanvas = null;
-starfieldFrontCanvas = null;
+    starfieldFrontCanvas = null;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -2434,7 +2435,7 @@ function drawBGObjects() {
                     obj.ufoPhase = 'hover';
                     obj.vx = 0;
                 }
-            } 
+            }
             else if (obj.ufoPhase === 'hover') {
                 // 2. ЗАВИСАНИЕ: стоим на месте, выравниваем горизонт
                 obj.vx = 0;
@@ -2447,7 +2448,7 @@ function drawBGObjects() {
                     const chooseDir = Math.random() > 0.5 ? 1 : -1;
                     obj.outDir = chooseDir;
                 }
-            } 
+            }
             else if (obj.ufoPhase === 'out') {
                 // 3. ОТЛЁТ: разгоняемся в выбранную сторону и наклоняемся
                 const targetVx = obj.outDir * obj.maxSpeed;
@@ -2475,7 +2476,7 @@ function drawBGObjects() {
 
             // === 1. СВЕТОВОЙ ЛУЧ СКАНИРОВАНИЯ (ВКЛЮЧАЕТСЯ ТОЛЬКО ПРИ ЗАВИСАНИИ) ===
             const isHover = (obj.ufoPhase === 'hover');
-            
+
             // Плавное появление и затухание луча (от 0.0 до 1.0)
             if (!obj.beamAlpha) obj.beamAlpha = 0;
             const targetBeamAlpha = isHover ? 1.0 : 0.0;
@@ -2764,11 +2765,11 @@ function openCustomization(type) {
     const modalBorder = document.querySelector('#customization-modal .modal-card');
 
     if (type === 'speakers') {
-        titleEl.innerHTML = '📻 Колонки';
+        titleEl.innerHTML = t('customization.speakers_title');
         titleEl.style.color = '#3498db';
         modalBorder.style.borderColor = '#3498db';
     } else {
-        titleEl.innerHTML = '⚪ Шары Ньютона';
+        titleEl.innerHTML = t('customization.newton_title');
         titleEl.style.color = '#9b59b6';
         modalBorder.style.borderColor = '#9b59b6';
     }
@@ -2797,15 +2798,15 @@ function renderCustomizationModal() {
     let powerTxt = '';
 
     if (currentCustType === 'speakers') {
-        powerTxt = `Мощь: ${speakerMPS} м/сек`;
+        powerTxt = t('customization.power_mps', { value: speakerMPS });
     } else {
         let actualNSpeed = Math.max(500, 3000 - (newtonLevel * 130));
-        powerTxt = `Удар: ${newtonPower} м (${(actualNSpeed / 1000).toFixed(1)}с)`;
+        powerTxt = t('customization.hit_power', { power: newtonPower, speed: (actualNSpeed / 1000).toFixed(1) });
     }
 
     lvlEl.innerText = currentLvl;
     powerEl.innerText = powerTxt;
-    upgBtn.innerText = `Улучшить: ${cost} м`;
+    upgBtn.innerText = t('customization.upgrade_cost', { cost: cost });
     upgBtn.style.background = (currentHeight >= cost) ? '#2ecc71' : '#7f8c8d';
     upgBtn.disabled = (currentHeight < cost);
 
@@ -2832,8 +2833,8 @@ function renderCustomizationModal() {
     document.getElementById('cust-item-rarity').innerText = skinData.rarity;
     document.getElementById('cust-item-rarity').style.color = RARITY_COLORS[skinData.rarity] || '#fff';
 
-let buffText = getItemBuffText(currentCustType, selectedCustSkin);
-document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРОГО innerHTML
+    let buffText = getItemBuffText(currentCustType, selectedCustSkin);
+    document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРОГО innerHTML
 
     const badge = document.getElementById('cust-equipped-badge');
     const isEquipped = (selectedCustSkin === equippedId);
@@ -2848,12 +2849,12 @@ document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРО�
     // 3. Кнопка действия (Купить / Надеть)
     const actionBtn = document.getElementById('btn-cust-action');
     if (isEquipped) {
-        actionBtn.innerText = 'ВЫБРАНО';
+        actionBtn.innerText = t('ui.selected_btn');
         actionBtn.style.background = 'rgba(255,255,255,0.1)';
         actionBtn.style.color = '#bdc3c7';
         actionBtn.disabled = true;
     } else if (isOwned) {
-        actionBtn.innerText = 'НАДЕТЬ';
+        actionBtn.innerText = t('ui.equip_btn').toUpperCase();
         actionBtn.style.background = '#3498db';
         actionBtn.style.color = '#fff';
         actionBtn.disabled = false;
@@ -2867,12 +2868,12 @@ document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРО�
     } else {
         // Покупка (ассеты гаек вместо эмодзи)
         const isGold = skinData.priceType === 'goldenNuts';
-        const currencyIcon = isGold 
-            ? '<img src="assets/golden_nut.webp" class="ui-ico">' 
+        const currencyIcon = isGold
+            ? '<img src="assets/golden_nut.webp" class="ui-ico">'
             : '<img src="assets/nut.webp" class="ui-ico">';
         const canAfford = isGold ? (goldenNuts >= skinData.price) : (nuts >= skinData.price);
 
-        actionBtn.innerHTML = `КУПИТЬ ЗА ${skinData.price} ${currencyIcon}`;
+        actionBtn.innerHTML = t('ui.buy_for', { price: skinData.price, currency: currencyIcon });
         actionBtn.style.display = 'flex';
         actionBtn.style.alignItems = 'center';
         actionBtn.style.justifyContent = 'center';
@@ -2898,7 +2899,7 @@ document.getElementById('cust-item-desc').innerHTML = buffText; // <-- СТРО�
             };
 
             if (isGold && goldenNuts >= skinData.price) {
-                showConfirmPurchase('Покупка обвеса', `Купить "${skinData.name}" за ${skinData.price} <img src="assets/golden_nut.webp" class="ui-ico">?`, skinData.price, processPurchase);
+                showConfirmPurchase(t('confirm.gear_title'), t('confirm.gear_desc', { name: skinData.name, price: skinData.price }), skinData.price, processPurchase);
             } else if (!isGold && nuts >= skinData.price) {
                 processPurchase();
             }
@@ -2967,21 +2968,23 @@ function renderLuckModal() {
     if (!modEl) return;
     modEl.innerHTML = '';
 
-    const ladderSkin = LADDER_SKINS[currentSkinId];
-    if (ladderSkin && ladderSkin.buffs.luck) {
-        modEl.innerHTML += `<div><img src="assets/icon_stair.webp" class="ui-ico-sm"> Лестница «${ladderSkin.name}»: <b style="color:#2ecc71;">+${ladderSkin.buffs.luck}</b></div>`;
+    const activeEffId = currentEffectId || currentSkinId;
+    const ladderSkin = LADDER_SKINS[activeEffId];
+    const activeBuffs = getActiveLadderBuffs();
+    if (ladderSkin && activeBuffs.luck) {
+        modEl.innerHTML += t('luck.ladder_item', { name: ladderSkin.name, luck: activeBuffs.luck });
     }
     if (currentTalisman && TALISMANS[currentTalisman]) {
-        modEl.innerHTML += `<div><img src="assets/talismans.webp" class="ui-ico-sm"> Талисман «${TALISMANS[currentTalisman].name}»: <b style="color:#2ecc71;">+${TALISMANS[currentTalisman].luck}</b></div>`;
+        modEl.innerHTML += t('luck.talisman_item', { name: TALISMANS[currentTalisman].name, luck: TALISMANS[currentTalisman].luck });
     }
     if (hasMech('cyber') && cyberExtraAccessory.type === 'talismans' && cyberExtraAccessory.id && TALISMANS[cyberExtraAccessory.id]) {
-        modEl.innerHTML += `<div>🦾 Кибер-слот «${TALISMANS[cyberExtraAccessory.id].name}»: <b style="color:#00ffff;">+${TALISMANS[cyberExtraAccessory.id].luck}</b></div>`;
+        modEl.innerHTML += t('luck.cyber_item', { name: TALISMANS[cyberExtraAccessory.id].name, luck: TALISMANS[cyberExtraAccessory.id].luck });
     }
     if (adState.fortuneTimer > 0) {
-        modEl.innerHTML += `<div>📺 Буст от рекламы (Знак Фортуны): <b style="color:#2ecc71;">+15</b></div>`;
+        modEl.innerHTML += t('luck.ad_fortune');
     }
     if (modEl.innerHTML === '') {
-        modEl.innerHTML = `<div>Нет активных баффов удачи.</div>`;
+        modEl.innerHTML = t('luck.no_buffs');
     }
 
     // Горизонтальный список талисманов для покупки
@@ -3010,10 +3013,10 @@ function renderLuckModal() {
         `;
 
         if (isEquipped) {
-            card.innerHTML += `<div style="font-size: 9px; color: #f1c40f; margin-top: 4px;">НАДЕТО</div>`;
+            card.innerHTML += t('luck.equipped_badge');
         } else if (isOwned) {
             const btn = document.createElement('button');
-            btn.innerText = 'Надеть';
+            btn.innerText = t('luck.equip_btn');
             btn.style.cssText = 'width: 100%; margin-top: 4px; padding: 4px; font-size: 9px; background: #3498db; color: #fff; border: none; border-radius: 4px; cursor: pointer;';
             btn.onclick = () => { equipItem('talismans', id); renderLuckModal(); updateFieldIcons(); saveGame(); };
             card.appendChild(btn);
@@ -3025,7 +3028,7 @@ function renderLuckModal() {
             btn.disabled = !canAfford;
             btn.onclick = () => {
                 if (goldenNuts >= item.price) {
-                    showConfirmPurchase('Новый талисман', `Купить талисман "${item.name}" за ${item.price} <img src="assets/golden_nut.webp" class="ui-ico">?`, item.price, () => {
+                    showConfirmPurchase(t('confirm.talisman_title'), t('confirm.talisman_desc', { name: item.name, price: item.price }), item.price, () => {
                         goldenNuts -= item.price;
                         ownedTalismans.push(id);
                         equipItem('talismans', id);
@@ -3038,7 +3041,7 @@ function renderLuckModal() {
             };
             card.appendChild(btn);
         } else {
-            card.innerHTML += `<div style="font-size: 9px; color: #7f8c8d; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 3px;"><img src="assets/locker.webp" class="ui-ico-sm"> Закрыто</div>`;
+            card.innerHTML += t('luck.locked_badge');
         }
 
         listEl.appendChild(card);
@@ -3096,30 +3099,30 @@ function updateAutoClickers(dt) {
             }
 
             if (isCoolSpeaker && speakerPulseCount % 3 === 0) {
-				const spGold = addGoldenNuts(1);
+                const spGold = addGoldenNuts(1);
 
-				// 1. Точные координаты висящей колонки на тросах:
-				const targetWidth = canvas.width * 0.27;
-				const ladderLeft = canvas.width / 2 - targetWidth / 2;
-				const speakerCenterX = ladderLeft - 36; // Ровно центр подвешенной колонки
-				const speakerTopY = canvas.height * 0.50 + ladderDropY;
+                // 1. Точные координаты висящей колонки на тросах:
+                const targetWidth = canvas.width * 0.27;
+                const ladderLeft = canvas.width / 2 - targetWidth / 2;
+                const speakerCenterX = ladderLeft - 36; // Ровно центр подвешенной колонки
+                const speakerTopY = canvas.height * 0.50 + ladderDropY;
 
-				// 2. Спавним партикл с картинкой золотой гайки (без эмодзи):
-				particles.push({
-					x: speakerCenterX,
-					y: speakerTopY,
-					img: canvasIcoGold,        // Картинка golden_nut.webp
-					imgSize: 22,
-					text: `+${spGold}`,        // Только цифра, без желтого кружка
-					color: '#f1c40f',
-					font: 'bold 22px sans-serif',
-					alpha: 1.8,
-					speed: 2.2
-				});
+                // 2. Спавним партикл с картинкой золотой гайки (без эмодзи):
+                particles.push({
+                    x: speakerCenterX,
+                    y: speakerTopY,
+                    img: canvasIcoGold,        // Картинка golden_nut.webp
+                    imgSize: 22,
+                    text: `+${spGold}`,        // Только цифра, без желтого кружка
+                    color: '#f1c40f',
+                    font: 'bold 22px sans-serif',
+                    alpha: 1.8,
+                    speed: 2.2
+                });
 
-				const mGold = document.getElementById('cases-modal-gold');
-if (mGold) mGold.innerText = goldenNuts;
-			}
+                const mGold = document.getElementById('cases-modal-gold');
+                if (mGold) mGold.innerText = goldenNuts;
+            }
         }
     }
 
@@ -3173,7 +3176,7 @@ if (mGold) mGold.innerText = goldenNuts;
                     hitDamage = Math.floor(hitDamage * 2.5);
                     const bNuts = Math.floor(3 + Math.random() * 3);
                     addNuts(bNuts);
-                    particles.push({ x: ballX, y: canvas.height * 0.22, text: `🎱 x2.5! +${bNuts} 🔩`, color: '#ffffff', font: 'bold 20px sans-serif', alpha: 1.6, speed: 2 });
+                    particles.push({ x: ballX, y: canvas.height * 0.22, text: t('particle.billiard_crit', { nuts: bNuts }), color: '#ffffff', font: 'bold 20px sans-serif', alpha: 1.6, speed: 2 });
                 }
 
                 // МЕХАНИКА 3 (ЗЕМЛЯ): 1% шанс на активацию случайного бонуса
@@ -3183,13 +3186,13 @@ if (mGold) mGold.innerText = goldenNuts;
 
                     if (picked === 'turbo') {
                         adState.turboTimer = Math.max(adState.turboTimer, 0) + 20000;
-                        particles.push({ x: ballX, y: canvas.height * 0.22, text: '🌍 ТУРБО x3 (20с)!', color: '#e67e22', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
+                        particles.push({ x: ballX, y: canvas.height * 0.22, text: t('particle.planet_turbo'), color: '#e67e22', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
                     } else if (picked === 'fortune') {
                         adState.fortuneTimer = Math.max(adState.fortuneTimer, 0) + 60000;
-                        particles.push({ x: ballX, y: canvas.height * 0.22, text: '🌍 УДАЧА +15 (60с)!', color: '#2ecc71', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
+                        particles.push({ x: ballX, y: canvas.height * 0.22, text: t('particle.planet_luck'), color: '#2ecc71', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
                     } else if (picked === 'frenzy') {
                         adState.frenzyTimer = Math.max(adState.frenzyTimer, 0) + 15000;
-                        particles.push({ x: ballX, y: canvas.height * 0.22, text: '🌍 ГАЙКОПАД (15с)!', color: '#f1c40f', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
+                        particles.push({ x: ballX, y: canvas.height * 0.22, text: t('particle.planet_frenzy'), color: '#f1c40f', font: 'bold 20px sans-serif', alpha: 2.2, speed: 2 });
                     }
                     AudioEngine.play('win', 0.85);
                 }
@@ -3229,12 +3232,12 @@ if (mGold) mGold.innerText = goldenNuts;
                 shakeTime = Math.max(shakeTime, 7);
 
                 AudioEngine.play(NEWTON_SKINS[currentNewtonSkin].sound, 0.6, 'newton');
-                particles.push({ 
-                    x: ballX, 
-                    y: canvas.height * 0.28 + ladderDropY, 
+                particles.push({
+                    x: ballX,
+                    y: canvas.height * 0.28 + ladderDropY,
                     text: `+${effectiveBallHit}`,
-                    alpha: 1, 
-                    speed: 2.5 
+                    alpha: 1,
+                    speed: 2.5
                 });
             }; // <-- ЗДЕСЬ ЗАКРЫВАЕТСЯ processBallHit!
 
@@ -3387,7 +3390,7 @@ function gameLoop() {
 
                 particles.push({
                     x: canvas.width / 2, y: canvas.height / 2,
-                    text: '💥 ИЗЛУЧЕНИЕ ХОКИНГА: +100 000 м!',
+                    text: t('particle.hawking'),
                     color: '#9b59b6', font: 'bold 28px sans-serif', alpha: 3.0, speed: 1.5
                 });
             }
@@ -3436,8 +3439,8 @@ function gameLoop() {
     if (adState.fortuneTimer > 0) adState.fortuneTimer = Math.max(0, adState.fortuneTimer - dt);
     if (adState.frenzyTimer > 0) adState.frenzyTimer = Math.max(0, adState.frenzyTimer - dt);
 
-// === ПЛАЗМЕННЫЕ ШАРЫ: НАГРЕВ / ОСТЫВАНИЕ И ЗАЛП ПРИ БЕЗДЕЙСТВИИ ===
-    const isPlasmaActive = currentNewtonSkin === 'plasma' || 
+    // === ПЛАЗМЕННЫЕ ШАРЫ: НАГРЕВ / ОСТЫВАНИЕ И ЗАЛП ПРИ БЕЗДЕЙСТВИИ ===
+    const isPlasmaActive = currentNewtonSkin === 'plasma' ||
         (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'plasma');
 
     if (isPlasmaActive) {
@@ -3464,7 +3467,7 @@ function gameLoop() {
                 y: canvas.height * 0.28,
                 img: lightningImg,
                 imgSize: 28,
-                text: 'РАЗРЯД (x10)!',
+                text: t('particle.storm_discharge'),
                 color: '#00ffff',
                 font: 'bold 22px sans-serif',
                 alpha: 2.2,
@@ -3636,7 +3639,7 @@ function gameLoop() {
     if (timedBoxText && btnClaimTimedBox) {
         const timedBoxLabel = document.getElementById('timed-box-label');
         if (isTimedBoxReady) {
-            timedBoxText.innerText = "ГОТОВО!";
+            timedBoxText.innerText = t('cases.ready');
             if (timedBoxLabel) timedBoxLabel.style.display = 'none';
             btnClaimTimedBox.style.background = "#27ae60";
             btnClaimTimedBox.style.borderColor = "#2ecc71";
@@ -3689,10 +3692,10 @@ function gameLoop() {
             if (infoTimeText) infoTimeText.innerText = timeFormatted;
         }
 
-        // Полоса прогресса (82 — полная длина окружности для радиуса 13)
+        // Полоса прогресса (69 — полная длина окружности для радиуса 11)
         if (progressCircle) {
-            const pct = retroChallengeMs / RETRO_CHALLENGE_GOAL;
-            progressCircle.style.strokeDashoffset = 82 - (pct * 82);
+            const pct = Math.min(1, retroChallengeMs / RETRO_CHALLENGE_GOAL);
+            progressCircle.style.strokeDashoffset = 69 - (pct * 69);
         }
 
         // Событие завершения испытания
@@ -3722,7 +3725,7 @@ function gameLoop() {
         displayedHeight += (currentHeight - displayedHeight) * 0.25;
         const currentInt = Math.floor(displayedHeight);
         if (lastRenderedHeight !== currentInt) {
-            heightDisplay.textContent = `${currentInt.toLocaleString('ru-RU')} м`;
+            heightDisplay.textContent = t('game.height_display', { height: currentInt.toLocaleString('ru-RU') });
             lastRenderedHeight = currentInt;
         }
 
@@ -3942,7 +3945,7 @@ function drawBackground() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 
-// Отрисовка светящейся Луны (Плавный спуск через весь экран)
+    // Отрисовка светящейся Луны (Плавный спуск через весь экран)
     if (visualHouseHeight >= 7000 && visualHouseHeight < 400000) {
         // 1. Плавное появление на старте (с 7 000 до 14 000 м)
         let moonAlpha = 1.0;
@@ -4740,7 +4743,7 @@ function drawNewtonCradle() {
 
     if (newtonSprite.src && newtonSprite.complete && newtonSprite.naturalWidth !== 0) {
         ctx.drawImage(newtonSprite, leftBallX - r, leftBallY - r, r * 2, r * 2);
-       // Визуал Плазмы (раскал до белого и голубого)
+        // Визуал Плазмы (раскал до белого и голубого)
         if (plasmaHeat > 0.05 && (currentNewtonSkin === 'plasma' || (hasMech('cyber') && cyberExtraAccessory.id === 'plasma'))) {
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
@@ -4969,19 +4972,19 @@ function checkAbsoluteUnlock() {
         shakeTime = 30; // Эпичная тряска экрана
 
         particles.push({
-    x: canvas.width / 2,
-    y: canvas.height * 0.35,
-    img: canvasIcoCrown,
-    imgSize: 30,
-    text: 'АБСОЛЮТ ОТКРЫТ!',
-    color: '#f1c40f',
-    font: 'bold 24px sans-serif',
-    alpha: 3.0,
-    speed: 1.2
-});
+            x: canvas.width / 2,
+            y: canvas.height * 0.35,
+            img: canvasIcoCrown,
+            imgSize: 30,
+            text: t('particle.absolute_unlocked'),
+            color: '#f1c40f',
+            font: 'bold 24px sans-serif',
+            alpha: 3.0,
+            speed: 1.2
+        });
 
         if (typeof renderInventory === 'function') renderInventory();
-        
+
         // Открываем модалку предпросмотра только что полученного Абсолюта
         if (typeof openLadderPreview === 'function') {
             openLadderPreview('absolute');
@@ -4998,11 +5001,11 @@ function hardResetGame() {
 // Проверка наград за достижение высоты
 function checkHeightUnlocks() {
     const unlocks = [
-        { h: 1000, id: 'storm', name: 'Грозовой фронт' },
-        { h: 10000, id: 'strato', name: 'Стратосфера' },
-        { h: 100000, id: 'cosmo', name: 'Космос' },
-        { h: 1000000, id: 'milkyway', name: 'Млечный Путь' },
-        { h: 10000000, id: 'endless', name: 'Бескрайний простор' }
+        { h: 1000, id: 'storm', name: t('ladder.storm.name') },
+        { h: 10000, id: 'strato', name: t('ladder.strato.name') },
+        { h: 100000, id: 'cosmo', name: t('ladder.cosmo.name') },
+        { h: 1000000, id: 'milkyway', name: t('ladder.milkyway.name') },
+        { h: 10000000, id: 'endless', name: t('ladder.endless.name') }
     ];
 
     const alt = Math.max(maxAltitudeReached, currentHeight);
@@ -5013,7 +5016,7 @@ function checkHeightUnlocks() {
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.35,
-                text: `👑 ЛЕГЕНДАРНЫЙ СКИН: ${u.name}!`,
+                text: t('particle.legendary_skin', { name: u.name }),
                 color: '#f1c40f',
                 font: 'bold 24px sans-serif',
                 alpha: 3.0,
@@ -5100,7 +5103,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         if (Math.sqrt(dx * dx + dy * dy) < retroCoin.size * 1.5) {
             retroCoin.active = false;
 
-           // Награда: Обычные гайки + Золотые гайки (5-15)
+            // Награда: Обычные гайки + Золотые гайки (5-15)
             const coinReward = Math.floor(75 + Math.random() * 50);
             const goldReward = Math.floor(5 + Math.random() * 11);
 
@@ -5109,16 +5112,16 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
 
             AudioEngine.play('pickupCoin5', 1.0);
             particles.push({
-    x: clickX,
-    y: clickY,
-    img: canvasIcoGold,
-    imgSize: 24,
-    text: `+${finalCoinNuts} гаек, +${finalCoinGold}!`,
-    color: '#f1c40f',
-    font: 'bold 22px sans-serif',
-    speed: 3,
-    alpha: 1.6
-});
+                x: clickX,
+                y: clickY,
+                img: canvasIcoGold,
+                imgSize: 24,
+                text: t('particle.retro_coin', { nuts: finalCoinNuts, gold: finalCoinGold }),
+                color: '#f1c40f',
+                font: 'bold 22px sans-serif',
+                speed: 3,
+                alpha: 1.6
+            });
             return;
         }
     }
@@ -5142,7 +5145,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
 
     // === МЕХАНИКА 1 (ПЛАЗМА): CPS > 6 ДАЁТ x2 К ВЫСОТЕ ===
     let isPlasmaX2 = false;
-    const isPlasmaEquipped = currentNewtonSkin === 'plasma' || 
+    const isPlasmaEquipped = currentNewtonSkin === 'plasma' ||
         (hasMech('cyber') && cyberExtraAccessory.type === 'newton' && cyberExtraAccessory.id === 'plasma');
     if (isPlasmaEquipped && liveCps >= 6) {
         currentClickPower *= 2;
@@ -5163,7 +5166,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         particles.push({
             x: clickX,
             y: clickY - 35,
-            text: '🍌 x2 КЛИК!',
+            text: t('particle.banana_double'),
             color: '#f1c40f',
             font: 'bold 18px sans-serif',
             speed: 2.2,
@@ -5178,7 +5181,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         particles.push({
             x: clickX + (Math.random() * 30 - 15),
             y: clickY - 50,
-            text: `🔥 x${comboMult.toFixed(2)} (${liveCps} CPS)`,
+            text: t('particle.combo', { mult: comboMult.toFixed(2), cps: liveCps }),
             color: '#ff4757',
             font: 'bold 18px sans-serif',
             speed: 2.2,
@@ -5209,16 +5212,16 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
             if (Math.random() < 0.01) {
                 goldenNuts += 1;
                 particles.push({
-    x: clickX,
-    y: clickY - 30,
-    img: canvasIcoGold,
-    imgSize: 22,
-    text: '+1',
-    color: '#f1c40f',
-    font: 'bold 22px sans-serif',
-    speed: 2,
-    alpha: 1.5
-});
+                    x: clickX,
+                    y: clickY - 30,
+                    img: canvasIcoGold,
+                    imgSize: 22,
+                    text: '+1',
+                    color: '#f1c40f',
+                    font: 'bold 22px sans-serif',
+                    speed: 2,
+                    alpha: 1.5
+                });
             }
         }
     }
@@ -5248,7 +5251,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
     const dropChance = 0.012 + (totalLuck * 0.0005);
     const ironUpgradeChance = (totalLuck * 0.15) / 100;
 
-for (let i = 0; i < tapsNum; i++) {
+    for (let i = 0; i < tapsNum; i++) {
         if (Math.random() < dropChance) {
             let caseType = (Math.random() < ironUpgradeChance) ? 'iron' : 'wooden';
 
@@ -5265,7 +5268,7 @@ for (let i = 0; i < tapsNum; i++) {
                 particles.push({
                     x: clickX, y: clickY - 50,
                     img: canvasIcoGoldBox, imgSize: 30,
-                    text: wasUpgraded ? 'ЗОЛОТОЙ КЕЙС (МЛЕЧНЫЙ ПУТЬ)!' : 'ЗОЛОТОЙ КЕЙС!',
+                    text: wasUpgraded ? t('particle.golden_case_milky') : t('particle.golden_case'),
                     color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 2.2, speed: 3.5
                 });
             } else if (caseType === 'iron') {
@@ -5274,7 +5277,7 @@ for (let i = 0; i < tapsNum; i++) {
                 particles.push({
                     x: clickX, y: clickY - 50,
                     img: canvasIcoIronBox, imgSize: 28,
-                    text: wasUpgraded ? 'СЕЙФ (МЛЕЧНЫЙ ПУТЬ)!' : 'СЕЙФ (УДАЧА)!',
+                    text: wasUpgraded ? t('particle.safe_milky') : t('particle.safe_luck'),
                     color: '#7f8c8d', font: 'bold 24px sans-serif', alpha: 2.0, speed: 3.5
                 });
             } else {
@@ -5285,7 +5288,7 @@ for (let i = 0; i < tapsNum; i++) {
                 particles.push({
                     x: clickX, y: clickY - 45,
                     img: canvasIcoWoodenBox, imgSize: 28,
-                    text: '+1 КЕЙС!',
+                    text: t('particle.case_drop'),
                     color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 1.8, speed: 3.5
                 });
             }
@@ -5293,7 +5296,7 @@ for (let i = 0; i < tapsNum; i++) {
         }
     }
 
-// === ПРОГРЕСС-БАР КЕЙСА И ВЫДАЧА НАГРАД ===
+    // === ПРОГРЕСС-БАР КЕЙСА И ВЫДАЧА НАГРАД ===
     clicksForBox += tapsNum;
     if (clicksForBox >= actualClicksNeeded) {
         clicksForBox = clicksForBox - actualClicksNeeded;
@@ -5320,7 +5323,7 @@ for (let i = 0; i < tapsNum; i++) {
             particles.push({
                 x: clickX, y: clickY - 50,
                 img: canvasIcoGoldBox, imgSize: 30,
-                text: 'ЗОЛОТОЙ КЕЙС!',
+                text: t('particle.golden_case'),
                 color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 2.2, speed: 3.5
             });
         } else if (awardedCase === 'iron') {
@@ -5329,7 +5332,7 @@ for (let i = 0; i < tapsNum; i++) {
             particles.push({
                 x: clickX, y: clickY - 50,
                 img: canvasIcoIronBox, imgSize: 28,
-                text: 'ЖЕЛЕЗНЫЙ СЕЙФ!',
+                text: t('particle.iron_safe'),
                 color: '#7f8c8d', font: 'bold 24px sans-serif', alpha: 2.0, speed: 3.5
             });
         } else {
@@ -5357,21 +5360,21 @@ for (let i = 0; i < tapsNum; i++) {
 
             const roll = Math.random();
             if (roll < 0.6) {
-    addNuts(100);
-    particles.push({ x: clickX, y: clickY, img: canvasIcoNut, imgSize: 22, text: '+100', color: '#27ae60', speed: 2, alpha: 1 });
-} else if (roll < 0.9) {
-    userCases.wooden++;
-    boxesOwned = userCases.wooden;
-    if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-    particles.push({ x: clickX, y: clickY, img: canvasIcoWoodenBox, imgSize: 26, text: '+1 ЯЩИК!', color: '#8d6e63', speed: 2, alpha: 1 });
-} else {
-    userCases.iron++;
-    particles.push({ x: clickX, y: clickY, img: canvasIcoIronBox, imgSize: 26, text: '+1 СЕЙФ!', color: '#7f8c8d', speed: 2, alpha: 1 });
-}
+                addNuts(100);
+                particles.push({ x: clickX, y: clickY, img: canvasIcoNut, imgSize: 22, text: '+100', color: '#27ae60', speed: 2, alpha: 1 });
+            } else if (roll < 0.9) {
+                userCases.wooden++;
+                boxesOwned = userCases.wooden;
+                if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
+                particles.push({ x: clickX, y: clickY, img: canvasIcoWoodenBox, imgSize: 26, text: t('particle.rusty_box'), color: '#8d6e63', speed: 2, alpha: 1 });
+            } else {
+                userCases.iron++;
+                particles.push({ x: clickX, y: clickY, img: canvasIcoIronBox, imgSize: 26, text: t('particle.rusty_safe'), color: '#7f8c8d', speed: 2, alpha: 1 });
+            }
         }
     }
 
-// Визуал и физика
+    // Визуал и физика
     ladderScaleX = 1.1;
     ladderScaleY = 0.85;
     ladderSpeed = 25;
@@ -5492,8 +5495,8 @@ document.getElementById('buy-click').addEventListener('click', () => {
         baseClickPower = UPGRADES_CONFIG.click.basePower + (clickLevel * UPGRADES_CONFIG.click.powerPerLevel);
 
         const ladderBuffs = getActiveLadderBuffs();
-const extraClick = ladderBuffs.click || 0;
-clickPower = baseClickPower + extraClick;
+        const extraClick = ladderBuffs.click || 0;
+        clickPower = baseClickPower + extraClick;
 
         if (uiClickPower) uiClickPower.innerText = clickPower;
 
@@ -5647,7 +5650,7 @@ function createGachaItemCard(item, caseId = 'wooden') {
         inner.appendChild(nutImg);
         inner.appendChild(valText);
     } else {
-        let meta = { name: 'Предмет', rarity: 'common', file: '' };
+        let meta = { name: t('inventory.item_fallback'), rarity: 'common', file: '' };
         if (item.type === 'skin') meta = LADDER_SKINS[item.id] || meta;
         else if (item.type === 'speaker') meta = SPEAKER_SKINS[item.id] || meta;
         else if (item.type === 'newton') meta = NEWTON_SKINS[item.id] || meta;
@@ -5704,7 +5707,7 @@ function rollLootFromCase(caseId) {
                     y: canvas.height * 0.3,
                     img: canvasIcoGold,
                     imgSize: 24,
-                    text: 'ДЖЕКПОТ: +1!',
+                    text: t('particle.jackpot'),
                     color: '#f1c40f',
                     font: 'bold 22px sans-serif',
                     alpha: 2,
@@ -5712,7 +5715,7 @@ function rollLootFromCase(caseId) {
                 });
             }
 
-            return { type: 'nuts', amount: finalNuts, name: `${finalNuts} Гаек` };
+            return { type: 'nuts', amount: finalNuts, name: `${finalNuts}` };
         }
     }
 
@@ -5779,13 +5782,13 @@ if (btnClaimTimedBox) {
             userCases.wooden = boxesOwned;
             if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
 
-           AudioEngine.play('win', 0.8);
+            AudioEngine.play('win', 0.8);
             particles.push({
                 x: canvas.width / 2,
                 y: canvas.height * 0.4,
                 img: canvasIcoWoodenBox,
                 imgSize: 28,
-                text: '+1 ЯЩИК ПОЛУЧЕН!',
+                text: t('particle.timed_box'),
                 color: '#2ecc71',
                 font: 'bold 26px sans-serif',
                 alpha: 2.0,
@@ -5823,7 +5826,7 @@ function claimPendingGachaPrize() {
             y: canvas.height * 0.32,
             img: canvasIcoGold,
             imgSize: 24,
-            text: `+${actualCrystalGold} (Кристалл)!`,
+            text: t('particle.crystal_gold', { value: actualCrystalGold }),
             color: '#00ffff',
             font: 'bold 22px sans-serif',
             alpha: 2.2,
@@ -5864,7 +5867,7 @@ function claimPendingGachaPrize() {
             const regular = ['clover', 'horseshoe', 'paw', 'coin', 'star', 'key'];
             if (regular.every(t => ownedTalismans.includes(t)) && !ownedTalismans.includes('sock')) {
                 ownedTalismans.push('sock');
-                setTimeout(() => alert('🎉 НЕВЕРОЯТНО! Ты собрал все талисманы и открыл СЕКРЕТНЫЙ НОСОК (+50 к удаче)!'), 300);
+                setTimeout(() => alert(t('talisman.sock_alert')), 300);
             }
         }
     }
@@ -5899,13 +5902,13 @@ function setGachaState(state, data = null) {
             rerollBtn.disabled = false;
             rerollBtn.style.background = 'linear-gradient(180deg, #9b59b6 0%, #8e44ad 100%)';
             rerollBtn.style.borderColor = '#e056fd';
-            rerollText.innerHTML = '<img src="assets/perk.webp" class="ui-ico-sm"> Перекрутить (Неон)';
+            rerollText.innerHTML = t('gacha.reroll_neon');
         } else if (adAvailable) {
             rerollBtn.classList.remove('is-hidden');
             rerollBtn.disabled = false;
             rerollBtn.style.background = ''; // Берет 3D-градиент из нашего нового CSS
             rerollBtn.style.borderColor = '';
-            rerollText.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Перекрутить за рекламу';
+            rerollText.innerHTML = t('gacha.reroll_ad');
         } else {
             rerollBtn.classList.add('is-hidden');
         }
@@ -5921,10 +5924,10 @@ function setGachaState(state, data = null) {
         btnsRow.classList.remove('no-more', 'has-batch');
 
         actionBtn.disabled = false;
-        actionBtn.innerText = 'Пропустить ⏩';
+        actionBtn.innerText = t('gacha.skip_btn');
 
         updateRerollButton(false);
-    } 
+    }
     else if (state === 'RESULT' || state === 'RESULT_DUPLICATE') {
         // После остановки выключаем режим одной кнопки
         btnsRow.classList.remove('is-spinning');
@@ -5933,7 +5936,7 @@ function setGachaState(state, data = null) {
                 titleEl.innerHTML = `+${data.amount} <img src="assets/nut.webp" class="ui-ico">`;
                 titleEl.style.color = '#54a0ff';
             } else if (data.isDuplicate) {
-                titleEl.innerHTML = `Повторка → +${data.goldReward} <img src="assets/golden_nut.webp" class="ui-ico">`;
+                titleEl.innerHTML = t('gacha.duplicate', { gold: data.goldReward });
                 titleEl.style.color = '#f1c40f';
             } else {
                 titleEl.innerText = data.name;
@@ -5947,19 +5950,19 @@ function setGachaState(state, data = null) {
 
             if (againBtn) {
                 againBtn.disabled = false;
-                againBtn.innerText = `Ещё (${remaining})`;
+                againBtn.innerText = t('gacha.again_count', { count: remaining });
             }
             if (batchBtn) batchBtn.disabled = false;
 
             actionBtn.disabled = false;
-            actionBtn.innerText = 'Закрыть';
+            actionBtn.innerText = t('gacha.close_btn');
         } else {
             // NO_MORE: кнопка «Закрыть» на 100% ширины
             btnsRow.classList.add('no-more');
             btnsRow.classList.remove('has-batch');
 
             actionBtn.disabled = false;
-            actionBtn.innerText = 'Закрыть';
+            actionBtn.innerText = t('gacha.close_btn');
         }
 
         updateRerollButton(true);
@@ -5998,7 +6001,7 @@ function startCaseOpening(caseId = 'wooden', isReroll = false) {
 
     // 6. Заголовок рулетки (п. 6: цвет редкости, тень, без серого)
     if (title) {
-        title.innerText = `Открываем: ${caseData.name}`;
+        title.innerText = t('gacha.opening_title', { name: caseData.name });
         title.style.color = (caseId === 'wooden') ? '#f39c12' : (caseData.color || '#ffffff');
     }
 
@@ -6272,13 +6275,13 @@ if (gachaBatchBtnEl) {
 
         claimPendingGachaPrize();
         document.getElementById('gachaModal').style.display = 'none';
-        
+
         // Сначала возвращаем видимость складу, внутри которого лежит окно результатов
         if (casesModal) {
             casesModal.classList.remove('hidden');
             renderCasesShop();
         }
-        
+
         openBatchCases(currentActiveCaseId, 10);
     };
 }
@@ -6522,7 +6525,7 @@ function openBatchCases(caseId, count = 10) {
     const actionsBox = modal ? modal.querySelector('.batch-result-actions') : null;
 
     if (modal && list) {
-        if (headerTitle) headerTitle.innerText = `ОТКРЫТО ${toOpen} ЯЩИКОВ`;
+        if (headerTitle) headerTitle.innerText = t('batch_result.title', { count: toOpen });
         list.innerHTML = '';
 
         // Подсчёт количества новых предметов
@@ -6533,9 +6536,9 @@ function openBatchCases(caseId, count = 10) {
         if (totalNuts > 0) summaryHtml += `<span>+${totalNuts} <img src="assets/nut.webp" class="ui-ico-sm"></span>`;
         if (totalGold > 0) summaryHtml += `<span>+${totalGold} <img src="assets/golden_nut.webp" class="ui-ico-sm"></span>`;
         if (newItemsCount > 0) {
-            summaryHtml += `<span style="color:#2ecc71;">Новых: ${newItemsCount} 🪜</span>`;
+            summaryHtml += t('batch_result.new_count', { count: newItemsCount });
         } else {
-            summaryHtml += `<span style="color:#7f8c8d;">Новых: 0</span>`;
+            summaryHtml += t('batch_result.new_zero');
         }
         summaryHtml += '</div>';
         list.innerHTML += summaryHtml;
@@ -6550,9 +6553,9 @@ function openBatchCases(caseId, count = 10) {
         sortedLadders.forEach(item => {
             const col = RARITY_COLORS[item.rarity] || '#fff';
             const isNew = !item.isDuplicate;
-            const rightText = isNew 
-                ? `<span style="color:#2ecc71; font-size:11.5px; font-weight:900;">★ НОВАЯ!</span>`
-                : `<span style="color:#e67e22; font-size:11.5px; font-weight:800;">Повтор (+${item.goldVal} <img src="assets/golden_nut.webp" class="ui-ico-sm">)</span>`;
+            const rightText = isNew
+                ? t('batch_result.new_item_badge')
+                : t('batch_result.duplicate_badge', { gold: item.goldVal });
 
             list.innerHTML += `
                 <div class="batch-item-row ${isNew ? 'is-new-item' : ''}">
@@ -6572,7 +6575,7 @@ function openBatchCases(caseId, count = 10) {
             if (remaining >= 10) {
                 actionsBox.classList.remove('no-more');
                 againBtn.style.display = 'flex';
-                againBtn.innerText = 'Ещё ×10';
+                againBtn.innerText = t('batch_result.open_more');
                 againBtn.onclick = (e) => {
                     e.stopPropagation();
                     openBatchCases(caseId, 10);
@@ -6580,7 +6583,7 @@ function openBatchCases(caseId, count = 10) {
             } else if (remaining >= 2) {
                 actionsBox.classList.remove('no-more');
                 againBtn.style.display = 'flex';
-                againBtn.innerText = `Ещё ×${remaining}`;
+                againBtn.innerText = t('batch_result.open_more_count', { count: remaining });
                 againBtn.onclick = (e) => {
                     e.stopPropagation();
                     openBatchCases(caseId, remaining);
@@ -6667,19 +6670,19 @@ function renderCasesShop() {
             const showBatchBtn = (isFree && count >= 2);
 
             actionButtonsHtml = `
-                <button class="case-btn-main btn-open btn-action-open">Открыть</button>
-                ${!isFree ? `<button class="case-btn-plus btn-action-plus" title="Купить еще">+</button>` : ''}
-                ${showBatchBtn ? `<button class="case-btn-x10 btn-action-batch" title="Открыть все">${batchLabel}</button>` : ''}
+                <button class="case-btn-main btn-open btn-action-open">${t('cases.open_btn')}</button>
+                ${!isFree ? `<button class="case-btn-plus btn-action-plus" title="${t('cases.buy_more_title')}">+</button>` : ''}
+                ${showBatchBtn ? `<button class="case-btn-x10 btn-action-batch" title="${t('cases.open_all_title')}">${batchLabel}</button>` : ''}
             `;
         } else if (isFree) {
-            actionButtonsHtml = `<button class="case-btn-main btn-drop-only" disabled>В игре</button>`;
+            actionButtonsHtml = `<button class="case-btn-main btn-drop-only" disabled>${t('cases.in_game')}</button>`;
         } else {
             const affordClass = canBuy ? '' : 'cant-afford';
             actionButtonsHtml = `
                 <button class="case-btn-main btn-buy btn-action-single-buy ${affordClass}">
-                    Купить ${actualPrice} <img src="${costIcon}" class="ui-ico-sm">
+                    ${t('cases.buy_price', { price: actualPrice, icon: costIcon })}
                 </button>
-                <button class="case-btn-plus btn-action-plus" title="Купить несколько">+</button>
+                <button class="case-btn-plus btn-action-plus" title="${t('cases.buy_multi_title')}">+</button>
             `;
         }
 
@@ -6742,7 +6745,7 @@ function updateAdFreeRewardsUI() {
     const safeBtn = document.getElementById('btn-ad-free-safe');
     const safeTile = document.getElementById('tile-ad-safe');
     if (safeTimerEl && safeBtn && safeTile) {
-        safeTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
+        safeTimerEl.innerHTML = t('cases.ad_claim');
         safeTile.classList.add('is-ready');
         safeBtn.disabled = false;
         safeBtn.style.opacity = '1';
@@ -6753,7 +6756,7 @@ function updateAdFreeRewardsUI() {
     const nutsBtn = document.getElementById('btn-ad-free-nuts');
     const nutsTile = document.getElementById('tile-ad-nuts');
     if (nutsTimerEl && nutsBtn && nutsTile) {
-        nutsTimerEl.innerHTML = '<img src="assets/ico_ad_tv.webp" class="ui-ico-sm"> Забрать';
+        nutsTimerEl.innerHTML = t('cases.ad_claim');
         nutsTile.classList.add('is-ready');
         nutsBtn.disabled = false;
         nutsBtn.style.opacity = '1';
@@ -6765,7 +6768,7 @@ function updateAdFreeRewardsUI() {
 // Закрытие окна склада и его под-окон
 function closeCasesWarehouseSafe() {
     if (typeof isGachaSpinning !== 'undefined' && isGachaSpinning) return;
-    
+
     const cModal = document.getElementById('cases-modal');
     if (cModal) cModal.classList.add('hidden');
 
@@ -6921,86 +6924,86 @@ function equipItem(type, id, silent = false) {
 
 // Генерация описания баффов
 const LADDER_DESC = {
-    // === ОБЫЧНЫЕ ===
-    wood: 'Стартовая классика. Пахнет началом бесконечного пути.',
-    banana: 'Удваивает каждый 5-й тап.',
-    beer: '+5 к показателю Удачи.',
-    fire: '+7 м за тап, -10 тапов до ящика.',
-    fireman: 'Колыбель Ньютона: +15 м за удар',
-    plastic: 'Шары Ньютона бьют быстрее на 0.15 c',
-    rusty: '65% шанс получить <img src="assets/nut.webp" class="ui-ico"> за каждый тап.',
-    tape: 'Скидка 10% в магазине улучшений.',
+    // === ОБЫЧНЫЕ ===
+    wood: t('ladder_desc.wood'),
+    banana: t('ladder_desc.banana'),
+    beer: t('ladder_desc.beer'),
+    fire: t('ladder_desc.fire'),
+    fireman: t('ladder_desc.fireman'),
+    plastic: t('ladder_desc.plastic'),
+    rusty: t('ladder_desc.rusty'),
+    tape: t('ladder_desc.tape'),
 
-    // === РЕДКИЕ ===
-    book: '+7 к показателю Удачи.',
-    cactus: 'Сабвуфер: +20 м/c. Колыбель Ньютона: +10 м за удар',
-    cement: 'Колыбель Ньютона: +50%, но удары на 0.3c реже.',
-    neon: 'Бесплатный реролл при открытии каждого кейса',
-    scratch: 'При 5+ тапах/сек высота за тап x1.5',
-    new_year: 'Подарок за каждые 150-250 тапов.',
+    // === РЕДКИЕ ===
+    book: t('ladder_desc.book'),
+    cactus: t('ladder_desc.cactus'),
+    cement: t('ladder_desc.cement'),
+    neon: t('ladder_desc.neon'),
+    scratch: t('ladder_desc.scratch'),
+    new_year: t('ladder_desc.new_year'),
 
-    // === ЭПИЧЕСКИЕ ===
-    bone: 'Удваивает каждый тап',
-    crystal: 'Каждое открытие кейса дополнительно приносит +3 <img src="assets/golden_nut.webp" class="ui-ico">.',
-    cyber: 'Открывает дополнительный слот под аксессуар.',
-    golden: 'Заполнение шкалы тапов даёт Железный сейф вместо деревяного ящика',
-    goth: 'Скидка 20% в магазине улучшений и кейсов',
-    ice: 'Скольжение: тапать можно свайпом по экрану',
-    vine: 'Увеличивает силу тапа, сабвуфера и шаров на +40%.',
-    add_stair: 'Баффы длятся на 50% дольше; каждый просмотр рекламы дополнительно приносит 20 <img src="assets/nut.webp" class="ui-ico"> и 3 <img src="assets/golden_nut.webp" class="ui-ico">.',
-    calendar_stair: '+10 к показателю Удачи; доп. шанс на легендарные скины из сейфа.',
+    // === ЭПИЧЕСКИЕ ===
+    bone: t('ladder_desc.bone'),
+    crystal: t('ladder_desc.crystal'),
+    cyber: t('ladder_desc.cyber'),
+    golden: t('ladder_desc.golden'),
+    goth: t('ladder_desc.goth'),
+    ice: t('ladder_desc.ice'),
+    vine: t('ladder_desc.vine'),
+    add_stair: t('ladder_desc.add_stair'),
+    calendar_stair: t('ladder_desc.calendar_stair'),
 
-    // === ЛЕГЕНДАРНЫЕ ===
-    marble: '25% шанс на Золотой контейнер за шкалу тапов.',
-    quant: 'Расщепление материи: 20% получаемых гаек становятся золотыми, -50 тапов до ящика.',
-    ufo: 'Каждые 30 секунд притягивает инопланетный контейнер',
-    mimic: 'Мимикрия: копирует способности 2 выбранных лестниц.',
+    // === ЛЕГЕНДАРНЫЕ ===
+    marble: t('ladder_desc.marble'),
+    quant: t('ladder_desc.quant'),
+    ufo: t('ladder_desc.ufo'),
+    mimic: t('ladder_desc.mimic'),
 
-    // === ОСОБЕННЫЕ ===
-    retro: 'Поймай летящую монетку (приз: до 125 <img src="assets/nut.webp" class="ui-ico"> и 15 <img src="assets/golden_nut.webp" class="ui-ico">).',
-    storm: '+20 м к подъёму за тап, но 5% шанс сломаться при клике.',
-    strato: 'Разреженный воздух: ускоряет работу сабвуфера и Колыбели Ньютона на 40%.',
-    cosmo: 'Увеличивает лимит оффлайн-накопления ресурсов до 3 часов.',
-    milkyway: 'Инерционный разгон лестницы. Шанс 25% повысить редкость любого выпадающего кейса на один уровень выше.',
-    endless: 'Каждую минуту увеличивает бонус получаемой высоты (тапы, колонка, колыбель) на +50% (максимум +1 000%). Смена лестницы сбрасывает накопленный бонус',
-    absolute: 'Венец эволюции: пассивные эффекты всех лестниц сразу'
+    // === ОСОБЕННЫЕ ===
+    retro: t('ladder_desc.retro'),
+    storm: t('ladder_desc.storm'),
+    strato: t('ladder_desc.strato'),
+    cosmo: t('ladder_desc.cosmo'),
+    milkyway: t('ladder_desc.milkyway'),
+    endless: t('ladder_desc.endless'),
+    absolute: t('ladder_desc.absolute')
 };
 
 const SPEAKER_DESC = {
-    old: 'Базовый ритм Сабвуфера (мощность x1)',
-    monster: '+20% к мощности Сабвуфера. -2 минуты от таймера бесплатного ящика.',
-    cyber: '+40% к мощности Сабвуфера. Получайте на 25% больше <img src="assets/nut.webp" class="ui-ico"> и <img src="assets/golden_nut.webp" class="ui-ico">!',
-    cool: '×2 к мощности Сабвуфера. Каждый 3-й бас приносит +1 <img src="assets/golden_nut.webp" class="ui-ico">.'
+    old: t('speaker_desc.old'),
+    monster: t('speaker_desc.monster'),
+    cyber: t('speaker_desc.cyber'),
+    cool: t('speaker_desc.cool')
 };
 
 const NEWTON_DESC = {
-    steel: 'Базовый авто-удар Колыбели Ньютона (урон x1)',
-    billiard: '+25% к урону шаров. Каждый 8-й удар даёт x2.5 высоты и 3–5 <img src="assets/nut.webp" class="ui-ico">.',
-    plasma: '+50% к урону шаров. Наэлектризованность: при 6+ тапах/сек удваивает высоту за каждый тап. После 5 сек бездействия — автоклик 10 тапов.',
-    planet: '×2 к урону шаров, +3 тапа к ящику за удар. +100% к силе тапа, Сабвуфера и шаров за каждый активный бафф. 1% шанс, что удар включит случайный бонус.'
+    steel: t('newton_desc.steel'),
+    billiard: t('newton_desc.billiard'),
+    plasma: t('newton_desc.plasma'),
+    planet: t('newton_desc.planet')
 };
 
 function getItemBuffText(type, itemOrId) {
     // Определяем строковый ID, независимо от того, передали ID или объект
     const id = typeof itemOrId === 'string' ? itemOrId : (
         type === 'ladders' ? Object.keys(LADDER_SKINS).find(k => LADDER_SKINS[k] === itemOrId) :
-        type === 'speakers' ? Object.keys(SPEAKER_SKINS).find(k => SPEAKER_SKINS[k] === itemOrId) :
-        type === 'newton' ? Object.keys(NEWTON_SKINS).find(k => NEWTON_SKINS[k] === itemOrId) :
-        type === 'talismans' ? Object.keys(TALISMANS).find(k => TALISMANS[k] === itemOrId) : null
+            type === 'speakers' ? Object.keys(SPEAKER_SKINS).find(k => SPEAKER_SKINS[k] === itemOrId) :
+                type === 'newton' ? Object.keys(NEWTON_SKINS).find(k => NEWTON_SKINS[k] === itemOrId) :
+                    type === 'talismans' ? Object.keys(TALISMANS).find(k => TALISMANS[k] === itemOrId) : null
     );
 
     if (type === 'ladders') {
-        return LADDER_DESC[id] || 'Без эффектов';
+        return LADDER_DESC[id] || t('inventory.no_effects');
     }
     if (type === 'speakers') {
-        return SPEAKER_DESC[id] || `Бас: x${SPEAKER_SKINS[id]?.buff?.mpsMult || 1.0}`;
+        return SPEAKER_DESC[id] || t('speaker_desc.fallback', { mult: SPEAKER_SKINS[id]?.buff?.mpsMult || 1.0 });
     }
     if (type === 'newton') {
-        return NEWTON_DESC[id] || `Удар: x${NEWTON_SKINS[id]?.buff?.powerMult || 1.0}`;
+        return NEWTON_DESC[id] || t('newton_desc.fallback', { mult: NEWTON_SKINS[id]?.buff?.powerMult || 1.0 });
     }
     if (type === 'talismans') {
         const item = typeof itemOrId === 'object' ? itemOrId : TALISMANS[id];
-        return `+${item?.luck || 0} к удаче`;
+        return t('inventory.luck_plus', { luck: item?.luck || 0 });
     }
     return '';
 }
@@ -7039,7 +7042,7 @@ function renderInventory() {
                 </div>
                 <div class="inv-eq-info">
                     <span class="inv-eq-label" style="color: #2ecc71;">
-                        <img src="assets/roller.webp" class="ui-ico-sm"> Облик
+                        ${t("inventory.tab_visual")}
                     </span>
                     <span class="inv-eq-name">${curVisSkin.name}</span>
                 </div>
@@ -7050,7 +7053,7 @@ function renderInventory() {
                 </div>
                 <div class="inv-eq-info">
                     <span class="inv-eq-label" style="color: #e056fd;">
-                        <img src="assets/perk.webp" class="ui-ico-sm"> Эффект
+                        ${t("inventory.tab_effect")}
                     </span>
                     <span class="inv-eq-name">${curEffSkin.name}</span>
                 </div>
@@ -7134,15 +7137,15 @@ function renderInventory() {
         let actionAreaHtml = '';
         const isEquipped = (equippedId === id);
         if (isEquipped) {
-            actionAreaHtml = `<button class="btn-equip active">${currentInventoryTab === 'talismans' ? 'СНЯТЬ' : 'НАДЕТО'}</button>`;
+            actionAreaHtml = `<button class="btn-equip active">${currentInventoryTab === 'talismans' ? t('inventory.unequip_btn') : t('inventory.equipped_btn')}</button>`;
         } else if (isOwned) {
-            actionAreaHtml = `<button class="btn-equip available">Надеть</button>`;
+            actionAreaHtml = `<button class="btn-equip available">${t("inventory.equip_btn")}</button>`;
         } else if (currentInventoryTab === 'talismans') {
             if (id === nextTalismanToBuy) {
                 const canAfford = goldenNuts >= item.price;
                 actionAreaHtml = `<button class="btn-equip buy-gear-btn" data-type="talismans" data-id="${id}" style="background: ${canAfford ? '#f1c40f' : '#555'}; color: #000; font-weight: bold;" ${!canAfford ? 'disabled' : ''}>${item.price} <img src="assets/golden_nut.webp" class="ui-ico-sm"></button>`;
             } else {
-                actionAreaHtml = `<button class="btn-equip locked" disabled><img src="assets/locker.webp" class="ui-ico-sm"> По очереди</button>`;
+                actionAreaHtml = `<button class="btn-equip locked" disabled>${t("inventory.in_order")}</button>`;
             }
         } else {
             const isGold = item.priceType === 'goldenNuts';
@@ -7196,7 +7199,7 @@ function renderInventory() {
                 };
 
                 if (isGold && goldenNuts >= targetItem.price) {
-                    showConfirmPurchase('Покупка предмета', `Купить «${targetItem.name}» за ${targetItem.price}?`, targetItem.price, processPurchase);
+                    showConfirmPurchase(t('confirm.item_title'), t('confirm.item_desc', { name: targetItem.name, price: targetItem.price }), targetItem.price, processPurchase);
                 } else if (!isGold && nuts >= targetItem.price) {
                     processPurchase();
                 }
@@ -7236,7 +7239,7 @@ function openLadderPreview(id) {
     imgEl.src = item.file;
     nameEl.innerText = item.name;
     nameEl.style.color = rarityColor;
-    descEl.innerHTML = LADDER_DESC[id] || 'Базовые свойства лестницы';
+    descEl.innerHTML = LADDER_DESC[id] || t('inventory.default_ladder_desc');
     badgeEl.innerText = (item.rarity || 'common').toUpperCase();
     badgeEl.style.color = rarityColor;
     badgeEl.style.borderColor = rarityColor;
@@ -7253,7 +7256,7 @@ function openLadderPreview(id) {
         if (id === 'mimic') {
             actionsBox.innerHTML += `
                 <button onclick="openMimicConfig()" style="background: none; border: 1.5px dashed #8c7ae6; color: #8c7ae6; border-radius: 8px; padding: 7px; font-weight: bold; cursor: pointer; font-size: 11px;">
-                    ⚙️ Настроить слоты (${LADDER_SKINS[mimicSlots[0]]?.name || '1'}, ${LADDER_SKINS[mimicSlots[1]]?.name || '2'})
+                    ${t('inventory.mimic_setup', { slot0: LADDER_SKINS[mimicSlots[0]]?.name || '1', slot1: LADDER_SKINS[mimicSlots[1]]?.name || '2' })}
                 </button>
             `;
         }
@@ -7261,7 +7264,7 @@ function openLadderPreview(id) {
             const bCol = (id === 'absolute') ? '#f1c40f' : '#00ffff';
             actionsBox.innerHTML += `
                 <button onclick="openCyberConfig()" style="background: none; border: 1.5px dashed ${bCol}; color: ${bCol}; border-radius: 8px; padding: 7px; font-weight: bold; cursor: pointer; font-size: 11px;">
-                    🦾 Настроить доп. слот
+                    ${t('inventory.cyber_setup')}
                 </button>
             `;
         }
@@ -7270,7 +7273,7 @@ function openLadderPreview(id) {
         const isFullyEquipped = isVis && isEff;
         actionsBox.innerHTML += `
             <button id="btn-lp-equip-all" style="width: 100%; height: 42px; border-radius: 10px; border: none; font-size: 13px; font-weight: 900; cursor: ${isFullyEquipped ? 'default' : 'pointer'}; background: ${isFullyEquipped ? '#27ae60' : 'linear-gradient(135deg, #f1c40f, #e67e22)'}; color: ${isFullyEquipped ? '#fff' : '#111'}; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
-                ${isFullyEquipped ? '✔ ПОЛНОСТЬЮ НАДЕТО' : 'ЭКИПИРОВАТЬ ВСЁ'}
+                ${isFullyEquipped ? t('inventory.fully_equipped') : t('inventory.equip_all')}
             </button>
         `;
 
@@ -7278,17 +7281,17 @@ function openLadderPreview(id) {
         actionsBox.innerHTML += `
             <div style="display: flex; gap: 8px; width: 100%;">
                 <button id="btn-lp-equip-vis" style="flex: 1; height: 36px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; border: 1.5px solid #2ecc71; background: ${isVis ? 'rgba(46,204,113,0.3)' : 'rgba(0,0,0,0.4)'}; color: #2ecc71; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                    <img src="assets/roller.webp" class="ui-ico-sm"> ${isVis ? 'Облик надет ✓' : 'Только облик'}
+                    ${isVis ? t('inventory.visual_equipped') : t('inventory.visual_only')}
                 </button>
                 <button id="btn-lp-equip-eff" style="flex: 1; height: 36px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; border: 1.5px solid #9b59b6; background: ${isEff ? 'rgba(155,89,182,0.3)' : 'rgba(0,0,0,0.4)'}; color: #e056fd; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                    <img src="assets/perk.webp" class="ui-ico-sm"> ${isEff ? 'Эффект надет ✓' : 'Только эффект'}
+                    ${isEff ? t('inventory.effect_equipped') : t('inventory.effect_only')}
                 </button>
             </div>
         `;
     } else {
         actionsBox.innerHTML = `
             <div style="padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid #555; border-radius: 8px; font-size: 12px; color: #bdc3c7; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                <img src="assets/locker.webp" class="ui-ico"> Предмет не открыт
+                ${t('inventory.item_locked')}
             </div>
         `;
     }
@@ -7390,7 +7393,7 @@ window.addEventListener('keydown', (e) => {
         batchModal.classList.add('hidden');
         return;
     }
-    
+
 
     const lpModal = document.getElementById('ladder-preview-modal');
     if (lpModal && !lpModal.classList.contains('hidden')) {
@@ -7464,7 +7467,7 @@ function triggerPurchaseEffect(cost = 10) {
     particles.push({
         x: canvas.width / 2,
         y: canvas.height * 0.08,
-        text: `-${Math.floor(cost).toLocaleString('ru-RU')} м`,
+        text: t('particle.shop_spent', { cost: Math.floor(cost).toLocaleString('ru-RU') }),
         color: '#ff4757',
         font: 'bold 22px sans-serif',
         alpha: 2.2,
@@ -7526,7 +7529,7 @@ function loadGame() {
 
     if (!saved) return false;
 
-   try {
+    try {
 
         // 1. СНАЧАЛА ПАРСИМ СЕЙВ (исправлена критическая ошибка)
         const data = JSON.parse(saved);
@@ -7610,7 +7613,7 @@ function loadGame() {
         equipLadderEffect(currentEffectId, true);
 
         // Обновляем UI
-        if (heightDisplay) heightDisplay.textContent = `${Math.floor(currentHeight).toLocaleString('ru-RU')} м`;
+        if (heightDisplay) heightDisplay.textContent = t('game.height_display', { height: Math.floor(currentHeight).toLocaleString('ru-RU') });
         uiNuts.innerText = `${nuts}`;
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
         if (uiLvlSpeaker) uiLvlSpeaker.innerText = speakerLevel;
@@ -7636,7 +7639,7 @@ function loadGame() {
             const effectiveMs = Math.min(offlineMs, maxOfflineMs);
             const seconds = effectiveMs / 1000;
 
-            const skin = LADDER_SKINS[data.currentEffectId || data.currentSkinId] || { buffs: {} };
+            const skin = { buffs: getActiveLadderBuffs() };
 
             let realMPS = 0;
             if (data.speakerLevel > 0) {
@@ -7667,16 +7670,16 @@ function loadGame() {
                     const offModal = document.getElementById('offline-modal');
                     const offMin = Math.floor(effectiveMs / 60000);
                     const offSec = Math.floor((effectiveMs % 60000) / 1000);
-                    document.getElementById('off-time-txt').innerText = `${offMin}м ${offSec}с`;
-                    document.getElementById('off-limit-txt').innerText = isCosmo ? '3 часа' : '30 мин';
+                    document.getElementById('off-time-txt').innerText = t('units.min_sec', { min: offMin, sec: offSec });
+                    document.getElementById('off-limit-txt').innerText = isCosmo ? t('offline.limit_3h') : t('offline.limit_30m');
 
-                    document.getElementById('off-speaker-txt').innerText = `+${offSpeakerMeters} м`;
-                    document.getElementById('off-newton-txt').innerText = `+${offNewtonMeters} м`;
-                    document.getElementById('off-cases-txt').innerText = `${offCases} шт.`;
-                    document.getElementById('off-total-txt').innerText = `+${totalOffMeters} м`;
+                    document.getElementById('off-speaker-txt').innerText = t('units.meters_plus', { value: offSpeakerMeters });
+                    document.getElementById('off-newton-txt').innerText = t('units.meters_plus', { value: offNewtonMeters });
+                    document.getElementById('off-cases-txt').innerText = t('units.pieces', { count: offCases });
+                    document.getElementById('off-total-txt').innerText = t('units.meters_plus', { value: totalOffMeters });
 
                     const btnClaim2x = document.getElementById('btn-claim-offline-x2');
-                    btnClaim2x.innerHTML = `▶ Удвоить за рекламу (+${(totalOffMeters * 2).toLocaleString('ru-RU')} м, ${offCases * 2} <img src="assets/wooden_box.webp" class="ui-ico-sm">)`;
+                    btnClaim2x.innerHTML = t('offline.double_btn', { meters: (totalOffMeters * 2).toLocaleString('ru-RU'), cases: offCases * 2 });
 
                     offModal.classList.remove('hidden');
 
@@ -7704,8 +7707,8 @@ function loadGame() {
         }
 
         checkAbsoluteUnlock();
-    updateFieldIcons();
-    return true;
+        updateFieldIcons();
+        return true;
     } catch (e) {
         console.error("Ошибка при загрузке сохранения:", e);
         return false;
@@ -7751,16 +7754,16 @@ function getActiveLadderBuffs() {
 
 // === КОНФИГУРАЦИЯ И ЛОГИКА РЕКЛАМНОГО СТРИКА (1-10) ===
 const AD_STREAK_REWARDS = [
-    { step: 1, title: '+300 <img src="assets/nut.webp" class="ui-ico"> Гаек', type: 'nuts', amount: 300 },
-    { step: 2, title: '+20 <img src="assets/clover_lucky.webp" class="ui-ico"> (15 мин)', type: 'buff_luck', durationMin: 15, luckAmount: 20 },
-    { step: 3, title: '+5 <img src="assets/golden_nut.webp" class="ui-ico">', type: 'gold', amount: 5 },
-    { step: 4, title: '+600 <img src="assets/nut.webp" class="ui-ico"> Гаек', type: 'nuts', amount: 600 },
-    { step: 5, title: '1 <img src="assets/iron_box.webp" class="ui-ico"> Сейф', type: 'case', caseId: 'iron', amount: 1 },
-    { step: 6, title: '<img src="assets/x3_bust.webp" class="ui-ico"> Турбо x3 (3 мин)', type: 'buff_turbo', durationSec: 180 },
-    { step: 7, title: '+15 <img src="assets/golden_nut.webp" class="ui-ico">', type: 'gold', amount: 15 },
-    { step: 8, title: '+1 000 <img src="assets/nut.webp" class="ui-ico"> Гаек', type: 'nuts', amount: 1000 },
-    { step: 9, title: '+25 <img src="assets/golden_nut.webp" class="ui-ico">', type: 'gold', amount: 25 },
-    { step: 10, title: '<img src="assets/add_stair.webp" class="ui-ico"> Скин «Билборд»', type: 'skin', skinId: 'add_stair' }
+    { step: 1, title: t('ad_streak_rewards.0.title'), type: 'nuts', amount: 300 },
+    { step: 2, title: t('ad_streak_rewards.1.title'), type: 'buff_luck', durationMin: 15, luckAmount: 20 },
+    { step: 3, title: t('ad_streak_rewards.2.title'), type: 'gold', amount: 5 },
+    { step: 4, title: t('ad_streak_rewards.3.title'), type: 'nuts', amount: 600 },
+    { step: 5, title: t('ad_streak_rewards.4.title'), type: 'case', caseId: 'iron', amount: 1 },
+    { step: 6, title: t('ad_streak_rewards.5.title'), type: 'buff_turbo', durationSec: 180 },
+    { step: 7, title: t('ad_streak_rewards.6.title'), type: 'gold', amount: 15 },
+    { step: 8, title: t('ad_streak_rewards.7.title'), type: 'nuts', amount: 1000 },
+    { step: 9, title: t('ad_streak_rewards.8.title'), type: 'gold', amount: 25 },
+    { step: 10, title: t('ad_streak_rewards.9.title'), type: 'skin', skinId: 'add_stair' }
 ];
 
 // Забор награды за шаг
@@ -7787,23 +7790,23 @@ function claimStreakReward(step) {
         const mult = hasMech('billboard') ? 1.5 : 1.0;
         adState.turboTimer += (r.durationSec * 1000 * mult);
     } else if (r.type === 'skin') {
-            if (ownedSkins.includes(r.skinId)) {
-                goldenNuts += (DUPLICATE_GOLD_REWARDS.epic || 35);
-                particles.push({
-                    x: canvas.width / 2,
-                    y: canvas.height * 0.4,
-                    img: canvasIcoGold,
-                    imgSize: 24,
-                    text: `Повторка: +${DUPLICATE_GOLD_REWARDS.epic || 35}!`,
-                    color: '#f1c40f',
-                    font: 'bold 22px sans-serif',
-                    alpha: 2,
-                    speed: 1.5
-                });
-            } else {
+        if (ownedSkins.includes(r.skinId)) {
+            goldenNuts += (DUPLICATE_GOLD_REWARDS.epic || 35);
+            particles.push({
+                x: canvas.width / 2,
+                y: canvas.height * 0.4,
+                img: canvasIcoGold,
+                imgSize: 24,
+                text: t('particle.streak_dupe', { value: DUPLICATE_GOLD_REWARDS.epic || 35 }),
+                color: '#f1c40f',
+                font: 'bold 22px sans-serif',
+                alpha: 2,
+                speed: 1.5
+            });
+        } else {
             ownedSkins.push(r.skinId);
             checkAbsoluteUnlock();
-            particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: '🎉 ПОЛУЧЕН СКИН БИЛБОРД!', color: '#00d2d3', alpha: 2.5, speed: 1.5 });
+            particles.push({ x: canvas.width / 2, y: canvas.height * 0.4, text: t('particle.streak_billboard'), color: '#00d2d3', alpha: 2.5, speed: 1.5 });
             if (typeof renderInventory === 'function') renderInventory();
         }
     }
@@ -7839,11 +7842,11 @@ function renderAdStreakUI() {
 
         let btnHtml = '';
         if (isClaimed) {
-            btnHtml = `<span style="color: #27ae60; font-weight: bold; font-size: 12px;">✔ Взято</span>`;
+            btnHtml = t('ad_streak.claimed');
         } else if (isUnlocked) {
-            btnHtml = `<button class="claim-streak-btn" data-step="${r.step}" style="background: #2ecc71; color: #fff; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">Забрать</button>`;
+            btnHtml = `<button class="claim-streak-btn" data-step="${r.step}" style="background: #2ecc71; color: #fff; border: none; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">${t("ad_streak.claim_btn")}</button>`;
         } else {
-            btnHtml = `<span style="color: #7f8c8d; font-size: 11px; display: inline-flex; align-items: center; gap: 3px;"><img src="assets/locker.webp" class="ui-ico-sm"> ${r.step} ролик</span>`;
+            btnHtml = t('ad_streak.locked_label', { step: r.step });
         }
 
         row.innerHTML = `
@@ -7947,28 +7950,40 @@ function refreshDailyDeal(isAdReroll = false) {
 
 
 
-// Универсальное всплывающее сообщение поверх всего окна
-function triggerRewardPopup(targetEl, iconSrc, text, color = '#f1c40f') {
-    const modalCard = document.querySelector('.cases-modal-card');
-    if (!targetEl || !modalCard) return;
+// Всплывающее уведомление: "+600 [иконка]" или "+1 [иконка сейфа]" прямо над кнопкой
+function triggerRewardPopup(targetEl, labelText, iconSrc, color = '#f1c40f') {
+    if (!targetEl) return;
 
-    const targetRect = targetEl.getBoundingClientRect();
-    const cardRect = modalCard.getBoundingClientRect();
+    const btnEl = targetEl.querySelector('button') || targetEl;
+    const rect = btnEl.getBoundingClientRect();
 
     const popup = document.createElement('div');
-    popup.className = 'modal-reward-popup';
-    popup.style.setProperty('--popup-color', color);
-    
-    // Координаты рассчитываются относительно всего окна, минуя срез скролла
-    popup.style.left = `${(targetRect.left - cardRect.left) + (targetRect.width / 2)}px`;
-    popup.style.top = `${(targetRect.top - cardRect.top)}px`;
-    popup.innerHTML = `<img src="${iconSrc}" alt=""> <span>${text}</span>`;
+    popup.style.cssText = `
+        position: fixed;
+        left: ${rect.left + rect.width / 2}px;
+        top: ${rect.top}px;
+        transform: translate(-50%, 0);
+        z-index: 99999;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 20px;
+        font-weight: 900;
+        color: ${color};
+        paint-order: stroke fill;
+        -webkit-text-stroke: 3.5px #000000;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.95);
+        white-space: nowrap;
+        animation: floatUpRewardBadge 1.2s ease-out forwards;
+    `;
+    popup.innerHTML = `<span>${labelText}</span> <img src="${iconSrc}" style="width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9));">`;
 
-    modalCard.appendChild(popup);
+    document.body.appendChild(popup);
 
     setTimeout(() => {
         if (popup.parentNode) popup.parentNode.removeChild(popup);
-    }, 1250);
+    }, 1200);
 }
 
 // Забор бесплатного сейфа за рекламу
@@ -7982,7 +7997,7 @@ if (btnAdFreeSafe) {
 
             AudioEngine.play('win', 0.85);
             const tile = document.getElementById('tile-ad-safe');
-            triggerRewardPopup(tile, 'assets/iron_box.webp', '+1 Сейф!', '#3498db');
+            triggerRewardPopup(tile, '+1', 'assets/iron_box.webp', '#5dade2');
         });
     };
 }
@@ -7992,13 +8007,13 @@ const btnAdFreeNuts = document.getElementById('btn-ad-free-nuts');
 if (btnAdFreeNuts) {
     btnAdFreeNuts.onclick = () => {
         watchRewardedAd('free_nuts', () => {
-            addNuts(600);
+            const gained = addNuts(600);
             renderCasesShop();
             updateAdFreeRewardsUI();
 
             AudioEngine.play('gaiki', 0.85);
             const tile = document.getElementById('tile-ad-nuts');
-            triggerRewardPopup(tile, 'assets/nut.webp', '+600 Гаек!', '#f1c40f');
+            triggerRewardPopup(tile, `+${gained}`, 'assets/nut.webp', '#54a0ff');
         });
     };
 }
@@ -8013,8 +8028,13 @@ if (btnAdFreeGold) {
             updateAdFreeRewardsUI();
 
             AudioEngine.play('pickupCoin5', 1.0);
-            const tile = document.getElementById('tile-ad-gold');
-            triggerRewardPopup(tile, 'assets/golden_nut.webp', `+${gained} Золота!`, '#f1c40f');
+            showThankYouModal(
+                t('modal.bank_gold.title'),
+                t('modal.bank_gold.desc', { amount: gained }),
+                false,
+                'assets/reward_gold_mascot.webp',
+                true // <-- Флаг: не проигрывать второй звук donate_sound!
+            );
         });
     };
 }
@@ -8027,9 +8047,9 @@ function renderDailyDealUI() {
 
     // 1. Таймер (без дублирования "Смена через")
     const now = new Date();
-const midnight = new Date(now);
-midnight.setHours(24, 0, 0, 0);
-const timeLeft = Math.max(0, midnight - now);
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const timeLeft = Math.max(0, midnight - now);
     const h = String(Math.floor(timeLeft / 3600000)).padStart(2, '0');
     const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, '0');
     const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0');
@@ -8051,8 +8071,8 @@ const timeLeft = Math.max(0, midnight - now);
 
     const rarityColor = RARITY_COLORS[itemData.rarity] || '#f1c40f';
     const buffDesc = (dailyDeal.type === 'skin')
-        ? (LADDER_DESC[dailyDeal.id] || 'Уникальная лестница')
-        : `+${itemData.luck} к общей удаче`;
+        ? (LADDER_DESC[dailyDeal.id] || t('daily_deal.unique_ladder'))
+        : t('daily_deal.luck_desc', { luck: itemData.luck });
 
     // 3. Состояние кнопки (Объемный 3D-стиль)
     const canAfford = goldenNuts >= dailyDeal.salePrice;
@@ -8061,18 +8081,18 @@ const timeLeft = Math.max(0, midnight - now);
     if (isOwned) {
         buttonHtml = `
             <button disabled style="width: 100%; height: 42px; background: linear-gradient(180deg, #27ae60, #1e8449); color: #fff; border: 1px solid #7bed9f; border-bottom: 3px solid #145a32; border-radius: 10px; font-weight: 900; font-size: 13.5px; opacity: 0.9;">
-                ✔ В КОЛЛЕКЦИИ
+                ${t('daily_deal.in_collection')}
             </button>`;
     } else if (canAfford) {
         buttonHtml = `
             <button id="btn-buy-deal" style="width: 100%; height: 42px; background: linear-gradient(180deg, #ffeaa7 0%, #f1c40f 45%, #e67e22 100%); color: #111; border: 1px solid #fff; border-bottom: 4px solid #9a7d0a; border-radius: 10px; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(241,196,15,0.4); display: flex; align-items: center; justify-content: center; gap: 5px;">
-                КУПИТЬ: <s style="color: rgba(0,0,0,0.55); font-size: 12px;">${dailyDeal.basePrice}</s> ${dailyDeal.salePrice} <img src="assets/golden_nut.webp" class="ui-ico-sm">
+                ${t('daily_deal.buy_btn', { base: dailyDeal.basePrice, sale: dailyDeal.salePrice })}
             </button>`;
     } else {
         const needGold = dailyDeal.salePrice - goldenNuts;
         buttonHtml = `
             <button id="btn-buy-deal" style="width: 100%; height: 42px; background: linear-gradient(180deg, #ff9f43 0%, #d35400 100%); color: #fff; border: 1px solid #ffd54f; border-bottom: 4px solid #873600; border-radius: 10px; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.7);">
-                Не хватает ${needGold} <img src="assets/golden_nut.webp" class="ui-ico-sm"> → В Банк
+                ${t('daily_deal.not_enough', { need: needGold })}
             </button>`;
     }
 
@@ -8085,7 +8105,7 @@ const timeLeft = Math.max(0, midnight - now);
             </div>
             <div style="flex: 1; text-align: left; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
                 <span style="align-self: flex-start; display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 9.5px; font-weight: 900; background: rgba(0,0,0,0.6); color: ${rarityColor}; border: 1px solid ${rarityColor}; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;">
-                    ${itemData.rarity || 'epic'} • СКИДКА -${Math.round((1 - dailyDeal.salePrice / dailyDeal.basePrice) * 100)}%
+                    ${t('daily_deal.discount_badge', { rarity: itemData.rarity || 'epic', percent: Math.round((1 - dailyDeal.salePrice / dailyDeal.basePrice) * 100) })}
                 </span>
                 <div style="font-size: 18px; font-weight: 900; color: #ffffff; margin-bottom: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1.15;">${itemData.name}</div>
                 <div style="font-size: 12px; color: #cbd5e1; line-height: 1.4;">${buffDesc}</div>
@@ -8102,7 +8122,7 @@ const timeLeft = Math.max(0, midnight - now);
     if (buyBtn && !isOwned) {
         buyBtn.onclick = () => {
             if (goldenNuts >= dailyDeal.salePrice) {
-                showConfirmPurchase('Сделка дня', `Купить "${itemData.name}" за ${dailyDeal.salePrice} <img src="assets/golden_nut.webp" class="ui-ico">?`, dailyDeal.salePrice, () => {
+                showConfirmPurchase(t('confirm.deal_title'), t('confirm.deal_desc', { name: itemData.name, price: dailyDeal.salePrice }), dailyDeal.salePrice, () => {
                     goldenNuts -= dailyDeal.salePrice;
                     if (dailyDeal.type === 'skin') {
                         ownedSkins.push(dailyDeal.id);
@@ -8126,13 +8146,13 @@ const timeLeft = Math.max(0, midnight - now);
         };
     }
 
-    
+
     // 5. Кнопка реролла за рекламу
     if (rerollBtn) {
         const attempts = dailyDeal.adRerollsLeft !== undefined ? dailyDeal.adRerollsLeft : 5;
 
         if (attempts > 0) {
-            rerollBtn.innerHTML = `<img src="assets/ico_ad_tv.webp" class="ui-ico"> Обновить (${attempts}/5)`;
+            rerollBtn.innerHTML = t('daily_deal.reroll_btn', { left: attempts });
             rerollBtn.disabled = false;
             rerollBtn.style.opacity = '1';
             rerollBtn.style.cursor = 'pointer';
@@ -8143,7 +8163,7 @@ const timeLeft = Math.max(0, midnight - now);
                 });
             };
         } else {
-            rerollBtn.innerHTML = `Попытки исчерпаны (0/5)`;
+            rerollBtn.innerHTML = t('daily_deal.reroll_exhausted');
             rerollBtn.disabled = true;
             rerollBtn.style.opacity = '0.45';
             rerollBtn.style.cursor = 'default';
@@ -8155,57 +8175,42 @@ const timeLeft = Math.max(0, midnight - now);
 
 // === ЕЖЕДНЕВНЫЙ КАЛЕНДАРЬ (7 ДНЕЙ) ===
 const CALENDAR_REWARDS = [
-    { day: 1, text: '+300 <img src="assets/nut.webp" class="ui-ico-sm">', icon: '<img src="assets/nut.webp" class="ui-ico-lg">', type: 'nuts', amount: 300 },
-    { day: 2, text: '2 <img src="assets/wooden_box.webp" class="ui-ico-sm">', icon: '<img src="assets/wooden_box.webp" class="ui-ico-lg">', type: 'case', caseId: 'wooden', amount: 2 },
-    { day: 3, text: '+10 <img src="assets/golden_nut.webp" class="ui-ico-sm">', icon: '<img src="assets/golden_nut.webp" class="ui-ico-lg">', type: 'gold', amount: 10 },
-    { day: 4, text: '+800 <img src="assets/nut.webp" class="ui-ico-sm">', icon: '<img src="assets/nut.webp" class="ui-ico-lg">', type: 'nuts', amount: 800 },
-    { day: 5, text: '1 <img src="assets/iron_box.webp" class="ui-ico-sm">', icon: '<img src="assets/iron_box.webp" class="ui-ico-lg">', type: 'case', caseId: 'iron', amount: 1 },
-    { day: 6, text: '+25 <img src="assets/golden_nut.webp" class="ui-ico-sm">', icon: '<img src="assets/golden_nut.webp" class="ui-ico-lg">', type: 'gold', amount: 25 },
-    { day: 7, text: 'Скин «Календарь»', icon: '<img src="assets/calendar_stair.webp" class="ui-ico-lg">', type: 'skin', skinId: 'calendar_stair' }
+    { day: 1, text: t('calendar_rewards.0.text'), icon: '<img src="assets/nut.webp" style="width: 30px; height: 30px; object-fit: contain;">', type: 'nuts', amount: 500 },
+    { day: 2, text: t('calendar_rewards.1.text'), icon: '<img src="assets/iron_box.webp" style="width: 32px; height: 32px; object-fit: contain;">', type: 'case', caseId: 'iron', amount: 1 },
+    { day: 3, text: t('calendar_rewards.2.text'), icon: '<img src="assets/golden_box.webp" style="width: 32px; height: 32px; object-fit: contain;">', type: 'case', caseId: 'gold', amount: 1 },
+    { day: 4, text: t('calendar_rewards.3.text'), icon: '<img src="assets/golden_nut.webp" style="width: 30px; height: 30px; object-fit: contain;">', type: 'gold', amount: 75 },
+    { day: 5, text: t('calendar_rewards.4.text'), icon: '<img src="assets/golden_box.webp" style="width: 32px; height: 32px; object-fit: contain;">', type: 'case', caseId: 'gold', amount: 2 },
+    { day: 6, text: t('calendar_rewards.5.text'), icon: '<img src="assets/golden_nut.webp" style="width: 30px; height: 30px; object-fit: contain;">', type: 'gold', amount: 100 },
+    { day: 7, text: t('calendar_rewards.6.text'), icon: '<img src="assets/calendar_stair.webp" style="height: 64px; width: auto; object-fit: contain;">', type: 'skin', skinId: 'calendar_stair' }
 ];
 
 let calendarState = {
     currentDay: 1,          // День, который ждёт забора (1..7)
     lastClaimDate: null,    // 'YYYY-MM-DD'
     missedDay: false,       // Флаг пропуска дня
-    cycle: 1                // 1 = первая неделя (скин), 2+ = бесконечный цикл (+75 золота и сейф)
+    cycle: 1                // 1 = первая неделя (скин), 2+ = 3 золотых ящика
 };
 
-// Проверка статуса при входе в игру
 function checkDailyCalendarStatus() {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    if (calendarState.lastClaimDate === todayStr) return false;
+    if (!calendarState.lastClaimDate) return true;
 
-    // Если уже забирали сегодня
-    if (calendarState.lastClaimDate === todayStr) {
-        return false;
-    }
-
-    // Если первый вход в истории
-    if (!calendarState.lastClaimDate) {
-        return true;
-    }
-
-    // Расчет разницы в днях
     const lastDate = new Date(calendarState.lastClaimDate.replace(/-/g, '/'));
     const currDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const diffDays = Math.round((currDate - lastDate) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 1) {
-        // Зашёл на следующий день — стрик сохранен
         calendarState.missedDay = false;
         return true;
     } else if (diffDays > 1) {
-        // Пропустил день
         calendarState.missedDay = true;
         return true;
     }
-
     return false;
 }
 
-// Отрисовка календаря
-// Отрисовка календаря (с поддержкой цикла 2+ недели)
 function renderCalendarUI() {
     const grid = document.getElementById('calendar-grid');
     const day7Action = document.getElementById('calendar-day-7-action');
@@ -8220,7 +8225,6 @@ function renderCalendarUI() {
 
     const isLoopCycle = (calendarState.cycle || 1) > 1 || ownedSkins.includes('calendar_stair');
 
-    // 1. Отображение плашки пропуска
     if (calendarState.missedDay && calendarState.currentDay > 1) {
         missedAlert.classList.remove('hidden');
         actionsBox.classList.add('hidden');
@@ -8229,7 +8233,7 @@ function renderCalendarUI() {
         actionsBox.classList.remove('hidden');
     }
 
-    // 2. Сетка Дней 1 - 6
+    // Сетка Дней 1 - 6
     for (let i = 0; i < 6; i++) {
         const rew = CALENDAR_REWARDS[i];
         const isPast = rew.day < calendarState.currentDay;
@@ -8237,73 +8241,71 @@ function renderCalendarUI() {
 
         const card = document.createElement('div');
         card.style.cssText = `
-            background: ${isCurrent ? 'rgba(46, 204, 113, 0.2)' : (isPast ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.05)')};
-            border: 1px solid ${isCurrent ? '#2ecc71' : (isPast ? '#7f8c8d' : '#34495e')};
-            border-radius: 8px; padding: 8px 4px; text-align: center;
+            background: ${isCurrent ? 'linear-gradient(180deg, rgba(46, 204, 113, 0.28) 0%, rgba(20, 35, 30, 0.9) 100%)' : (isPast ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.05)')};
+            border: 1.5px solid ${isCurrent ? '#2ecc71' : (isPast ? '#475569' : '#334155')};
+            border-radius: 11px; padding: 8px 4px; text-align: center;
+            box-shadow: ${isCurrent ? '0 0 12px rgba(46,204,113,0.3)' : 'none'};
         `;
         card.innerHTML = `
-            <div style="font-size: 10px; color: ${isCurrent ? '#2ecc71' : '#bdc3c7'}; font-weight: bold;">День ${rew.day}</div>
-            <div style="font-size: 18px; margin: 4px 0;">${isPast ? '✔' : rew.icon}</div>
-            <div style="font-size: 10px; color: ${isPast ? '#7f8c8d' : '#fff'}; font-weight: bold;">${rew.text}</div>
+            <div style="font-size: 10.5px; color: ${isCurrent ? '#2ecc71' : '#94a3b8'}; font-weight: 800;">${t("calendar.day_badge", { day: rew.day })}</div>
+            <div style="height: 36px; display: flex; align-items: center; justify-content: center; margin: 4px 0; font-size: 20px; color: #2ecc71;">${isPast ? '✔' : rew.icon}</div>
+            <div style="font-size: 11px; color: ${isPast ? '#64748b' : '#ffffff'}; font-weight: 900;">${rew.text}</div>
         `;
         grid.appendChild(card);
     }
 
-    // 3. Динамическая карточка 7-го дня (Скин на 1-й неделе, Золото+Сейф на 2-й+)
-if (day7Box) {
-        const day7Title = isLoopCycle ? 'День 7: Супер-награда' : 'День 7: Супер-приз';
-        const day7Desc = isLoopCycle ? '+75 <img src="assets/golden_nut.webp" class="ui-ico-sm"> и 1 <img src="assets/iron_box.webp" class="ui-ico-sm">' : 'Скин «Календарь» (Epic)';
-        const day7Icon = isLoopCycle ? '<img src="assets/iron_box.webp" class="ui-ico-lg">' : '<img src="assets/calendar_stair.webp" class="ui-ico-lg">';
+    // Крупная витрина 7-го дня (высота подиума 68px — лестница видна идеально!)
+    if (day7Box) {
+        const day7Title = isLoopCycle ? t('calendar.day7_title_loop') : t('calendar.day7_title');
+        const day7Desc = isLoopCycle ? t('calendar.day7_desc_loop') : t('calendar.day7_desc');
+        const day7Visual = isLoopCycle
+            ? `<div style="width: 56px; height: 64px; background: radial-gradient(circle, rgba(241,196,15,0.35) 0%, transparent 70%); border: 1.5px solid #f1c40f; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                   <img src="assets/golden_box.webp" style="width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.8));">
+               </div>`
+            : `<div style="width: 56px; height: 68px; background: radial-gradient(circle, rgba(224,86,253,0.38) 0%, rgba(0,0,0,0.5) 80%); border: 1.5px solid #e056fd; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 12px rgba(155,89,182,0.4);">
+                   <img src="assets/calendar_stair.webp" style="max-height: 60px; max-width: 44px; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.9));">
+               </div>`;
 
         day7Box.querySelector('div').innerHTML = `
-            <span style="font-size: 24px;">${day7Icon}</span>
-            <div>
-                <div style="font-size: 12px; font-weight: bold; color: #e74c3c;">${day7Title}</div>
-                <div style="font-size: 10px; color: #fff;">${day7Desc}</div>
+            ${day7Visual}
+            <div style="text-align: left;">
+                <div style="font-size: 13px; font-weight: 900; color: #ff6b6b; margin-bottom: 3px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${day7Title}</div>
+                <div style="font-size: 11.5px; font-weight: 700; color: #ffffff;">${day7Desc}</div>
             </div>
         `;
     }
 
-    // 4. Кнопки действий
     if (day7Action) {
         if (calendarState.currentDay === 7) {
-            day7Action.innerHTML = `<span style="color: #f1c40f; font-weight: bold; font-size: 12px;">СЕГОДНЯ!</span>`;
-
+            day7Action.innerHTML = t('calendar.today_badge');
             if (isLoopCycle) {
-                // Начиная со 2-й недели День 7 МОЖНО удваивать за рекламу!
                 if (btnClaimX2) {
                     btnClaimX2.style.display = 'block';
-                    btnClaimX2.innerHTML = `▶ Удвоить за рекламу (+150 <img src="assets/golden_nut.webp" class="ui-ico-sm">, 2 <img src="assets/iron_box.webp" class="ui-ico-sm">)`;
+                    btnClaimX2.innerHTML = t('calendar.double_claim_loop');
                 }
-                if (btnClaimNormal) {
-                    btnClaimNormal.innerHTML = `Забрать обычную (+75 <img src="assets/golden_nut.webp" class="ui-ico-sm">, 1 <img src="assets/iron_box.webp" class="ui-ico-sm">)`;
-                }
+                if (btnClaimNormal) btnClaimNormal.innerHTML = t('calendar.claim_normal_loop');
             } else {
-                // На 1-й неделе скин выдается строго в 1 экземпляре
                 if (btnClaimX2) btnClaimX2.style.display = 'none';
-                if (btnClaimNormal) btnClaimNormal.innerText = 'Забрать скин «Календарь»!';
+                if (btnClaimNormal) btnClaimNormal.innerText = t('calendar.claim_skin_btn');
             }
         } else if (calendarState.currentDay > 7) {
-            day7Action.innerHTML = `<span style="color: #2ecc71; font-weight: bold; font-size: 12px;">✔ ВЗЯТО</span>`;
+            day7Action.innerHTML = t('calendar.claimed_badge');
         } else {
-            day7Action.innerHTML = `<span style="color: #7f8c8d; font-size: 11px; display: inline-flex; align-items: center; gap: 3px;"><img src="assets/locker.webp" class="ui-ico-sm"> День 7</span>`;
+            day7Action.innerHTML = t('calendar.day7_locked_badge');
             if (btnClaimX2) {
                 btnClaimX2.style.display = 'block';
-                btnClaimX2.innerText = '▶ Удвоить за рекламу (x2)';
+                btnClaimX2.innerText = t('calendar.double_ad');
             }
-            if (btnClaimNormal) btnClaimNormal.innerText = 'Забрать обычную';
+            if (btnClaimNormal) btnClaimNormal.innerText = t('calendar.claim_normal');
         }
     }
 }
 
-// Забор награды
-// Забор награды дня (с поддержкой бесконечного цикла)
 function claimCalendarDay(isDouble = false) {
     const isLoopCycle = (calendarState.cycle || 1) > 1 || ownedSkins.includes('calendar_stair');
     const day = calendarState.currentDay;
     const mult = (isDouble && (day < 7 || isLoopCycle)) ? 2 : 1;
 
-    // Выдача наград Дней 1 - 6
     if (day < 7) {
         const dayData = CALENDAR_REWARDS[day - 1];
         if (!dayData) return;
@@ -8311,7 +8313,7 @@ function claimCalendarDay(isDouble = false) {
         if (dayData.type === 'nuts') {
             addNuts(dayData.amount * mult);
         } else if (dayData.type === 'gold') {
-            goldenNuts += (dayData.amount * mult);
+            addGoldenNuts(dayData.amount * mult);
         } else if (dayData.type === 'case') {
             userCases[dayData.caseId] = (userCases[dayData.caseId] || 0) + (dayData.amount * mult);
             if (dayData.caseId === 'wooden') {
@@ -8324,68 +8326,59 @@ function claimCalendarDay(isDouble = false) {
         particles.push({
             x: canvas.width / 2,
             y: canvas.height * 0.4,
-            img: canvasIcoClover, // Или canvasIcoWoodenBox
+            img: canvasIcoClover,
             imgSize: 26,
-            text: `День ${day} получен!`,
+            text: t('particle.calendar_day', { day: day }),
             color: '#f1c40f',
             font: 'bold 24px sans-serif',
             alpha: 2.2,
             speed: 1.8
         });
-    }
-    // Выдача награды Дня 7
-    else {
+    } else {
         if (!isLoopCycle) {
-            // Неделя 1: Выдаем эксклюзивную лестницу
             if (!ownedSkins.includes('calendar_stair')) {
                 ownedSkins.push('calendar_stair');
                 checkAbsoluteUnlock();
                 if (typeof renderInventory === 'function') renderInventory();
             }
             particles.push({
-            x: canvas.width / 2,
-            y: canvas.height * 0.4,
-            img: canvasIcoCrown,
-            imgSize: 30,
-            text: 'ПОЛУЧЕН СКИН КАЛЕНДАРЬ!',
-            color: '#e74c3c',
-            font: 'bold 22px sans-serif',
-            alpha: 2.5,
-            speed: 1.8
-        });
+                x: canvas.width / 2,
+                y: canvas.height * 0.4,
+                img: canvasIcoCrown,
+                imgSize: 30,
+                text: t('particle.calendar_skin'),
+                color: '#e74c3c',
+                font: 'bold 22px sans-serif',
+                alpha: 2.5,
+                speed: 1.8
+            });
         } else {
-            // Неделя 2 и далее: +75 🟡 и 1 🧰 сейф (или 150 🟡 и 2 🧰 с x2)
-            goldenNuts += (75 * mult);
-            userCases.iron = (userCases.iron || 0) + (1 * mult);
+            // Повторка 7-го дня: 3 Золотых ящика (или 6 с рекламой x2)
+            userCases.gold = (userCases.gold || 0) + (3 * mult);
             if (typeof renderCasesShop === 'function') renderCasesShop();
 
             particles.push({
-            x: canvas.width / 2,
-            y: canvas.height * 0.4,
-            img: canvasIcoGold,
-            imgSize: 26,
-            text: `+${75 * mult} и +${1 * mult} сейф!`,
-            color: '#f1c40f',
-            font: 'bold 24px sans-serif',
-            alpha: 2.5,
-            speed: 1.8
-        });
+                x: canvas.width / 2,
+                y: canvas.height * 0.4,
+                img: canvasIcoGoldBox,
+                imgSize: 28,
+                text: t('particle.calendar_bonus', { cases: 3 * mult }),
+                color: '#f1c40f',
+                font: 'bold 24px sans-serif',
+                alpha: 2.5,
+                speed: 1.8
+            });
         }
     }
 
-    // Если реклама уже сыграла «тыдынь», не дублируем. Если обычный забор — играем «тыдынь»
-    if (!isDouble) {
-        AudioEngine.play('win', 0.8);
-    }
+    if (!isDouble) AudioEngine.play('win', 0.8);
 
-    // Запоминаем дату забора
     const now = new Date();
     calendarState.lastClaimDate = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
 
-    // Переход на следующий день или перезапуск цикла на 2-ю неделю
     if (calendarState.currentDay >= 7) {
         calendarState.currentDay = 1;
-        calendarState.cycle = (calendarState.cycle || 1) + 1; // Запуск следующей недели
+        calendarState.cycle = (calendarState.cycle || 1) + 1;
     } else {
         calendarState.currentDay++;
     }
@@ -8395,6 +8388,30 @@ function claimCalendarDay(isDouble = false) {
     if (modal) modal.classList.add('hidden');
 }
 
+// Кнопки окна Ретро-испытания (Экипировать полностью ИЛИ просто забрать)
+const btnClaimRetro = document.getElementById('btn-claim-retro');
+if (btnClaimRetro) {
+    btnClaimRetro.onclick = () => {
+        const modal = document.getElementById('retro-modal');
+        if (modal) modal.classList.add('hidden');
+        equipItem('ladders', 'retro', true); // Надеваем визуальный облик
+        equipLadderEffect('retro');          // Надеваем пассивный эффект!
+        checkAbsoluteUnlock();
+        saveGame();
+    };
+}
+
+const btnCloseRetroOnly = document.getElementById('btn-close-retro-only');
+if (btnCloseRetroOnly) {
+    btnCloseRetroOnly.onclick = () => {
+        const modal = document.getElementById('retro-modal');
+        if (modal) modal.classList.add('hidden');
+        AudioEngine.play('click', 0.5);
+        checkAbsoluteUnlock();
+        saveGame();
+    };
+}
+
 // Кнопки забора и модалки
 const calendarModal = document.getElementById('calendar-modal');
 const btnCloseCalendar = document.getElementById('btn-close-calendar');
@@ -8402,8 +8419,6 @@ const btnClaimCalendarX2 = document.getElementById('btn-claim-calendar-x2');
 const btnClaimCalendarNormal = document.getElementById('btn-claim-calendar-normal');
 const btnRestoreStreak = document.getElementById('btn-restore-streak');
 const btnResetStreak = document.getElementById('btn-reset-streak');
-
-const btnClaimRetro = document.getElementById('btn-claim-retro');
 if (btnClaimRetro) {
     btnClaimRetro.onclick = () => {
         const modal = document.getElementById('retro-modal');
@@ -8460,7 +8475,7 @@ function activateFrenzyMode(seconds = 30) {
             y: canvas.height * 0.35,
             img: canvasIcoNutRain,
             imgSize: 32,
-            text: 'ГАЙКОПАД!',
+            text: t('particle.frenzy'),
             color: '#f1c40f',
             font: 'bold 26px sans-serif',
             alpha: 2.5,
@@ -8482,7 +8497,7 @@ if (btnBoostFrenzy) btnBoostFrenzy.onclick = () => activateFrenzyMode(30);
 function updateBoostsUI() {
     const formatTime = (ms) => {
         if (ms >= 60000) return `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
-        return `${Math.ceil(ms / 1000)}с`;
+        return t('units.seconds_short', { value: Math.ceil(ms / 1000) });
     };
 
     const tTxt = document.getElementById('boost-turbo-text');
@@ -8504,7 +8519,7 @@ function updateBoostsUI() {
             fTxt.innerText = formatTime(adState.fortuneTimer);
             fBtn.style.background = '#2ecc71'; fBtn.style.color = '#fff'; fBtn.style.boxShadow = '0 0 12px rgba(46,204,113,0.6)';
         } else {
-            fTxt.innerText = 'Удача';
+            fTxt.innerText = t('buffs.fortune_name');
             fBtn.style.background = 'rgba(30, 39, 46, 0.95)'; fBtn.style.color = '#2ecc71'; fBtn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
         }
     }
@@ -8516,7 +8531,7 @@ function updateBoostsUI() {
             zTxt.innerText = formatTime(adState.frenzyTimer);
             zBtn.style.background = '#f1c40f'; zBtn.style.color = '#111'; zBtn.style.boxShadow = '0 0 12px rgba(241,196,15,0.6)';
         } else {
-            zTxt.innerText = 'Дождь';
+            zTxt.innerText = t('buffs.frenzy_name');
             zBtn.style.background = 'rgba(30, 39, 46, 0.95)'; zBtn.style.color = '#f1c40f'; zBtn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
         }
     }
@@ -8526,29 +8541,29 @@ function updateBoostsUI() {
 
     const dFortune = document.getElementById('drawer-timer-fortune');
     if (dFortune) {
-        dFortune.innerHTML = adState.fortuneTimer > 0 
-            ? `${icoStopwatch} ${formatTime(adState.fortuneTimer)}` 
+        dFortune.innerHTML = adState.fortuneTimer > 0
+            ? `${icoStopwatch} ${formatTime(adState.fortuneTimer)}`
             : `${icoStopwatch} 10:00`;
     }
 
     const dTurbo = document.getElementById('drawer-timer-turbo');
     if (dTurbo) {
-        dTurbo.innerHTML = adState.turboTimer > 0 
-            ? `${icoStopwatch} ${formatTime(adState.turboTimer)}` 
+        dTurbo.innerHTML = adState.turboTimer > 0
+            ? `${icoStopwatch} ${formatTime(adState.turboTimer)}`
             : `${icoStopwatch} 01:00`;
     }
 
     const dFrenzy = document.getElementById('drawer-timer-frenzy');
     if (dFrenzy) {
-        dFrenzy.innerHTML = adState.frenzyTimer > 0 
-            ? `${icoStopwatch} ${formatTime(adState.frenzyTimer)}` 
+        dFrenzy.innerHTML = adState.frenzyTimer > 0
+            ? `${icoStopwatch} ${formatTime(adState.frenzyTimer)}`
             : `${icoStopwatch} 00:30`;
     }
 
     const dAuto = document.getElementById('drawer-timer-autotap');
     if (dAuto) {
-        dAuto.innerHTML = adState.autotapTimer > 0 
-            ? `${icoStopwatch} ${formatTime(adState.autotapTimer)}` 
+        dAuto.innerHTML = adState.autotapTimer > 0
+            ? `${icoStopwatch} ${formatTime(adState.autotapTimer)}`
             : `${icoStopwatch} 00:40`;
     }
 }
@@ -8620,7 +8635,7 @@ window.addEventListener('visibilitychange', () => {
     } else if (document.visibilityState === 'visible') {
         // 1. Возобновляем музыку, если она играла до сворачивания
         if (window._bgmWasPlaying && AudioEngine.bgm) {
-            AudioEngine.bgm.play().catch(() => {});
+            AudioEngine.bgm.play().catch(() => { });
             window._bgmWasPlaying = false;
         }
 
@@ -8660,8 +8675,8 @@ function grantShortcutReward() {
     saveGame();
 
     showThankYouModal(
-        'ЗОЛОТО НАЧИСЛЕНО!',
-        '+100 <img src="assets/golden_nut.webp" class="ui-ico"> уже на балансе!<br><span style="color: #f1c40f; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 6px;">Спасибо, что ты с нами! ❤️</span>',
+        t('modal.shortcut_reward.title'),
+        t('modal.shortcut_reward.desc'),
         false
     );
 }
@@ -8794,11 +8809,11 @@ async function renderLeaderboardUI() {
     const descEl = document.getElementById('lb-season-desc');
     if (!listEl) return;
 
-    listEl.innerHTML = '<div style="text-align:center;color:#bdc3c7;padding:20px;">Загрузка рекордов...</div>';
-    
+    listEl.innerHTML = t('leaderboard.loading');
+
     descEl.innerText = currentLeaderboardTab === 'all'
-        ? 'Общий рейтинг покорителей космоса'
-        : 'Сброс каждый понедельник в 00:00';
+        ? t('leaderboard.desc_alltime')
+        : t('leaderboard.desc_week');
 
     const myScore = Math.floor(currentHeight);
     let entries = [];
@@ -8818,14 +8833,14 @@ async function renderLeaderboardUI() {
             if (res && res.entries) {
                 entries = res.entries.map(e => {
                     let extra = {};
-                    try { extra = JSON.parse(e.extraData || '{}'); } catch (_) {}
+                    try { extra = JSON.parse(e.extraData || '{}'); } catch (_) { }
                     return {
                         rank: e.rank,
-                        name: e.player.publicName || 'Анонимный альпинист',
+                        name: e.player.publicName || t('leaderboard.anon'),
                         score: e.score,
                         isVip: extra.isVip || false,
                         avatar: e.player.getAvatarSrc ? e.player.getAvatarSrc('small') : null,
-                        isPlayer: e.player.uniqueID === res.userRank?.player?.uniqueID
+                        isPlayer: (res.userRank > 0 && e.rank === res.userRank)
                     };
                 });
                 if (res.userRank) myRank = res.userRank;
@@ -8840,7 +8855,7 @@ async function renderLeaderboardUI() {
         const base = MOCK_LEADERS[currentLeaderboardTab] || [];
         entries = base.map(p => ({ ...p, isPlayer: false }));
         entries.push({
-            name: 'Ты (Игрок)',
+            name: t('leaderboard.you_player'),
             score: myScore,
             isVip: isVip,
             avatar: null,
@@ -8895,7 +8910,7 @@ async function renderLeaderboardUI() {
                     </div>
                 </div>
             </div>
-            <div class="lb-row-score">${p.score.toLocaleString('ru-RU')} м</div>
+            <div class="lb-row-score">${t("game.height_display", { height: p.score.toLocaleString("ru-RU") })}</div>
         `;
 
         listEl.appendChild(row);
@@ -8905,10 +8920,10 @@ async function renderLeaderboardUI() {
         const rankTxt = myRank ? `#${myRank}` : '—';
         const myNameHtml = isVip
             ? `<div class="lb-vip-pill">
-                   <span>Ты (VIP)</span>
+                   ${t('leaderboard.you_vip')}
                    <img src="assets/cut_crown.webp" class="lb-vip-corner-crown" alt="VIP" onerror="this.src='assets/crown.webp'">
                </div>`
-            : `<span>Ты</span>`;
+            : `${t('leaderboard.you')}`;
 
         playerCardEl.innerHTML = `
             <div class="lb-row-left">
@@ -8917,7 +8932,7 @@ async function renderLeaderboardUI() {
                     ${myNameHtml}
                 </div>
             </div>
-            <div class="lb-row-score" style="color:#f1c40f;">${myScore.toLocaleString('ru-RU')} м</div>
+            <div class="lb-row-score" style="color:#f1c40f;">${t("game.height_display", { height: myScore.toLocaleString("ru-RU") })}</div>
         `;
     }
 }
@@ -9064,7 +9079,7 @@ function triggerCaseGainedPopup() {
 
     const popup = document.createElement('div');
     popup.className = 'case-floating-popup';
-    popup.innerHTML = '+<img src="assets/wooden_box.webp" style="width: 17px; height: 17px; vertical-align: -3px; margin: 0 2px;"> КЕЙС!';
+    popup.innerHTML = t('cases.popup_case');
     layer.appendChild(popup);
 
     setTimeout(() => {
@@ -9132,7 +9147,7 @@ if (btnFieldLuck && modalLuck) {
 // === АКТИВАЦИЯ БАФФОВ (В ЧЕСТНЫХ МИЛЛИСЕКУНДАХ) ===========
 // ==========================================================
 function triggerTimeWarp() {
-    const skin = LADDER_SKINS[currentSkinId] || LADDER_SKINS.wood;
+    const skin = { buffs: getActiveLadderBuffs() };
     const isVine = hasMech('vine');
     const isStrato = hasMech('strato');
     const timeMult = isStrato ? 1.42 : 1.0;
@@ -9208,7 +9223,7 @@ function triggerTimeWarp() {
         // Земля: каждый удар даёт +3 прогресса в ящик
         if (isPlanet) {
             earnedBoxClicks += (totalHits * 3);
-        }else {
+        } else {
             earnedBoxClicks += (totalHits * 1);
         }
     }
@@ -9221,7 +9236,7 @@ function triggerTimeWarp() {
 
     // Честно начисляем гайки через addNuts (учитывает квантовое расщепление и кибер-колонку)
     if (earnedNuts > 0) addNuts(earnedNuts);
-    if (earnedGold > 0) goldenNuts += earnedGold;
+    if (earnedGold > 0) addGoldenNuts(earnedGold);
 
     // Начисляем прогресс кейсов для шаров Земли
     if (earnedBoxClicks > 0) {
@@ -9241,13 +9256,13 @@ function triggerTimeWarp() {
             actualNeeded = Math.max(10, actualNeeded);
         }
         if (uiCasesCount) uiCasesCount.innerText = boxesOwned;
-        if (uiBoxText) uiBoxText.innerText = `Ящик: ${clicksForBox}/${actualNeeded}`;
+        if (uiBoxText) uiBoxText.innerText = `${clicksForBox}/${actualNeeded}`;
         if (uiBoxProgress) uiBoxProgress.style.height = `${Math.min(100, (clicksForBox / actualNeeded) * 100)}%`;
     }
 
-let report = `+${earnedMeters.toLocaleString('ru-RU')} м`;
-    if (earnedNuts > 0) report += ` • +${earnedNuts} гаек`;
-    if (earnedGold > 0) report += ` • +${earnedGold} золота`;
+    let report = t('particle.timewarp_report', { meters: earnedMeters.toLocaleString('ru-RU') });
+    if (earnedNuts > 0) report += ' • ' + t('particle.timewarp_nuts', { nuts: earnedNuts });
+    if (earnedGold > 0) report += ' • ' + t('particle.timewarp_gold', { gold: earnedGold });
 
     particles.push({
         x: canvas.width / 2,
@@ -9287,46 +9302,42 @@ function startAutoTapInterval() {
 
 function activateBuffDirectly(type, durationMs) {
     if (typeof adState === 'undefined') window.adState = {};
+    const mult = hasMech('billboard') ? 1.5 : 1.0;
+    const finalDuration = durationMs * mult;
 
     if (type === 'fortune') {
-        adState.fortuneTimer = durationMs;
+        const maxCapMs = 30 * 60000 * mult;
+        adState.fortuneTimer = Math.min(maxCapMs, (adState.fortuneTimer || 0) + finalDuration);
         particles.push({
             x: canvas.width / 2, y: canvas.height * 0.35,
             img: canvasIcoClover, imgSize: 32,
-            text: 'УДАЧА +15!', color: '#2ecc71', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
+            text: t('particle.luck_15'), color: '#2ecc71', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
         });
     }
     if (type === 'turbo') {
-        adState.turboTimer = durationMs;
+        adState.turboTimer = Math.max(adState.turboTimer || 0, 0) + finalDuration;
         particles.push({
             x: canvas.width / 2, y: canvas.height * 0.35,
             img: canvasIcoTurbo, imgSize: 32,
-            text: 'ТУРБО-ДОХОД x3!', color: '#e67e22', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
+            text: t('particle.turbo_income'), color: '#e67e22', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
         });
     }
     if (type === 'frenzy') {
-        adState.frenzyTimer = durationMs;
+        adState.frenzyTimer = Math.max(adState.frenzyTimer || 0, 0) + finalDuration;
         particles.push({
             x: canvas.width / 2, y: canvas.height * 0.35,
             img: canvasIcoNutRain, imgSize: 32,
-            text: 'ГАЙКОПАД!', color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 2.5, speed: 1.5
+            text: t('particle.frenzy'), color: '#f1c40f', font: 'bold 24px sans-serif', alpha: 2.5, speed: 1.5
         });
     }
     if (type === 'autotap') {
-        adState.autotapTimer = durationMs; // <-- ЗАДАЁМ ВРЕМЯ БАФФА (40 сек)
+        adState.autotapTimer = Math.max(adState.autotapTimer || 0, 0) + finalDuration;
         particles.push({
-            x: canvas.width / 2, 
-            y: canvas.height * 0.35,
-            img: canvasIcoRobotHand, 
-            imgSize: 32,
-            text: 'АВТОПИЛОТ (15 тапов/с)!', 
-            color: '#00d2ff', 
-            font: 'bold 24px sans-serif', 
-            alpha: 2.2, 
-            speed: 1.5
+            x: canvas.width / 2, y: canvas.height * 0.35,
+            img: canvasIcoRobotHand, imgSize: 32,
+            text: t('particle.autotap'), color: '#00d2ff', font: 'bold 24px sans-serif', alpha: 2.2, speed: 1.5
         });
-
-        startAutoTapInterval(); // <-- ЗАПУСКАЕМ ЕДИНЫЙ ИНТЕРВАЛ
+        startAutoTapInterval();
     }
 
     if (type === 'timewarp') {
@@ -9346,16 +9357,17 @@ const bindBuffGoldAction = (btnId, cost, durationMs, type) => {
         e.stopPropagation();
         if (goldenNuts >= cost) {
             showConfirmPurchase(
-                'Активация усиления',
-                `Потратить ${cost} <img src="assets/golden_nut.webp" class="ui-ico"> на активацию эффекта?`,
+                t('confirm.buff_title'),
+                t('confirm.buff_desc', { cost: cost }),
                 cost,
                 () => {
                     goldenNuts -= cost;
+                    updateHeaderUI();
                     activateBuffDirectly(type, durationMs);
                 }
             );
         } else {
-            alert('Недостаточно золотых гаек');
+            alert(t('confirm.not_enough_gold'));
         }
     };
 };
@@ -9365,7 +9377,7 @@ bindBuffGoldAction('btn-buy-buff-frenzy-gold', 39, 30000, 'frenzy');
 bindBuffGoldAction('btn-buy-buff-autotap-gold', 39, 40000, 'autotap');
 bindBuffGoldAction('btn-buy-buff-timewarp-gold', 39, 0, 'timewarp');
 
-// Покупка за РЕКЛАМУ
+// Покупка за РЕКЛАМУ (все кнопки честно проходят через watchRewardedAd!)
 const bindBuffAdAction = (btnId, durationMs, type, fallbackBtnId) => {
     const btn = document.getElementById(btnId);
     if (!btn) return;
@@ -9375,9 +9387,9 @@ const bindBuffAdAction = (btnId, durationMs, type, fallbackBtnId) => {
         if (oldBtn) {
             oldBtn.click();
         } else {
-            if (typeof adState === 'undefined') window.adState = {};
-            adState.streakCount = Math.min(10, (adState.streakCount || 0) + 1);
-            activateBuffDirectly(type, durationMs);
+            watchRewardedAd(`buff_${type}`, () => {
+                activateBuffDirectly(type, durationMs);
+            });
         }
     };
 };
@@ -9441,7 +9453,7 @@ function updateActiveBuffsDisplay() {
                 const s = totalSec % 60;
                 timeTxt = `${m}:${s < 10 ? '0' : ''}${s}`;
             } else {
-                timeTxt = `${totalSec}с`;
+                timeTxt = t('units.seconds_short', { value: totalSec });
             }
 
             badge.innerHTML = `
@@ -9617,8 +9629,8 @@ function renderMimicUI() {
     const slot1El = document.querySelector('#mimic-slot-1 .slot-name');
     if (!listEl) return;
 
-    if (slot0El) slot0El.innerText = LADDER_SKINS[mimicSlots[0]]?.name || 'Пусто';
-    if (slot1El) slot1El.innerText = LADDER_SKINS[mimicSlots[1]]?.name || 'Пусто';
+    if (slot0El) slot0El.innerText = LADDER_SKINS[mimicSlots[0]]?.name || t('inventory.slot_empty');
+    if (slot1El) slot1El.innerText = LADDER_SKINS[mimicSlots[1]]?.name || t('inventory.slot_empty');
 
     listEl.innerHTML = '';
 
@@ -9644,10 +9656,10 @@ function renderMimicUI() {
             <img src="${item.file}" style="height: 32px; object-fit: contain; margin-bottom: 2px;">
             <div style="font-size: 11px; font-weight: bold; color: ${item.color || '#fff'};">${item.name}</div>
             <div style="font-size: 9px; color: #bdc3c7; height: 24px; overflow: hidden; line-height: 1.2; margin-top: 2px;">
-                ${LADDER_DESC[id] || 'Базовые свойства'}
+                ${LADDER_DESC[id] || t('inventory.slot_default')}
             </div>
             <div style="margin-top: 4px; font-size: 9px; font-weight: bold; color: ${isSelected ? '#8c7ae6' : '#7f8c8d'};">
-                ${isSlot0 ? '✔ Слот 1' : (isSlot1 ? '✔ Слот 2' : '+ Выбрать')}
+                ${isSlot0 ? t('inventory.slot_1_selected') : (isSlot1 ? t('inventory.slot_2_selected') : t('inventory.select_action'))}
             </div>
         `;
 
@@ -9740,7 +9752,7 @@ function renderCyberUI() {
             <div style="font-size: 11px; font-weight: bold; color: ${item.color || RARITY_COLORS[item.rarity] || '#fff'};">${item.name}</div>
             <div style="font-size: 9px; color: #bdc3c7; height: 24px; overflow: hidden; line-height: 1.2; margin-top: 2px;">${buffDesc}</div>
             <div style="margin-top: 4px; font-size: 9px; font-weight: bold; color: ${isSelected ? '#00ffff' : '#7f8c8d'};">
-                ${isSelected ? '✔ Установлено' : '+ Выбрать'}
+                ${isSelected ? t('inventory.cyber_installed') : t('inventory.select_action')}
             </div>
         `;
 
@@ -9779,7 +9791,7 @@ if (btnToggleZen && uiLayer) {
     btnToggleZen.addEventListener('click', (e) => {
         e.stopPropagation();
         const isZen = uiLayer.classList.toggle('zen-mode');
-        
+
         // Меняем иконку: если скрыто — закрытый глаз, если видно — открытый
         const icoZen = document.getElementById('ico-zen');
         if (icoZen) {
@@ -9840,7 +9852,7 @@ function triggerUfoBeacon() {
         y: canvas.height * 0.35,
         img: ufoGiftImg,
         imgSize: 32,
-        text: 'МАГНИТ НЛО!',
+        text: t('particle.magnet_ufo'),
         color: '#4cd137',
         font: 'bold 24px sans-serif',
         alpha: 2.2,
@@ -9848,7 +9860,7 @@ function triggerUfoBeacon() {
     });
 
     if (typeof AudioEngine !== 'undefined') AudioEngine.play('ufo_tap', 0.8);
-    
+
     // Закрываем шторку при призыве НЛО
     if (buffsDrawer) buffsDrawer.style.transform = 'translateX(105%)';
 }
@@ -9868,8 +9880,8 @@ if (btnUfoGold) {
         e.stopPropagation();
         if (goldenNuts >= 39) {
             showConfirmPurchase(
-                'Активация усиления',
-                'Потратить 39 <img src="assets/golden_nut.webp" class="ui-ico"> на призыв НЛО?',
+                t('confirm.buff_title'),
+                t('confirm.ufo_desc'),
                 39,
                 () => {
                     goldenNuts -= 39;
@@ -9878,7 +9890,82 @@ if (btnUfoGold) {
                 }
             );
         } else {
-            alert('Недостаточно золотых гаек');
+            alert(t('confirm.not_enough_gold'));
         }
     };
+}
+
+// === ДИНАМИЧЕСКОЕ ОБНОВЛЕНИЕ ПЕРЕВОДОВ В ПАМЯТИ ИГРЫ ===
+function updateDynamicTranslations() {
+    // 1. Лестницы (имена и описания)
+    Object.keys(LADDER_SKINS).forEach(id => {
+        LADDER_SKINS[id].name = t(`ladder.${id}.name`);
+        LADDER_DESC[id] = t(`ladder_desc.${id}`);
+    });
+
+    // 2. Колонки
+    Object.keys(SPEAKER_SKINS).forEach(id => {
+        SPEAKER_SKINS[id].name = t(`speaker.${id}.name`);
+        SPEAKER_DESC[id] = t(`speaker_desc.${id}`);
+    });
+
+    // 3. Шары Ньютона
+    Object.keys(NEWTON_SKINS).forEach(id => {
+        NEWTON_SKINS[id].name = t(`newton.${id}.name`);
+        NEWTON_DESC[id] = t(`newton_desc.${id}`);
+    });
+
+    // 4. Талисманы
+    Object.keys(TALISMANS).forEach(id => {
+        TALISMANS[id].name = t(`talisman.${id}.name`);
+    });
+
+    // 5. Кейсы
+    if (CASES_DB.wooden) {
+        CASES_DB.wooden.name = t('cases.wooden_name');
+        if (CASES_DB.wooden.loot[0]) CASES_DB.wooden.loot[0].name = t('cases.nut_loot_50');
+        if (CASES_DB.wooden.loot[1]) CASES_DB.wooden.loot[1].name = t('cases.nut_loot_150');
+        if (CASES_DB.wooden.loot[2]) CASES_DB.wooden.loot[2].name = t('cases.nut_loot_300');
+    }
+    if (CASES_DB.iron) CASES_DB.iron.name = t('cases.iron_name');
+    if (CASES_DB.gold) CASES_DB.gold.name = t('cases.gold_name');
+
+    // 6. Локации, Рубежи и Бортовой журнал
+    const locKeys = ['khrushchevka', 'roofs', 'roofs', 'storm_front', 'stratosphere', 'open_space', 'milky_way', 'endless'];
+    LOCATIONS.forEach((loc, idx) => {
+        if (locKeys[idx]) loc.name = t(`locations.${locKeys[idx]}`);
+    });
+    HEIGHT_MILESTONES.forEach((m, idx) => {
+        m.name = t(`height_milestones.${idx}.name`);
+        m.desc = t(`height_milestones.${idx}.desc`);
+    });
+    STAGES_LORE.forEach((s, idx) => {
+        s.name = t(`stages_lore.${idx}.name`);
+        s.desc = t(`stages_lore.${idx}.desc`);
+    });
+
+    // 7. Награды рекламного стрика и календаря
+    AD_STREAK_REWARDS.forEach((r, idx) => {
+        r.title = t(`ad_streak_rewards.${idx}.title`);
+    });
+    CALENDAR_REWARDS.forEach((c, idx) => {
+        c.text = t(`calendar_rewards.${idx}.text`);
+    });
+
+    // 8. Обновляем HTML и активные элементы UI
+    applyHtmlTranslations();
+    updateShopUI();
+    updateBoostsUI();
+    if (heightDisplay) {
+        heightDisplay.textContent = t('game.height_display', { height: Math.floor(displayedHeight).toLocaleString() });
+    }
+}
+
+// Удобная функция для переключения языка (например, из Яндекс SDK или настроек)
+function setGameLanguage(langCode) {
+    if (TRANSLATIONS[langCode]) {
+        currentLang = langCode;
+        window.currentLang = langCode;
+        updateDynamicTranslations();
+    }
 }

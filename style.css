@@ -27,7 +27,8 @@ body {
     position: relative;
     width: 100%;
     height: 100%;
-    max-width: 540px; /* Оптимальная ширина для мобильного кликера на ПК */
+    max-width: 540px;
+    /* Оптимальная ширина для мобильного кликера на ПК */
     background: #222;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
     overflow: hidden;
@@ -370,7 +371,8 @@ canvas {
    ══════════════════════════════════════════════════════════════ */
 
 :root {
-    --cell-h: 112px; /* Базовое значение, динамически пересчитывается в JS */
+    --cell-h: 112px;
+    /* Базовое значение, динамически пересчитывается в JS */
 }
 
 .gacha-modal-overlay {
@@ -475,7 +477,8 @@ canvas {
     position: relative;
     width: 100%;
     height: var(--cell-h, 112px);
-    overflow: visible; /* Без overflow:hidden, чтобы не срезало перекладины */
+    overflow: visible;
+    /* Без overflow:hidden, чтобы не срезало перекладины */
     box-sizing: border-box;
     flex-shrink: 0;
 }
@@ -483,16 +486,19 @@ canvas {
 .gacha-item-content {
     position: absolute;
     inset: 0;
-    bottom: 5.5px; /* Свободная область без перекладины */
+    bottom: 5.5px;
+    /* Свободная область без перекладины */
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 14px; /* Зазор от боковых стоек */
+    padding: 6px 14px;
+    /* Зазор от боковых стоек */
     box-sizing: border-box;
     z-index: 2;
     pointer-events: none;
-    opacity: 0.35; /* По умолчанию для крайних ячеек */
+    opacity: 0.35;
+    /* По умолчанию для крайних ячеек */
     transition: opacity 120ms linear;
 }
 
@@ -511,6 +517,7 @@ canvas {
 .gacha-cell.is-center .gacha-item-content {
     opacity: 1;
 }
+
 .gacha-cell.is-center .gacha-item-inner {
     transform: scale(1.1);
 }
@@ -518,6 +525,7 @@ canvas {
 .gacha-cell.is-near .gacha-item-content {
     opacity: 0.6;
 }
+
 .gacha-cell.is-near .gacha-item-inner {
     transform: scale(1);
 }
@@ -525,6 +533,7 @@ canvas {
 .gacha-cell.is-far .gacha-item-content {
     opacity: 0.35;
 }
+
 .gacha-cell.is-far .gacha-item-inner {
     transform: scale(1);
 }
@@ -654,6 +663,7 @@ canvas {
 .gacha-btns-row.is-spinning .gacha-btn-batch {
     display: none !important;
 }
+
 .gacha-btns-row.is-spinning .gacha-btn-action {
     flex: 0 0 100% !important;
     width: 100% !important;
@@ -669,11 +679,13 @@ canvas {
     flex: 0 0 calc(45% - 5.33px);
     width: calc(45% - 5.33px);
 }
+
 .gacha-btns-row.has-batch .gacha-btn-batch {
     display: flex;
     flex: 0 0 calc(20% - 5.33px);
     width: calc(20% - 5.33px);
 }
+
 .gacha-btns-row.has-batch .gacha-btn-action {
     flex: 0 0 calc(35% - 5.33px);
     width: calc(35% - 5.33px);
@@ -684,6 +696,7 @@ canvas {
 .gacha-btns-row.no-more .gacha-btn-batch {
     display: none !important;
 }
+
 .gacha-btns-row.no-more .gacha-btn-action {
     flex: 0 0 100% !important;
     width: 100% !important;
@@ -730,7 +743,8 @@ canvas {
 
 .gacha-btn-reroll:disabled {
     opacity: 0.9;
-    cursor: pointer; /* Всегда активный курсор */
+    cursor: pointer;
+    /* Всегда активный курсор */
     transform: none !important;
 }
 
@@ -1108,34 +1122,85 @@ canvas {
 
 /* ── SHARED KEYFRAMES ───────────────────────────────────────── */
 @keyframes scanSlide {
-    0%   { background-position: 0 0; }
-    100% { background-position: 0 200px; }
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: 0 200px;
+    }
 }
+
 @keyframes neonPulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.55; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.55;
+    }
 }
+
 @keyframes bmBtnFlash {
-    0%   { box-shadow: 0 0 0 rgba(255,255,255,0); }
-    50%  { box-shadow: 0 0 16px rgba(255,255,255,0.4); }
-    100% { box-shadow: 0 0 0 rgba(255,255,255,0); }
+    0% {
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
 }
+
 @keyframes ddHaloBreath {
-    0%, 100% { opacity: 0.6; transform: translate(-50%,-50%) scale(1);   }
-    50%       { opacity: 1;   transform: translate(-50%,-50%) scale(1.08); }
+
+    0%,
+    100% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.08);
+    }
 }
+
 @keyframes ddShimmer {
-    0%   { transform: translateX(-120%) skewX(-20deg); }
-    100% { transform: translateX(220%)  skewX(-20deg); }
+    0% {
+        transform: translateX(-120%) skewX(-20deg);
+    }
+
+    100% {
+        transform: translateX(220%) skewX(-20deg);
+    }
 }
+
 @keyframes invTabUnderline {
-    from { width: 0; }
-    to   { width: 100%; }
+    from {
+        width: 0;
+    }
+
+    to {
+        width: 100%;
+    }
 }
+
 @keyframes bdStripeSlide {
-    0%   { transform: translateY(-100%); }
-    100% { transform: translateY(100%);  }
+    0% {
+        transform: translateY(-100%);
+    }
+
+    100% {
+        transform: translateY(100%);
+    }
 }
+
 /* ══════════════════════════════════════════════════════════════
    1. BLACK MARKET SHOP  #shop-modal (АТМОСФЕРНЫЙ + ТАЧ-ФРЕНДЛИ)
    ══════════════════════════════════════════════════════════════ */
@@ -1151,12 +1216,10 @@ canvas {
     background: linear-gradient(165deg, #0d121a 0%, #121924 60%, #0a0d13 100%);
     border: none;
     border-radius: 14px;
-    clip-path: polygon(
-        0 10px, 10px 0,
-        calc(100% - 10px) 0, 100% 10px,
-        100% calc(100% - 10px), calc(100% - 10px) 100%,
-        10px 100%, 0 calc(100% - 10px)
-    );
+    clip-path: polygon(0 10px, 10px 0,
+            calc(100% - 10px) 0, 100% 10px,
+            100% calc(100% - 10px), calc(100% - 10px) 100%,
+            10px 100%, 0 calc(100% - 10px));
     box-shadow:
         0 0 0 2px #f39c12,
         0 12px 35px rgba(0, 0, 0, 0.9),
@@ -1172,13 +1235,11 @@ canvas {
     inset: 0;
     pointer-events: none;
     z-index: 2;
-    background: repeating-linear-gradient(
-        180deg,
-        rgba(0, 0, 0, 0) 0px,
-        rgba(0, 0, 0, 0) 3px,
-        rgba(0, 0, 0, 0.15) 3px,
-        rgba(0, 0, 0, 0.15) 4px
-    );
+    background: repeating-linear-gradient(180deg,
+            rgba(0, 0, 0, 0) 0px,
+            rgba(0, 0, 0, 0) 3px,
+            rgba(0, 0, 0, 0.15) 3px,
+            rgba(0, 0, 0, 0.15) 4px);
 }
 
 /* Шапка окна */
@@ -1236,13 +1297,17 @@ canvas {
     position: absolute;
     inset: -10px;
 }
-.shop-close-x:active { background: rgba(231, 76, 60, 0.5); }
+
+.shop-close-x:active {
+    background: rgba(231, 76, 60, 0.5);
+}
 
 /* БАННЕР С КАРТИНКОЙ ЛАВКИ (ПОЛНЫЙ КАДР 16:9) */
 .shop-banner-box {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 9; /* Пропорция оригинального арта */
+    aspect-ratio: 16 / 9;
+    /* Пропорция оригинального арта */
     max-height: 180px;
     overflow: hidden;
     background: #080b10;
@@ -1281,14 +1346,16 @@ canvas {
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    margin-bottom: 12px; /* Принудительный зазор 12px между рядами */
+    margin-bottom: 12px;
+    /* Принудительный зазор 12px между рядами */
     background: rgba(255, 255, 255, 0.035);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
 }
 
 .bm-row:last-child {
-    margin-bottom: 0; /* У последнего элемента убираем отступ */
+    margin-bottom: 0;
+    /* У последнего элемента убираем отступ */
 }
 
 /* Стиль для подписи бонуса (+12 м/с) */
@@ -1401,6 +1468,7 @@ canvas {
     line-height: 1.2;
     margin-top: 2px;
 }
+
 /* ══════════════════════════════════════════════════════════════
    2. BUFFS DRAWER  #buffs-drawer (УВЕЛИЧЕННЫЕ ТАЧ-ЗОНЫ)
    ══════════════════════════════════════════════════════════════ */
@@ -1460,7 +1528,11 @@ canvas {
     justify-content: center;
     transition: color 0.15s, background 0.15s;
 }
-.bd-close:active { color: #fff; background: rgba(231, 76, 60, 0.4); }
+
+.bd-close:active {
+    color: #fff;
+    background: rgba(231, 76, 60, 0.4);
+}
 
 .bd-divider {
     height: 1px;
@@ -1477,12 +1549,20 @@ canvas {
     padding: 0 12px 18px;
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Увеличенный зазор между карточками */
+    gap: 12px;
+    /* Увеличенный зазор между карточками */
     scrollbar-width: thin;
     scrollbar-color: #2c3e50 transparent;
 }
-.bd-list::-webkit-scrollbar { width: 4px; }
-.bd-list::-webkit-scrollbar-thumb { background: #34495e; border-radius: 2px; }
+
+.bd-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.bd-list::-webkit-scrollbar-thumb {
+    background: #34495e;
+    border-radius: 2px;
+}
 
 /* Карточка усилителя */
 .bd-tile {
@@ -1546,7 +1626,8 @@ canvas {
 /* Ряд кнопок */
 .bd-tile-btns {
     display: flex;
-    gap: 8px; /* Безопасный зазор между кнопками */
+    gap: 8px;
+    /* Безопасный зазор между кнопками */
 }
 
 /* Базовые свойства кнопок с высотой 42px */
@@ -1574,10 +1655,12 @@ canvas {
     color: #0b0f14;
     border-bottom: 3px solid rgba(0, 0, 0, 0.4);
 }
+
 .bd-btn-ad:active {
     transform: translateY(2.5px);
     border-bottom-width: 0.5px;
 }
+
 .bd-btn-ad .ui-ico {
     width: 18px;
     height: 18px;
@@ -1585,7 +1668,8 @@ canvas {
 
 /* Кнопка за золото (широкая, с четкой рамкой) */
 .bd-btn-gold {
-    flex: 0 0 76px; /* Фиксированная комфортная ширина */
+    flex: 0 0 76px;
+    /* Фиксированная комфортная ширина */
     background: rgba(241, 196, 15, 0.12);
     border: 1.5px solid #f1c40f;
     border-bottom: 3px solid #b78a06;
@@ -1593,11 +1677,13 @@ canvas {
     font-size: 13px;
     padding: 0 8px;
 }
+
 .bd-btn-gold:active {
     transform: translateY(2.5px);
     border-bottom-width: 1px;
     background: rgba(241, 196, 15, 0.25);
 }
+
 .bd-btn-gold .ui-ico {
     width: 16px;
     height: 16px;
@@ -1619,9 +1705,9 @@ canvas {
     border-radius: 16px;
     overflow: hidden;
     box-shadow:
-        0 0 0 1px rgba(52,152,219,0.25),
-        0 0 0 3px rgba(52,152,219,0.08),
-        0 20px 60px rgba(0,0,0,0.9);
+        0 0 0 1px rgba(52, 152, 219, 0.25),
+        0 0 0 3px rgba(52, 152, 219, 0.08),
+        0 20px 60px rgba(0, 0, 0, 0.9);
     color: #fff;
 }
 
@@ -1632,7 +1718,7 @@ canvas {
     gap: 8px;
     padding: 10px 14px;
     background: linear-gradient(90deg, #0d1b2a 0%, #14243a 100%);
-    border-bottom: 1px solid rgba(52,152,219,0.2);
+    border-bottom: 1px solid rgba(52, 152, 219, 0.2);
     flex-shrink: 0;
 }
 
@@ -1662,8 +1748,8 @@ canvas {
 }
 
 .inv-close-btn {
-    background: rgba(231,76,60,0.15);
-    border: 1px solid rgba(231,76,60,0.4);
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
     color: #e74c3c;
     width: 26px;
     height: 26px;
@@ -1677,7 +1763,10 @@ canvas {
     flex-shrink: 0;
     transition: background 0.15s;
 }
-.inv-close-btn:hover { background: rgba(231,76,60,0.3); }
+
+.inv-close-btn:hover {
+    background: rgba(231, 76, 60, 0.3);
+}
 
 /* Tab rail */
 .inv-tab-rail {
@@ -1687,7 +1776,7 @@ canvas {
     padding: 0;
     border-radius: 0;
     margin: 0;
-    border-bottom: 2px solid rgba(52,152,219,0.15);
+    border-bottom: 2px solid rgba(52, 152, 219, 0.15);
     flex-shrink: 0;
 }
 
@@ -1695,7 +1784,7 @@ canvas {
     flex: 1;
     background: transparent;
     border: none;
-    border-right: 1px solid rgba(255,255,255,0.06);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
     color: #566573;
     font-weight: 700;
     font-size: 10px;
@@ -1711,12 +1800,16 @@ canvas {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-.inv-tab-rail .inv-tab:last-child { border-right: none; }
+
+.inv-tab-rail .inv-tab:last-child {
+    border-right: none;
+}
 
 .inv-tab-icon {
     font-size: 16px;
     line-height: 1;
 }
+
 .inv-tab-label {
     font-size: 8px;
     letter-spacing: 1px;
@@ -1735,11 +1828,14 @@ canvas {
     border-radius: 1px;
     transition: width 0.2s ease;
 }
-.inv-tab-rail .inv-tab.active::after { width: 70%; }
+
+.inv-tab-rail .inv-tab.active::after {
+    width: 70%;
+}
 
 .inv-tab-rail .inv-tab.active {
     color: #3498db;
-    background: rgba(52,152,219,0.08);
+    background: rgba(52, 152, 219, 0.08);
 }
 
 /* Items area */
@@ -1756,17 +1852,19 @@ canvas {
 /* Existing .inv-item-card gets extra treatment */
 .inv-item-card {
     background: linear-gradient(135deg, #141e2c 0%, #1a2540 100%);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-left: 3px solid #3498db;
     border-radius: 0 10px 10px 0;
     padding: 10px 12px;
     transition: border-left-color 0.2s, box-shadow 0.2s;
 }
+
 .inv-item-card.equipped {
     border-left-color: #f1c40f;
     background: linear-gradient(135deg, #1b1e0f 0%, #252910 100%);
-    box-shadow: inset 0 0 20px rgba(241,196,15,0.07);
+    box-shadow: inset 0 0 20px rgba(241, 196, 15, 0.07);
 }
+
 .btn-equip.active {
     background: linear-gradient(135deg, #f1c40f, #e67e22);
     color: #000;
@@ -1774,6 +1872,7 @@ canvas {
     border-radius: 6px;
     border: none;
 }
+
 .btn-equip.available {
     background: linear-gradient(135deg, #27ae60, #1e8449);
     border-bottom: 2px solid #145a32;
@@ -1781,10 +1880,11 @@ canvas {
     border: none;
     color: #fff;
 }
+
 .btn-equip.locked {
     background: #1c2533;
     color: #4a5568;
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 6px;
     cursor: not-allowed;
 }
@@ -1818,7 +1918,7 @@ canvas {
     width: 200px;
     height: 200px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(212,160,23,0.25) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(212, 160, 23, 0.25) 0%, transparent 70%);
     pointer-events: none;
     animation: ddHaloBreath 3s ease-in-out infinite;
     z-index: 0;
@@ -1835,6 +1935,7 @@ canvas {
     pointer-events: none;
     opacity: 0.7;
 }
+
 /* Отключаем кривые декоративные скобки по углам */
 .dd-corner {
     display: none !important;
@@ -1858,14 +1959,14 @@ canvas {
     display: flex;
     align-items: center;
     gap: 6px;
-    text-shadow: 0 0 14px rgba(241,196,15,0.8);
+    text-shadow: 0 0 14px rgba(241, 196, 15, 0.8);
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
 .dd-close {
-    background: rgba(231,76,60,0.15);
-    border: 1px solid rgba(231,76,60,0.35);
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.35);
     color: #e74c3c;
     width: 26px;
     height: 26px;
@@ -1879,7 +1980,10 @@ canvas {
     transition: background 0.15s;
     flex-shrink: 0;
 }
-.dd-close:hover { background: rgba(231,76,60,0.3); }
+
+.dd-close:hover {
+    background: rgba(231, 76, 60, 0.3);
+}
 
 /* Countdown strip */
 .dd-countdown-strip {
@@ -1889,13 +1993,14 @@ canvas {
     align-items: center;
     gap: 7px;
     justify-content: center;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(241,196,15,0.25);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(241, 196, 15, 0.25);
     border-radius: 6px;
     padding: 6px 12px;
     margin-bottom: 14px;
     overflow: hidden;
 }
+
 /* Shimmer sweep */
 .dd-countdown-strip::after {
     content: '';
@@ -1904,7 +2009,7 @@ canvas {
     left: -60%;
     width: 50%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
     animation: ddShimmer 3.5s ease-in-out infinite;
 }
 
@@ -1915,17 +2020,19 @@ canvas {
     letter-spacing: 1px;
     font-weight: 700;
 }
+
 .dd-countdown-sep {
     font-size: 8px;
     color: #f1c40f;
     opacity: 0.6;
 }
+
 .dd-countdown-time {
     font-size: 15px;
     font-weight: 900;
     color: #f1c40f;
     letter-spacing: 2px;
-    text-shadow: 0 0 10px rgba(241,196,15,0.6);
+    text-shadow: 0 0 10px rgba(241, 196, 15, 0.6);
     font-variant-numeric: tabular-nums;
 }
 
@@ -1950,8 +2057,8 @@ canvas {
     justify-content: center;
     gap: 6px;
     padding: 10px;
-    background: rgba(255,255,255,0.04);
-    border: 1px dashed rgba(52,152,219,0.45);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed rgba(52, 152, 219, 0.45);
     border-radius: 8px;
     color: #3498db;
     font-size: 11px;
@@ -1962,22 +2069,33 @@ canvas {
     transition: background 0.2s, border-color 0.2s, color 0.2s;
     overflow: hidden;
 }
+
 .dd-reroll-btn::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(52,152,219,0.08), transparent);
+    background: linear-gradient(90deg, transparent, rgba(52, 152, 219, 0.08), transparent);
     transform: translateX(-100%);
     transition: transform 0.4s ease;
 }
-.dd-reroll-btn:hover::before { transform: translateX(100%); }
+
+.dd-reroll-btn:hover::before {
+    transform: translateX(100%);
+}
+
 .dd-reroll-btn:hover {
-    background: rgba(52,152,219,0.1);
+    background: rgba(52, 152, 219, 0.1);
     border-color: #3498db;
     color: #5dade2;
 }
-.dd-reroll-btn:active { transform: scale(0.98); }
-.dd-reroll-icon { font-size: 14px; }
+
+.dd-reroll-btn:active {
+    transform: scale(0.98);
+}
+
+.dd-reroll-icon {
+    font-size: 14px;
+}
 
 /* ══════════════════════════════════════════════════════════════
    1. СЕТКА ЛЕСТНИЦ В ИНВЕНТАРЕ (2 В РЯДУ, ВЫСОКИЕ КАРТОЧКИ)
@@ -1986,7 +2104,8 @@ canvas {
 #inventory-items-list.inv-grid-ladders {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    grid-auto-rows: 145px !important; /* Гарантирует высоту каждого ряда в 145px */
+    grid-auto-rows: 145px !important;
+    /* Гарантирует высоту каждого ряда в 145px */
     gap: 10px !important;
     padding: 6px 4px 16px !important;
     align-content: start !important;
@@ -2100,7 +2219,8 @@ canvas {
 
 .ladder-preview-card {
     position: relative;
-    width: 345px; /* Сделали шире (было 310px) */
+    width: 345px;
+    /* Сделали шире (было 310px) */
     max-width: 92vw;
     background: radial-gradient(circle at 50% 30%, #1e2c3d 0%, #0d1219 100%);
     border: 2px solid #3498db;
@@ -2165,7 +2285,11 @@ canvas {
     transition: background 0.15s, color 0.15s;
     flex-shrink: 0;
 }
-.lp-close-btn:active { background: rgba(231, 76, 60, 0.4); color: #fff; }
+
+.lp-close-btn:active {
+    background: rgba(231, 76, 60, 0.4);
+    color: #fff;
+}
 
 /* ОГРОМНЫЙ ПОДИУМ ПОД ЛЕСТНИЦУ (185px высоты!) */
 .lp-podium {
@@ -2189,7 +2313,8 @@ canvas {
 }
 
 .lp-ladder-img {
-    max-height: 175px; /* Увеличено со 130px до 175px */
+    max-height: 175px;
+    /* Увеличено со 130px до 175px */
     max-width: 85px;
     width: auto;
     height: auto;
@@ -2245,6 +2370,7 @@ canvas {
         opacity: 0;
         transform: scale(0.85) translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -2291,7 +2417,7 @@ canvas {
     align-items: center;
     gap: 4px;
     backdrop-filter: blur(4px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
 /* Контентная часть */
@@ -2395,8 +2521,14 @@ canvas {
 }
 
 @keyframes shortcutShineAnim {
-    0% { left: -100%; }
-    50%, 100% { left: 200%; }
+    0% {
+        left: -100%;
+    }
+
+    50%,
+    100% {
+        left: 200%;
+    }
 }
 
 .shortcut-btn-skip {
@@ -2621,8 +2753,17 @@ canvas {
 }
 
 @keyframes pulse-border {
-    0%, 100% { border-color: #27ae60; box-shadow: 0 0 4px rgba(39, 174, 96, 0.3); }
-    50% { border-color: #2ecc71; box-shadow: 0 0 12px rgba(46, 204, 113, 0.7); }
+
+    0%,
+    100% {
+        border-color: #27ae60;
+        box-shadow: 0 0 4px rgba(39, 174, 96, 0.3);
+    }
+
+    50% {
+        border-color: #2ecc71;
+        box-shadow: 0 0 12px rgba(46, 204, 113, 0.7);
+    }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2670,8 +2811,15 @@ canvas {
 }
 
 @keyframes gold-shimmer {
-    0%, 70% { transform: translateX(-150%) rotate(25deg); }
-    100% { transform: translateX(450%) rotate(25deg); }
+
+    0%,
+    70% {
+        transform: translateX(-150%) rotate(25deg);
+    }
+
+    100% {
+        transform: translateX(450%) rotate(25deg);
+    }
 }
 
 .case-a-art-wrap {
@@ -2700,9 +2848,17 @@ canvas {
     z-index: 1;
 }
 
-.glow-wooden { background: radial-gradient(circle, rgba(141, 110, 99, 0.35) 0%, transparent 70%); }
-.glow-iron   { background: radial-gradient(circle, rgba(52, 152, 219, 0.35) 0%, transparent 70%); }
-.glow-gold   { background: radial-gradient(circle, rgba(241, 196, 15, 0.45) 0%, transparent 70%); }
+.glow-wooden {
+    background: radial-gradient(circle, rgba(141, 110, 99, 0.35) 0%, transparent 70%);
+}
+
+.glow-iron {
+    background: radial-gradient(circle, rgba(52, 152, 219, 0.35) 0%, transparent 70%);
+}
+
+.glow-gold {
+    background: radial-gradient(circle, rgba(241, 196, 15, 0.45) 0%, transparent 70%);
+}
 
 .case-a-img {
     position: relative;
@@ -2777,7 +2933,9 @@ canvas {
     transition: transform 0.08s ease;
 }
 
-.case-btn-main:active { transform: scale(0.95); }
+.case-btn-main:active {
+    transform: scale(0.95);
+}
 
 .case-btn-main.btn-open {
     background: linear-gradient(135deg, #27ae60, #219653);
@@ -2853,7 +3011,9 @@ canvas {
     justify-content: center;
 }
 
-.case-btn-x10:active { transform: scale(0.92); }
+.case-btn-x10:active {
+    transform: scale(0.92);
+}
 
 /* Окно мультипокупки (мягкое затемнение фона) */
 #multi-buy-modal.confirm-modal-backdrop {
@@ -3203,20 +3363,23 @@ canvas {
     width: 100% !important;
 }
 
-  /* Всплывающее сообщение поверх всего окна */
+/* Всплывающее сообщение поверх всего окна */
 @keyframes floatUpRewardBadge {
     0% {
         opacity: 0;
         transform: translate(-50%, 4px) scale(0.88);
     }
+
     20% {
         opacity: 1;
         transform: translate(-50%, -4px) scale(1.05);
     }
+
     75% {
         opacity: 1;
         transform: translate(-50%, -16px) scale(1);
     }
+
     100% {
         opacity: 0;
         transform: translate(-50%, -26px) scale(0.92);
@@ -3237,7 +3400,8 @@ canvas {
     font-weight: 900;
     color: #ffffff;
     pointer-events: none;
-    z-index: 500 !important; /* Гарантированно выше шапки */
+    z-index: 500 !important;
+    /* Гарантированно выше шапки */
     white-space: nowrap;
     animation: floatUpRewardBadge 1.25s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
@@ -3266,7 +3430,7 @@ canvas {
     background: linear-gradient(180deg, #f39c12 0%, #d35400 100%) !important;
     color: #fff !important;
     border: 1px solid #ffd54f !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.6) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
 }
 
 .cases-header-title h2 {
@@ -3335,7 +3499,7 @@ canvas {
     border-bottom: 4px solid #0d131c !important;
     color: #f1c40f !important;
     font-size: 20px !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
 .case-btn-x10 {
@@ -3354,7 +3518,8 @@ canvas {
 }
 
 .gacha-cell.is-near .gacha-item-content {
-    opacity: 0.72 !important; /* Соседние предметы лучше видны при прокрутке */
+    opacity: 0.72 !important;
+    /* Соседние предметы лучше видны при прокрутке */
 }
 
 /* Светящаяся лазерная линия по центру рулетки */
@@ -3380,8 +3545,8 @@ canvas {
     background: linear-gradient(180deg, #2ecc71 0%, #219653 100%) !important;
     border: 1px solid #7bed9f !important;
     border-bottom: 4px solid #145a32 !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
-    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.5), inset 0 1px 1px rgba(255,255,255,0.4) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
 }
 
 .gacha-btn-batch {
@@ -3402,8 +3567,8 @@ canvas {
     background: linear-gradient(180deg, #f39c12 0%, #d35400 100%) !important;
     border: 1px solid #ffd54f !important;
     border-bottom: 4px solid #903800 !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
-    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4), inset 0 1px 1px rgba(255,255,255,0.35) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -3435,7 +3600,10 @@ canvas {
     border-radius: 10px;
     padding: 6px 10px;
 }
-.bank-vip-note b { color: #f1c40f; }
+
+.bank-vip-note b {
+    color: #f1c40f;
+}
 
 /* Крупная карточка +15 золота за рекламу */
 .bank-free-gold-card {
@@ -3467,11 +3635,12 @@ canvas {
     justify-content: center;
     flex-shrink: 0;
 }
+
 .bank-fg-icon-wrap img {
     width: 28px;
     height: 28px;
     object-fit: contain;
-    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.8));
 }
 
 .bank-fg-title {
@@ -3503,11 +3672,15 @@ canvas {
     display: flex;
     align-items: center;
     gap: 6px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
     box-shadow: 0 4px 12px rgba(39, 174, 96, 0.45);
     transition: transform 0.08s ease;
 }
-.bank-btn-ad:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+.bank-btn-ad:active {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+}
 
 /* Выделенная карточка "Без рекламы" */
 .bank-adfree-card {
@@ -3535,7 +3708,7 @@ canvas {
     padding: 1px 7px;
     border-radius: 6px;
     letter-spacing: 0.6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.7);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 .bank-af-title {
@@ -3545,7 +3718,7 @@ canvas {
     display: flex;
     align-items: center;
     gap: 6px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .bank-af-desc {
@@ -3565,11 +3738,15 @@ canvas {
     font-size: 14px;
     font-weight: 900;
     cursor: pointer;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
     box-shadow: 0 4px 14px rgba(155, 89, 182, 0.5);
     flex-shrink: 0;
 }
-.bank-btn-adfree:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+.bank-btn-adfree:active {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+}
 
 /* Паки золота */
 .bank-packs-list {
@@ -3586,7 +3763,7 @@ canvas {
     border: 1.5px solid #26364a;
     border-radius: 12px;
     padding: 9px 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.45);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
 }
 
 .bank-pack-row.featured-pack {
@@ -3629,7 +3806,8 @@ canvas {
     border-radius: 5px;
 }
 
-.bank-btn-buy, .bank-btn-buy-orange {
+.bank-btn-buy,
+.bank-btn-buy-orange {
     min-width: 78px;
     height: 38px;
     padding: 0 12px;
@@ -3653,11 +3831,12 @@ canvas {
     border: 1px solid #ffd54f;
     border-bottom: 3.5px solid #903800;
     color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
     box-shadow: 0 3px 12px rgba(230, 126, 34, 0.45);
 }
 
-.bank-btn-buy:active, .bank-btn-buy-orange:active {
+.bank-btn-buy:active,
+.bank-btn-buy-orange:active {
     transform: translateY(2px);
     border-bottom-width: 1.5px;
 }
@@ -3683,6 +3862,7 @@ canvas {
     font-size: 11.5px;
     color: #cbd5e1;
 }
+
 .starter-timer-strip b {
     color: #ff4757;
     font-size: 13px;
@@ -3704,7 +3884,7 @@ canvas {
     display: flex;
     align-items: center;
     gap: 8px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .starter-loot-item.full-row {
@@ -3712,10 +3892,25 @@ canvas {
     padding: 8px 12px;
 }
 
-.starter-loot-item.gold-highlight { border-color: rgba(241, 196, 15, 0.65); background: rgba(241, 196, 15, 0.08); }
-.starter-loot-item.cyan-highlight { border-color: rgba(0, 255, 255, 0.55); background: rgba(0, 255, 255, 0.07); }
-.starter-loot-item.green-highlight { border-color: rgba(46, 204, 113, 0.65); background: rgba(46, 204, 113, 0.1); }
-.starter-loot-item.vip-highlight { border-color: rgba(241, 196, 15, 0.75); background: linear-gradient(90deg, rgba(241,196,15,0.14), rgba(230,126,34,0.08)); }
+.starter-loot-item.gold-highlight {
+    border-color: rgba(241, 196, 15, 0.65);
+    background: rgba(241, 196, 15, 0.08);
+}
+
+.starter-loot-item.cyan-highlight {
+    border-color: rgba(0, 255, 255, 0.55);
+    background: rgba(0, 255, 255, 0.07);
+}
+
+.starter-loot-item.green-highlight {
+    border-color: rgba(46, 204, 113, 0.65);
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.starter-loot-item.vip-highlight {
+    border-color: rgba(241, 196, 15, 0.75);
+    background: linear-gradient(90deg, rgba(241, 196, 15, 0.14), rgba(230, 126, 34, 0.08));
+}
 
 .starter-loot-item div {
     display: flex;
@@ -3754,10 +3949,11 @@ canvas {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
-    box-shadow: 0 5px 18px rgba(46, 204, 113, 0.5), inset 0 1px 1px rgba(255,255,255,0.45);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 5px 18px rgba(46, 204, 113, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.45);
     transition: transform 0.08s ease;
 }
+
 .starter-btn-claim-3d:active {
     transform: translateY(2px);
     border-bottom-width: 2px;
@@ -4044,7 +4240,7 @@ canvas {
     width: 34px;
     height: 34px;
     object-fit: contain;
-    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.8));
 }
 
 /* Красивая 3D-медаль, пока нет картинок rank_1..3.webp */
@@ -4057,11 +4253,24 @@ canvas {
     align-items: center;
     justify-content: center;
     color: #111;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.6);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.6);
 }
-.lb-medal-1 .lb-medal-fallback { background: linear-gradient(135deg, #fff200, #f39c12); border: 1.5px solid #fff; }
-.lb-medal-2 .lb-medal-fallback { background: linear-gradient(135deg, #ffffff, #95a5a6); border: 1.5px solid #fff; }
-.lb-medal-3 .lb-medal-fallback { background: linear-gradient(135deg, #ff9f43, #d35400); border: 1.5px solid #ffd54f; color: #fff; }
+
+.lb-medal-1 .lb-medal-fallback {
+    background: linear-gradient(135deg, #fff200, #f39c12);
+    border: 1.5px solid #fff;
+}
+
+.lb-medal-2 .lb-medal-fallback {
+    background: linear-gradient(135deg, #ffffff, #95a5a6);
+    border: 1.5px solid #fff;
+}
+
+.lb-medal-3 .lb-medal-fallback {
+    background: linear-gradient(135deg, #ff9f43, #d35400);
+    border: 1.5px solid #ffd54f;
+    color: #fff;
+}
 
 .lb-player-name {
     font-size: 13.5px;
@@ -4075,15 +4284,21 @@ canvas {
     text-overflow: ellipsis;
 }
 
-.lb-row-top1 .lb-player-name { color: #ffd54f; font-size: 14.5px; }
-.lb-row-me .lb-player-name { color: #2ecc71; }
+.lb-row-top1 .lb-player-name {
+    color: #ffd54f;
+    font-size: 14.5px;
+}
+
+.lb-row-me .lb-player-name {
+    color: #2ecc71;
+}
 
 .lb-vip-crown {
     width: 17px;
     height: 17px;
     object-fit: contain;
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
 }
 
 .lb-row-score {
@@ -4094,9 +4309,19 @@ canvas {
     white-space: nowrap;
     margin-left: 8px;
 }
-.lb-row-top1 .lb-row-score { color: #f1c40f; font-size: 14.5px; }
-.lb-row-top2 .lb-row-score { color: #dfe6e9; }
-.lb-row-top3 .lb-row-score { color: #ff9f43; }
+
+.lb-row-top1 .lb-row-score {
+    color: #f1c40f;
+    font-size: 14.5px;
+}
+
+.lb-row-top2 .lb-row-score {
+    color: #dfe6e9;
+}
+
+.lb-row-top3 .lb-row-score {
+    color: #ff9f43;
+}
 
 /* Нижняя плашка игрока */
 .lb-my-card {
@@ -4171,7 +4396,7 @@ canvas {
     padding: 0 14px !important;
     paint-order: stroke fill;
     -webkit-text-stroke: 2px #4a3200;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4205,16 +4430,19 @@ canvas {
     overflow: hidden;
     transition: transform 0.1s ease;
 }
-.inv-eq-slot:active { transform: scale(0.97); }
+
+.inv-eq-slot:active {
+    transform: scale(0.97);
+}
 
 .inv-eq-slot.slot-visual {
     border-color: rgba(46, 204, 113, 0.65);
-    box-shadow: 0 0 14px rgba(46, 204, 113, 0.15), inset 0 1px 0 rgba(255,255,255,0.08);
+    box-shadow: 0 0 14px rgba(46, 204, 113, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .inv-eq-slot.slot-effect {
     border-color: rgba(155, 89, 182, 0.75);
-    box-shadow: 0 0 14px rgba(155, 89, 182, 0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+    box-shadow: 0 0 14px rgba(155, 89, 182, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .inv-eq-thumb {
@@ -4228,11 +4456,12 @@ canvas {
     justify-content: center;
     flex-shrink: 0;
 }
+
 .inv-eq-thumb img {
     max-width: 26px;
     max-height: 38px;
     object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
 
 .inv-eq-info {
@@ -4265,7 +4494,7 @@ canvas {
 #inventory-items-list.inv-grid-ladders .ladder-card-tile {
     height: 150px !important;
     background: linear-gradient(180deg, #172230 0%, #0d131c 100%) !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4285,7 +4514,11 @@ canvas {
     filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.65));
     transition: transform 0.1s ease;
 }
-.btn-top-graphic:active { transform: scale(0.92); }
+
+.btn-top-graphic:active {
+    transform: scale(0.92);
+}
+
 .btn-top-graphic img {
     height: 38px;
     width: auto;
@@ -4361,7 +4594,7 @@ canvas {
     position: absolute;
     top: -30px;
     right: -24px;
-    width: 44px; 
+    width: 44px;
     height: 44px;
     object-fit: contain;
     transform: rotate(38deg);
@@ -4482,7 +4715,7 @@ canvas {
     font-weight: 900;
     color: #ffffff;
     letter-spacing: 0.8px;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 .settings-body {
@@ -4498,7 +4731,7 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .settings-tile-top {
@@ -4584,6 +4817,7 @@ canvas {
     gap: 6px;
     transition: transform 0.08s ease;
 }
+
 .settings-support-btn:active {
     transform: translateY(2px);
     border-bottom-width: 1px;
@@ -4661,6 +4895,7 @@ canvas {
     transform: translateY(2px) !important;
     border-bottom-width: 2px !important;
 }
+
 /* ══════════════════════════════════════════════════════════════
    НОВЫЙ ПРОГРЕСС-БАР ЯЩИКА: МИНИ-СТРЕМЯНКА СО СТУПЕНЬКАМИ И БОЛТАМИ
    ══════════════════════════════════════════════════════════════ */
@@ -4707,16 +4942,14 @@ canvas {
     bottom: 2px;
     left: -6.5px;
     right: -6.5px;
-    background: repeating-linear-gradient(
-        180deg,
-        transparent 0px,
-        transparent 5px,
-        #3b2310 5px,
-        #5c3818 7px,
-        #3b2310 10px,
-        transparent 10px,
-        transparent 11px
-    );
+    background: repeating-linear-gradient(180deg,
+            transparent 0px,
+            transparent 5px,
+            #3b2310 5px,
+            #5c3818 7px,
+            #3b2310 10px,
+            transparent 10px,
+            transparent 11px);
     pointer-events: none;
     z-index: -1;
     border-radius: 2px;
@@ -4729,10 +4962,9 @@ canvas {
     inset: 0;
     background:
         /* Внутренние тени вдоль деревянных стоек */
-        linear-gradient(90deg, rgba(0,0,0,0.55) 0%, transparent 18%, transparent 82%, rgba(0,0,0,0.55) 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.55) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, 0.55) 100%),
         /* 6 поперечных перекладин стремянки */
-        repeating-linear-gradient(
-            180deg,
+        repeating-linear-gradient(180deg,
             transparent 0px,
             transparent 6px,
             #3b2310 6px,
@@ -4740,8 +4972,7 @@ canvas {
             #a66d38 9px,
             #3b2310 10.5px,
             transparent 10.5px,
-            transparent 11px
-        );
+            transparent 11px);
     pointer-events: none;
     z-index: 3;
 }
