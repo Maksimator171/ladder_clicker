@@ -10174,3 +10174,27 @@ function updateDesktopAmbientBG() {
     activeAmbientLayerNum = (activeAmbientLayerNum === 1) ? 2 : 1;
 }
 
+// Открытие и закрытие окна Сообщества
+function openCommunityModal() {
+    const modal = document.getElementById('community-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof AudioEngine !== 'undefined') AudioEngine.play('click', 0.5);
+    }
+}
+
+function closeCommunityModal() {
+    const modal = document.getElementById('community-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        if (typeof AudioEngine !== 'undefined') AudioEngine.play('click', 0.5);
+    }
+}
+
+// Закрытие окна сообщества при клике на тёмный фон вокруг карточки
+const commModalEl = document.getElementById('community-modal');
+if (commModalEl) {
+    commModalEl.addEventListener('click', (e) => {
+        if (e.target === commModalEl) closeCommunityModal();
+    });
+}

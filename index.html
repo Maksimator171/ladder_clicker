@@ -1343,10 +1343,55 @@
                         <!-- Футер -->
                         <div class="settings-footer">
                             <div class="settings-version" data-i18n="game.version">Космическая Стремянка v1.0.0</div>
-                            <button onclick="alert(t('settings.support_alert'))" class="settings-support-btn">
+                            <button onclick="openCommunityModal()" class="settings-support-btn">
                                 <img src="assets/ico_dialog.webp" class="ui-ico"> <span
                                     data-i18n="settings.support_btn">Поддержка / Сообщество</span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Модальное окно Поддержки и Сообщества -->
+            <div id="community-modal" class="modal-overlay hidden" style="z-index: 31000;">
+                <div class="cases-modal-card settings-modal-card community-modal-card">
+                    <div class="settings-header">
+                        <div class="settings-title-wrap">
+                            <img src="assets/ico_dialog.webp" class="ui-ico-title">
+                            <h2 data-i18n="settings.support_btn">Поддержка / Сообщество</h2>
+                        </div>
+                        <button id="btn-close-community" class="cases-close-btn" aria-label="Закрыть" onclick="closeCommunityModal()">
+                            <span class="close-icon">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="cases-content-scroll community-body">
+                        <!-- Блок Telegram: Иконка + QR + Ссылка -->
+                        <div class="comm-tile comm-tile-tg">
+                            <div class="comm-brand-row">
+                                <img src="assets/Telegram_Logo.webp" class="comm-logo-img" alt="Telegram">
+                                <span class="comm-brand-title">Telegram</span>
+                            </div>
+
+                            <div class="comm-qr-wrap">
+                                <img src="assets/telegram_qr.webp" class="comm-qr-img" alt="Telegram QR">
+                            </div>
+
+                            <a href="https://t.me/+8zBUYR_lLiwzNTYy" target="_blank" rel="noopener noreferrer" class="comm-link-btn comm-btn-tg">
+                                https://t.me/+8zBUYR_lLiwzNTYy
+                            </a>
+                        </div>
+
+                        <!-- Блок ВКонтакте: Иконка + Ссылка под ней -->
+                        <div class="comm-tile comm-tile-vk">
+                            <div class="comm-brand-row">
+                                <img src="assets/VK_Compact_Log.webp" class="comm-logo-img" alt="VK">
+                                <span class="comm-brand-title">ВКонтакте</span>
+                            </div>
+
+                            <a href="https://vk.ru/club242442928" target="_blank" rel="noopener noreferrer" class="comm-link-btn comm-btn-vk">
+                                https://vk.ru/club242442928
+                            </a>
                         </div>
                     </div>
                 </div>
