@@ -5055,36 +5055,35 @@ canvas {
 /* Золотая искорка как на монетках (четырёхконечная звезда с вогнутыми дугами) */
 .vip-crown-glint {
     position: absolute;
-    /* 👇 КООРДИНАТЫ ИСКРЫ НА КОРОНЕ (меняй при необходимости) 👇 */
-    top: -25px;   /* Выше / ниже */
-    right: -14px; /* Правее / левее */
+    /* 👇 КООРДИНАТЫ ИСКРЫ НА КОРОНЕ 👇 */
+    top: -23px;   /* Выше / ниже */
+    right: -11px; /* Правее / левее */
 
-    width: 15px;
-    height: 15px;
+    width: 10px;  /* Уменьшили размер с 15px до 10px */
+    height: 10px;
     pointer-events: none;
     z-index: 6;
-    background: linear-gradient(135deg, #ffffff 20%, #fff200 80%);
-    /* Вырезаем форму классической монетной искры */
+    background: linear-gradient(135deg, #ffffff 30%, #ffe600 85%);
     clip-path: polygon(
-        50% 0%, 60% 38%, 100% 50%, 60% 62%,
-        50% 100%, 40% 62%, 0% 50%, 40% 38%
+        50% 0%, 59% 39%, 100% 50%, 59% 61%,
+        50% 100%, 41% 61%, 0% 50%, 41% 39%
     );
-    filter: drop-shadow(0 0 5px #ffd700);
-    animation: coinSparkleAnim 2.8s infinite ease-in-out;
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.75));
+    animation: coinSparkleAnim 4.8s infinite ease-in-out; /* Раз в 4.8 секунды */
 }
 
 @keyframes coinSparkleAnim {
-    0%, 68%, 100% {
+    0%, 82%, 100% {
         transform: scale(0) rotate(0deg);
         opacity: 0;
     }
-    80% {
-        transform: scale(1.15) rotate(25deg);
-        opacity: 1;
+    89% {
+        transform: scale(0.95) rotate(25deg);
+        opacity: 0.9;
     }
-    88% {
-        transform: scale(0.75) rotate(45deg);
-        opacity: 0.85;
+    94% {
+        transform: scale(0.55) rotate(45deg);
+        opacity: 0.6;
     }
 }
 
@@ -5136,4 +5135,58 @@ canvas {
         z-index: 5;
         box-shadow: 0 0 50px rgba(0, 0, 0, 0.95), 0 0 2px rgba(255, 255, 255, 0.2) !important;
     }
+}
+
+/* Аккуратная маленькая искорка на короне VIP */
+.vip-crown-glint {
+    position: absolute;
+    /* 👇 КООРДИНАТЫ ИСКРЫ НА КОРОНЕ 👇 */
+    top: -23px;   /* Выше / ниже */
+    right: -11px; /* Правее / левее */
+
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    z-index: 6;
+    background: linear-gradient(135deg, #ffffff 30%, #ffe600 85%);
+    clip-path: polygon(
+        50% 0%, 59% 39%, 100% 50%, 59% 61%,
+        50% 100%, 41% 61%, 0% 50%, 41% 39%
+    );
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.75));
+    animation: coinSparkleAnim 4.8s infinite ease-in-out;
+}
+
+/* Чтобы у разных игроков в ТОПе искры сверкали вразнобой, а не синхронно */
+.lb-row-card:nth-child(2n) .vip-crown-glint {
+    animation-delay: 1.7s;
+}
+.lb-row-card:nth-child(3n) .vip-crown-glint {
+    animation-delay: 3.3s;
+}
+
+@keyframes coinSparkleAnim {
+    0%, 82%, 100% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+    }
+    89% {
+        transform: scale(0.95) rotate(25deg);
+        opacity: 0.9;
+    }
+    94% {
+        transform: scale(0.55) rotate(45deg);
+        opacity: 0.6;
+    }
+}
+
+/* Аппаратное ускорение скролла инвентаря без перерисовки теней */
+#inventory-items-list {
+    will-change: scroll-position;
+    contain: content;
+    transform: translateZ(0);
+}
+
+#inventory-items-list.inv-grid-ladders .ladder-card-tile {
+    contain: layout paint;
 }

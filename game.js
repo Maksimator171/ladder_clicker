@@ -3469,10 +3469,12 @@ function gameLoop() {
     ladderScaleX += (1 - ladderScaleX) * 0.15;
     ladderScaleY += (1 - ladderScaleY) * 0.15;
 
-    if (breakDelay > 0) breakDelay--;
-    else ladderDropY += (0 - ladderDropY) * 0.15;
-
-    if (ladderImg.complete) drawLadder();
+    if (breakDelay > 0) {
+        breakDelay--;
+    } else {
+        ladderDropY += (0 - ladderDropY) * 0.18;
+        if (ladderImg.complete) drawLadder();
+    }
 
     if (speakerLevel > 0) drawHangingSpeaker();
     if (newtonLevel > 0) drawNewtonCradle();
@@ -4952,29 +4954,78 @@ function drawParticles() {
     }
 }
 
-function breakLadder() {
-    const chunkCount = 4 + Math.floor(Math.random() * 3);
-    const baseW = canvas.width * 0.27;
+let lastBreakEffectTime = 0;
 
-    for (let i = 0; i < chunkCount; i++) {
+function breakLadder(isLightBurst = false) {
+    // Ограничиваем максимум обломков на экране, чтобы никогда не лагало
+    if (debrisArray.length > 55) {
+        debrisArray.splice(0, 18);
+    }
+
+    const targetWidth = canvas.width * 0.27;
+    const leftX = canvas.width / 2 - targetWidth / 2;
+    const rightX = canvas.width / 2 + targetWidth / 2;
+    const railW = targetWidth * 0.32;
+
+    // Если это быстрый повторный клик — добавляем меньше кусков (шаг 140px вместо 70px)
+    const segmentH = isLightBurst ? 140 : 70;
+    const totalSegments = Math.ceil(canvas.height / segmentH) + 1;
+
+    for (let i = 0; i < totalSegments; i++) {
+        const segY = i * segmentH + (Math.random() - 0.5) * 20;
+
+        // 1. Левая стойка (летит влево)
         debrisArray.push({
-            x: canvas.width / 2 + (Math.random() - 0.5) * 60,
-            y: canvas.height * 0.3 + (i * 60),
-            vx: (Math.random() - 0.5) * 24,
-            vy: -7 - Math.random() * 10,
+            x: leftX + (Math.random() - 0.5) * 10,
+            y: segY,
+            vx: -6 - Math.random() * 14,
+            vy: -4 - Math.random() * 8,
             rot: Math.random() * Math.PI * 2,
-            rotSpeed: (Math.random() - 0.5) * 0.4,
-            // Вытянутые пропорции: узкие (35% ширины) и длинные вертикально
-            width: baseW * 0.45,
-            height: baseW * 0.95
+            rotSpeed: -(0.08 + Math.random() * 0.25),
+            width: railW,
+            height: 75,
+            type: 'left_rail'
         });
+
+        // 2. Правая стойка (летит вправо)
+        debrisArray.push({
+            x: rightX + (Math.random() - 0.5) * 10,
+            y: segY,
+            vx: 6 + Math.random() * 14,
+            vy: -4 - Math.random() * 8,
+            rot: Math.random() * Math.PI * 2,
+            rotSpeed: 0.08 + Math.random() * 0.25,
+            width: railW,
+            height: 75,
+            type: 'right_rail'
+        });
+
+        // 3. Перекладина
+        if (!isLightBurst || Math.random() < 0.5) {
+            debrisArray.push({
+                x: canvas.width / 2 + (Math.random() - 0.5) * 20,
+                y: segY + segmentH * 0.4,
+                vx: (Math.random() - 0.5) * 12,
+                vy: -6 - Math.random() * 6,
+                rot: (Math.random() - 0.5) * 0.8,
+                rotSpeed: (Math.random() - 0.5) * 0.35,
+                width: targetWidth * 0.75,
+                height: 16,
+                type: 'rung'
+            });
+        }
     }
 }
 
 function drawDebris() {
+    if (!ladderImg.complete || ladderImg.naturalWidth === 0) return;
+
+    const lw = ladderImg.naturalWidth;
+    const lh = ladderImg.naturalHeight;
+
     for (let i = debrisArray.length - 1; i >= 0; i--) {
         let d = debrisArray[i];
-        d.vy += 0.8;
+        d.vy += 0.85; // гравитация
         d.x += d.vx;
         d.y += d.vy;
         d.rot += d.rotSpeed;
@@ -4983,14 +5034,14 @@ function drawDebris() {
         ctx.translate(d.x, d.y);
         ctx.rotate(d.rot);
 
-        // Вырезаем вертикальный сегмент боковой стойки без сплющивания
-        if (ladderImg.complete && ladderImg.naturalWidth !== 0) {
-            ctx.drawImage(
-                ladderImg,
-                0, ladderImg.height * 0.2, ladderImg.width * 0.5, ladderImg.height * 0.4,
-                -d.width / 2, -d.height / 2, d.width, d.height
-            );
+        if (d.type === 'left_rail') {
+            ctx.drawImage(ladderImg, 0, lh * 0.2, lw * 0.4, lh * 0.3, -d.width / 2, -d.height / 2, d.width, d.height);
+        } else if (d.type === 'right_rail') {
+            ctx.drawImage(ladderImg, lw * 0.6, lh * 0.2, lw * 0.4, lh * 0.3, -d.width / 2, -d.height / 2, d.width, d.height);
+        } else {
+            ctx.drawImage(ladderImg, lw * 0.2, lh * 0.45, lw * 0.6, lh * 0.1, -d.width / 2, -d.height / 2, d.width, d.height);
         }
+
         ctx.restore();
 
         if (d.y > canvas.height + 250) debrisArray.splice(i, 1);
@@ -5111,18 +5162,34 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         lastPlayerTapTime = Date.now();
     }
 
-    if (settingsState.vibrate && navigator.vibrate) {
+    // Проверяем, открыто ли любое крупное окно (Инвентарь, Кейсы, ТОП), чтобы скролл летал в 60 FPS
+    const lbModalEl = document.getElementById('leaderboard-modal');
+    const invModalEl = document.getElementById('inventory-modal');
+    const casesModalEl = document.getElementById('cases-modal');
+    const isLbOpen = (lbModalEl && !lbModalEl.classList.contains('hidden')) ||
+                     (invModalEl && !invModalEl.classList.contains('hidden')) ||
+                     (casesModalEl && !casesModalEl.classList.contains('hidden'));
+
+    if (!isLbOpen && settingsState.vibrate && navigator.vibrate) {
         navigator.vibrate(15);
     }
     AudioEngine.playTap(currentSkinId);
     AudioEngine.updateAmbient(currentHeight);
 
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    let clickX = canvas.width / 2;
+    let clickY = canvas.height * 0.45;
 
-    const clickX = (clientX - rect.left) * scaleX;
-    const clickY = (clientY - rect.top) * scaleY;
+    // Не вызываем тяжёлый getBoundingClientRect при автоклике или открытом ТОПе
+    if (!isAutoBurst && !isLbOpen && clientX !== undefined && clientY !== undefined) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        clickX = (clientX - rect.left) * scaleX;
+        clickY = (clientY - rect.top) * scaleY;
+    } else {
+        clickX += (Math.random() - 0.5) * 60;
+        clickY += (Math.random() - 0.5) * 60;
+    }
 
     const skin = { buffs: getActiveLadderBuffs() };
 
@@ -5140,7 +5207,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
 
     let tapsNum = 1;
     if (hasMech('bone')) tapsNum *= 2;
-    if (isBananaProc) tapsNum *= 2; // На 5-й клик Банана tapsNum становится 2!
+    if (isBananaProc) tapsNum *= 2;
 
     // Подсчет CPS в скользящем окне 1 секунды
     const tapNow = Date.now();
@@ -5158,7 +5225,6 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         if (Math.sqrt(dx * dx + dy * dy) < retroCoin.size * 1.5) {
             retroCoin.active = false;
 
-            // Награда: Обычные гайки + Золотые гайки (5-15)
             const coinReward = Math.floor(75 + Math.random() * 50);
             const goldReward = Math.floor(5 + Math.random() * 11);
 
@@ -5186,7 +5252,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         const dy = clickY - ufoGift.y;
 
         if (Math.hypot(dx, dy) < 75) {
-            claimUfoGift(clickX, clickY); // <-- Выдаёт гайки/кейсы/золото, звук и частицы
+            claimUfoGift(clickX, clickY);
             return;
         }
     }
@@ -5194,8 +5260,6 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
     // База клика + баффы
     let currentClickPower = clickPower;
     if (skin.buffs.clickAdd) currentClickPower += skin.buffs.clickAdd;
-
-    // Умножаем урон клика на количество тапов (Кость x2, Банан на 5-й тап x2)
     currentClickPower *= tapsNum;
 
     // === МЕХАНИКА 1 (ПЛАЗМА): CPS > 6 ДАЁТ x2 К ВЫСОТЕ ===
@@ -5207,17 +5271,16 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         isPlasmaX2 = true;
     }
 
-    // === МЕХАНИКА 3 (ЗЕМЛЯ): +25% СИЛЫ КЛИКА ЗА КАЖДЫЙ АКТИВНЫЙ БАФФ ===
+    // === МЕХАНИКА 3 (ЗЕМЛЯ): +100% СИЛЫ КЛИКА ЗА КАЖДЫЙ АКТИВНЫЙ БАФФ ===
     currentClickPower = Math.round(currentClickPower * getPlanetBuffMultiplier());
 
-    // Накачиваем инерцию Млечного пути (теперь переменная объявлена и не крашит игру!)
+    // Инерция Млечного пути
     if (hasMech('milkyway')) {
         cosmicMomentum += currentClickPower * 1.5;
         cosmicMomentum = Math.min(cosmicMomentum, currentClickPower * 20);
     }
 
-    // Если сработал Банан — выводим визуальное уведомление
-    if (isBananaProc) {
+    if (!isLbOpen && isBananaProc) {
         particles.push({
             x: clickX,
             y: clickY - 35,
@@ -5233,17 +5296,18 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
     if (hasMech('scratch') && liveCps > 4) {
         const comboMult = Math.min(1.5, 1.0 + (liveCps - 4) * 0.08);
         currentClickPower = Math.round(currentClickPower * comboMult);
-        particles.push({
-            x: clickX + (Math.random() * 30 - 15),
-            y: clickY - 50,
-            text: t('particle.combo', { mult: comboMult.toFixed(2), cps: liveCps }),
-            color: '#ff4757',
-            font: 'bold 18px sans-serif',
-            speed: 2.2,
-            alpha: 1.6
-        });
+        if (!isLbOpen) {
+            particles.push({
+                x: clickX + (Math.random() * 30 - 15),
+                y: clickY - 50,
+                text: t('particle.combo', { mult: comboMult.toFixed(2), cps: liveCps }),
+                color: '#ff4757',
+                font: 'bold 18px sans-serif',
+                speed: 2.2,
+                alpha: 1.6
+            });
+        }
     }
-
 
     const activeEff = currentEffectId || currentSkinId;
     if (hasMech('storm') && activeEff !== 'absolute' && Math.random() < 0.05) {
@@ -5252,47 +5316,74 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         return;
     }
 
-    // Лоза (+40%)
     if (hasMech('vine')) currentClickPower = Math.round(currentClickPower * 1.4);
+    if (adState.turboTimer > 0) currentClickPower *= 3;
 
-    // Турбо x3
-    if (adState.turboTimer > 0) {
-        currentClickPower *= 3;
-    }
-
-    // Гайкопад: честно дает гайки за каждый засчитанный тап
+    // === ГАЙКОПАД (с визуальным вылетом "+N [гайка]") ===
     if (adState.frenzyTimer > 0) {
-        addNuts(tapsNum);
+        const gainedFrenzyNuts = addNuts(tapsNum);
+        if (!isLbOpen && gainedFrenzyNuts > 0) {
+            particles.push({
+                x: clickX + (Math.random() > 0.5 ? 45 : -45),
+                y: clickY - 10,
+                img: canvasIcoNut,
+                imgSize: 22,
+                text: `+${gainedFrenzyNuts}`,
+                color: '#54a0ff',
+                font: 'bold 22px sans-serif',
+                speed: 2.6,
+                alpha: 1.35
+            });
+        }
+
         for (let i = 0; i < tapsNum; i++) {
             if (Math.random() < 0.01) {
                 goldenNuts += 1;
-                particles.push({
-                    x: clickX,
-                    y: clickY - 30,
-                    img: canvasIcoGold,
-                    imgSize: 22,
-                    text: '+1',
-                    color: '#f1c40f',
-                    font: 'bold 22px sans-serif',
-                    speed: 2,
-                    alpha: 1.5
-                });
+                if (!isLbOpen) {
+                    particles.push({
+                        x: clickX,
+                        y: clickY - 30,
+                        img: canvasIcoGold,
+                        imgSize: 22,
+                        text: '+1',
+                        color: '#f1c40f',
+                        font: 'bold 22px sans-serif',
+                        speed: 2,
+                        alpha: 1.5
+                    });
+                }
             }
         }
     }
 
-    // Применяем высоту и импульс пружины UI
+    // Применяем высоту
     const effectiveClick = Math.round(currentClickPower * getGlobalMultiplier());
     currentHeight += effectiveClick;
 
-    counterScale = Math.min(counterScale + 0.08, 1.4);
-    markerBounce = Math.min(markerBounce + 0.15, 1.45);
+    if (!isLbOpen) {
+        counterScale = Math.min(counterScale + 0.08, 1.4);
+        markerBounce = Math.min(markerBounce + 0.15, 1.45);
+    }
     checkHeightUnlocks();
 
-    // Ржавая лестница: роллит шанс на каждый из тапов
+    // Ржавая лестница (тоже с вылетом иконки гайки при срабатывании!)
     if (hasMech('rusty')) {
+        let rustyGained = 0;
         for (let i = 0; i < tapsNum; i++) {
-            if (Math.random() < 0.65) addNuts(1);
+            if (Math.random() < 0.65) rustyGained += addNuts(1);
+        }
+        if (!isLbOpen && rustyGained > 0 && adState.frenzyTimer <= 0) {
+            particles.push({
+                x: clickX + (Math.random() > 0.5 ? 40 : -40),
+                y: clickY - 10,
+                img: canvasIcoNut,
+                imgSize: 20,
+                text: `+${rustyGained}`,
+                color: '#e67e22',
+                font: 'bold 20px sans-serif',
+                speed: 2.4,
+                alpha: 1.25
+            });
         }
     }
 
@@ -5301,7 +5392,7 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
     if (skin.buffs.caseLimitMinus) actualClicksNeeded -= skin.buffs.caseLimitMinus;
     actualClicksNeeded = Math.max(10, actualClicksNeeded);
 
-    // Шанс дропа кейса (проверяется за каждый засчитанный тап)
+    // Шанс дропа кейса
     const totalLuck = getTotalLuck();
     const dropChance = 0.012 + (totalLuck * 0.0005);
     const ironUpgradeChance = (totalLuck * 0.15) / 100;
@@ -5310,7 +5401,6 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         if (Math.random() < dropChance) {
             let caseType = (Math.random() < ironUpgradeChance) ? 'iron' : 'wooden';
 
-            // МЛЕЧНЫЙ ПУТЬ: 25% шанс повысить редкость кейса на уровень выше
             let wasUpgraded = false;
             if (hasMech('milkyway') && Math.random() < 0.25) {
                 if (caseType === 'wooden') { caseType = 'iron'; wasUpgraded = true; }
@@ -5366,7 +5456,6 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
             awardedCase = 'gold';
         }
 
-        // МЛЕЧНЫЙ ПУТЬ: 25% шанс повысить ящик за шкалу на уровень выше
         if (hasMech('milkyway') && Math.random() < 0.25) {
             if (awardedCase === 'wooden') awardedCase = 'iron';
             else if (awardedCase === 'iron') awardedCase = 'gold';
@@ -5398,7 +5487,6 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         }
     }
 
-    // Обновление текста и вертикальной шкалы прогресса
     if (uiBoxText) {
         uiBoxText.innerText = `${clicksForBox}/${actualClicksNeeded}`;
     }
@@ -5429,34 +5517,34 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         }
     }
 
-    // Визуал и физика
     ladderScaleX = 1.1;
     ladderScaleY = 0.85;
     ladderSpeed = 25;
 
-    if (isPlasmaX2) {
-        // Увеличенный сочный партикл для телефонов: 30px + молния 26px
-        particles.push({
-            x: clickX + (Math.random() * 30 - 15),
-            y: clickY - 20,
-            img: lightningImg,
-            imgSize: 26,
-            text: `+${effectiveClick} (x2)`,
-            color: '#00ffff',
-            font: 'bold 30px sans-serif',
-            alpha: 1.5,
-            speed: 3.5
-        });
-    } else {
-        // Базовый крупный шрифт (30px, как и было)
-        particles.push({
-            x: clickX + (Math.random() * 40 - 20),
-            y: clickY - 20,
-            text: `+${effectiveClick}`,
-            font: 'bold 30px sans-serif',
-            alpha: 1,
-            speed: 3 + Math.random() * 2
-        });
+    // Не спавним тяжелые текстовые партиклы, если поверх открыт Лидерборд
+    if (!isLbOpen) {
+        if (isPlasmaX2) {
+            particles.push({
+                x: clickX + (Math.random() * 30 - 15),
+                y: clickY - 20,
+                img: lightningImg,
+                imgSize: 26,
+                text: `+${effectiveClick} (x2)`,
+                color: '#00ffff',
+                font: 'bold 30px sans-serif',
+                alpha: 1.5,
+                speed: 3.5
+            });
+        } else {
+            particles.push({
+                x: clickX + (Math.random() * 40 - 20),
+                y: clickY - 20,
+                text: `+${effectiveClick}`,
+                font: 'bold 30px sans-serif',
+                alpha: 1,
+                speed: 3 + Math.random() * 2
+            });
+        }
     }
 
     // Проверка офферов на 500 м
@@ -5471,8 +5559,6 @@ function handleTap(clientX, clientY, isAutoBurst = false) {
         const radarMod = document.getElementById('radar-modal');
         if (radarMod) {
             radarMod.classList.remove('hidden');
-
-            // Блокируем блок кнопок на 1 секунду от случайных тапов
             const actionsBox = radarMod.querySelector('.shortcut-actions');
             if (actionsBox) {
                 actionsBox.style.pointerEvents = 'none';
@@ -7529,17 +7615,30 @@ function triggerPurchaseEffect(cost = 10) {
         speed: 2.5
     });
 
-    // Серия тресков: имитация надлома и полного обрушения балок
-    AudioEngine.play('upgrade_crack_ladder', 0.5);
-    setTimeout(() => AudioEngine.play('upgrade_crack_ladder', 0.75), 80);
-    setTimeout(() => AudioEngine.play('upgrade_crack_ladder', 0.95), 170);
+    const now = Date.now();
+    const isRapidClick = (now - lastBreakEffectTime < 650);
 
-    const costPower = Math.min(5.0, 1.0 + Math.log10(Math.max(10, cost)) * 0.75);
-    shakeTime = Math.floor(12 * costPower);
-    breakDelay = Math.floor(14 * costPower);
-    ladderDropY = canvas.height * (0.9 * costPower);
-    ladderSpeed = -60 * costPower;
-    breakLadder();
+    // Звук треска: при спаме кликами играем один плотный треск вместо тройного эха
+    AudioEngine.play('upgrade_crack_ladder', 0.65);
+    if (!isRapidClick) {
+        setTimeout(() => AudioEngine.play('upgrade_crack_ladder', 0.85), 80);
+    }
+
+    const costPower = Math.min(3.0, 1.0 + Math.log10(Math.max(10, cost)) * 0.4);
+    shakeTime = Math.min(22, Math.floor(10 * costPower));
+
+    if (!isRapidClick) {
+        // Полноценный разлом (не чаще чем раз в 0.65 сек)
+        lastBreakEffectTime = now;
+        breakDelay = 12;
+        ladderDropY = -canvas.height * 0.65;
+        ladderSpeed = -45 * costPower;
+        breakLadder(false);
+    } else {
+        // Быстрый повторный клик: старые обломки продолжают лететь, подбрасываем свежую порцию щепок
+        breakDelay = Math.max(breakDelay, 8);
+        breakLadder(true);
+    }
 }
 
 // ==========================================
@@ -7625,7 +7724,10 @@ function loadGame() {
         retroChallengeMs = data.retroChallengeMs || 0;
 
         claimedMilestones = data.claimedMilestones || [];
-        dailyDeal = data.dailyDeal || dailyDeal;
+        if (data.dailyDeal) {
+    dailyDeal = data.dailyDeal;
+    dailyDeal.adRerollsLeft = 5; // Сбрасываем попытки реролла до 5 при перезаходе
+}
 
         activePlayBoxTimer = data.activePlayBoxTimer || 0;
         isTimedBoxReady = data.isTimedBoxReady || false;

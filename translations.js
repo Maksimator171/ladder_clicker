@@ -562,6 +562,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'НАСТРОЙКИ',
+            language: '🌐 Язык / language',
             music: 'Музыка и фон',
             tap_sounds: 'Звуки тапа',
             speaker_bass: 'Бас колонки',
@@ -1395,6 +1396,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'SETTINGS', // Settings modal header
+            language: '🌐 Language',
             music: 'Music & Ambience', // Slider 1: background music and wind/space ambience volume
             tap_sounds: 'Tap Sounds', // Slider 2: ladder tap sound effects volume
             speaker_bass: 'Subwoofer Bass', // Slider 3: passive Subwoofer bass volume
@@ -2217,6 +2219,7 @@ const TRANSLATIONS = {
     // ═══════════════════════════════════════
     settings: {
         title: '设置',
+        language: '🌐 语言',
         music: '音乐与环境音',
         tap_sounds: '点击音效',
         speaker_bass: '音箱低音',
@@ -2906,6 +2909,7 @@ const TRANSLATIONS = {
     },
     settings: {
         title: 'AJUSTES',
+        language: '🌐 Idioma',
         music: 'Música y ambiente',
         tap_sounds: 'Sonidos de toque',
         speaker_bass: 'Graves del subwoofer',
@@ -3682,6 +3686,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'AYARLAR',
+            language: '🌐 Dil',
             music: 'Müzik ve Ambiyans',
             tap_sounds: 'Tıklama Sesleri',
             speaker_bass: 'Subwoofer Bası',
@@ -4515,6 +4520,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'CONFIGURAÇÕES', // Settings modal header
+            language: '🌐 Idioma',
             music: 'Música e ambiente', // Slider 1: background music and wind/space ambience volume
             tap_sounds: 'Sons dos toques', // Slider 2: ladder tap sound effects volume
             speaker_bass: 'Graves do subwoofer', // Slider 3: passive Subwoofer bass volume
@@ -5345,6 +5351,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'الإعدادات',
+            language: '🌐 اللغة',
             music: 'الموسيقى والأجواء',
             tap_sounds: 'أصوات النقر',
             speaker_bass: 'جهير المضخم',
@@ -6174,6 +6181,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'PENGATURAN',
+            language: '🌐 Bahasa',
             music: 'Musik & Suasana',
             tap_sounds: 'Suara Tap',
             speaker_bass: 'Bass Subwoofer',
@@ -7007,6 +7015,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'EINSTELLUNGEN', // Settings modal header
+            language: '🌐 Sprache',
             music: 'Musik & Atmosphäre', // Slider 1: background music and wind/space ambience volume
             tap_sounds: 'Tap-Sounds', // Slider 2: ladder tap sound effects volume
             speaker_bass: 'Subwoofer-Bass', // Slider 3: passive Subwoofer bass volume
@@ -7841,6 +7850,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'सेटिंग्स', // Settings modal header
+            language: '🌐 भाषा',
             music: 'संगीत और परिवेश', // Slider 1: background music and wind/space ambience volume
             tap_sounds: 'टैप की आवाज़ें', // Slider 2: ladder tap sound effects volume
             speaker_bass: 'सबवूफ़र बास', // Slider 3: passive Subwoofer bass volume
@@ -8674,6 +8684,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'CÀI ĐẶT', // Tiêu đề modal Cài đặt
+            language: '🌐 Ngôn ngữ',
             music: 'Nhạc & Môi trường', // Thanh trượt 1: âm lượng nhạc nền và không gian
             tap_sounds: 'Âm thanh Chạm', // Thanh trượt 2: âm lượng chạm thang
             speaker_bass: 'Âm Bass của Loa', // Thanh trượt 3: âm lượng bass Loa Siêu Trầm
@@ -9507,6 +9518,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'PARAMÈTRES', // Settings modal header
+            language: '🌐 Langue',
             music: 'Musique & Ambiance', // Slider 1: background music and wind/space ambience volume
             tap_sounds: 'Sons de tap', // Slider 2: ladder tap sound effects volume
             speaker_bass: 'Basses du Subwoofer', // Slider 3: passive Subwoofer bass volume
@@ -10334,6 +10346,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: 'IMPOSTAZIONI',
+            language: '🌐 Lingua',
             music: 'Musica & Atmosfera',
             tap_sounds: 'Suoni del Tap',
             speaker_bass: 'Bassi Subwoofer',
@@ -11154,6 +11167,7 @@ const TRANSLATIONS = {
     // ═══════════════════════════════════════
     settings: {
         title: '設定',
+        language: '🌐 言語',
         music: '音楽と環境音',
         tap_sounds: 'タップ音',
         speaker_bass: 'サブウーファー低音',
@@ -11974,6 +11988,7 @@ const TRANSLATIONS = {
         // ═══════════════════════════════════════
         settings: {
             title: '설정',
+            language: '🌐 언어',
             music: '음악 및 분위기',
             tap_sounds: '탭 사운드',
             speaker_bass: '서브우퍼 베이스',
@@ -12273,7 +12288,7 @@ function determineCurrentLang() {
         lang = 'ru';
     }
     if (!TRANSLATIONS[lang]) {
-        lang = 'ru';
+      lang = 'en';
     }
     return lang;
 }
@@ -12345,3 +12360,57 @@ if (typeof window !== 'undefined') {
     window.applyHtmlTranslations = applyHtmlTranslations;
 }
 
+function setGameLanguage(newLang) {
+    if (!TRANSLATIONS[newLang]) newLang = 'en';
+    window.currentLang = newLang;
+
+    // 1. Обновляем все HTML-элементы (data-i18n, картинки data-i18n-src и подсказки)
+    if (typeof applyHtmlTranslations === 'function') {
+        applyHtmlTranslations();
+    }
+
+    // 2. Синхронизируем выпадающий список в настройках
+    const langSelect = document.getElementById('settings-lang-select');
+    if (langSelect && langSelect.value !== newLang) {
+        langSelect.value = newLang;
+    }
+
+    // 3. Обновляем тексты внутри массивов Календаря, Локаций и Рубежей
+    if (typeof CALENDAR_REWARDS !== 'undefined') {
+        CALENDAR_REWARDS.forEach((item, idx) => {
+            item.text = t(`calendar_rewards.${idx}.text`);
+        });
+    }
+    if (typeof STAGES_LORE !== 'undefined') {
+        STAGES_LORE.forEach((item, idx) => {
+            item.name = t(`stages_lore.${idx}.name`);
+            item.desc = t(`stages_lore.${idx}.desc`);
+        });
+    }
+    if (typeof HEIGHT_MILESTONES !== 'undefined') {
+        HEIGHT_MILESTONES.forEach((item, idx) => {
+            item.name = t(`height_milestones.${idx}.name`);
+            item.desc = t(`height_milestones.${idx}.desc`);
+        });
+    }
+
+    // 4. Перерисовываем динамические панели игры
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateHeaderUI === 'function') updateHeaderUI();
+    if (typeof updateBuffsDrawerUI === 'function') updateBuffsDrawerUI();
+    if (typeof renderCasesShop === 'function') renderCasesShop();
+    if (typeof renderInventory === 'function') renderInventory();
+    if (typeof renderCalendarUI === 'function') renderCalendarUI();
+}
+
+// Привязываем смену языка к селектору в Настройках
+document.addEventListener('DOMContentLoaded', () => {
+    const langSelect = document.getElementById('settings-lang-select');
+    if (langSelect) {
+        langSelect.value = window.currentLang || 'ru';
+        langSelect.addEventListener('change', (e) => {
+            setGameLanguage(e.target.value);
+            if (typeof AudioEngine !== 'undefined') AudioEngine.play('click', 0.5);
+        });
+    }
+});
