@@ -266,6 +266,7 @@ const TRANSLATIONS = {
         //  СКЛАД КЕЙСОВ
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Гайки',
             badge: 'ТАЙНИК',
             title: 'СКЛАД КЕЙСОВ',
             safe_tile: 'Сейф',
@@ -1098,6 +1099,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Nuts',
             badge: 'CACHE', // Small top badge in the Case Vault header
             title: 'CASE VAULT', // Main header of the cases & gacha modal
             safe_tile: 'Safe', // Short label on the free Iron Safe ad tile
@@ -1926,6 +1928,7 @@ const TRANSLATIONS = {
     //  СКЛАД КЕЙСОВ
     // ═══════════════════════════════════════
     cases: {
+        odds_nuts: '螺母',
         badge: '藏匿处',
         title: '宝箱仓库',
         safe_tile: '保险箱',
@@ -2692,6 +2695,7 @@ const TRANSLATIONS = {
         timer_badge: '39 Yans',
     },
     cases: {
+        odds_nuts: 'Nueces',
         badge: 'BOTÍN',
         title: 'BÓVEDA DE CAJAS',
         safe_tile: 'Caja fuerte',
@@ -3392,6 +3396,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Somun',
             badge: 'ZULA',
             title: 'KASA ODASI',
             safe_tile: 'Kasa',
@@ -4222,6 +4227,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Nozes',
             badge: 'RESERVA', // Small top badge in the Case Vault header
             title: 'COFRE DE CAIXAS', // Main header of the cases & gacha modal
             safe_tile: 'Cofre', // Short label on the free Iron Safe ad tile
@@ -5057,6 +5063,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'صواميل',
             badge: 'المخبأ',
             title: 'مستودع الصناديق',
             safe_tile: 'خزينة',
@@ -5887,6 +5894,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Mur',
             badge: 'SIMPANAN',
             title: 'RUANG PETI',
             safe_tile: 'Brankas',
@@ -6717,6 +6725,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Muttern',
             badge: 'VERSTECK', // Small top badge in the Case Vault header
             title: 'KISTEN-TRESOR', // Main header of the cases & gacha modal
             safe_tile: 'Tresor', // Short label on the free Iron Safe ad tile
@@ -7552,6 +7561,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'नट्स',
             badge: 'कैश', // Small top badge in the Case Vault header
             title: 'केस वॉल्ट', // Main header of the cases & gacha modal
             safe_tile: 'तिजोरी', // Short label on the free Iron Safe ad tile
@@ -8386,6 +8396,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Đai ốc',
             badge: 'KHO TÀNG', // Huy hiệu nhỏ trên đầu Kho Rương
             title: 'KHO RƯƠNG', // Tiêu đề chính modal quay hòm & gacha
             safe_tile: 'Két', // Nhãn ngắn trên ô nhận Két Sắt xem QC miễn phí
@@ -9220,6 +9231,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Écrous',
             badge: 'CACHE', // Small top badge in the Case Vault header
             title: 'SALLE DES COFFRES', // Main header of the cases & gacha modal
             safe_tile: 'Coffre', // Short label on the free Iron Safe ad tile
@@ -10052,6 +10064,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: 'Dadi',
             badge: 'CAVEAU',
             title: 'CAVEAU CASSE',
             safe_tile: 'Cassaforte',
@@ -10873,6 +10886,7 @@ const TRANSLATIONS = {
     //  CASE VAULT
     // ═══════════════════════════════════════
     cases: {
+        odds_nuts: 'ナット',
         badge: '隠し場所',
         title: 'ケース金庫',
         safe_tile: '金庫',
@@ -11694,6 +11708,7 @@ const TRANSLATIONS = {
         //  CASE VAULT
         // ═══════════════════════════════════════
         cases: {
+            odds_nuts: '너트',
             badge: '보관소',
             title: '상자 보관소',
             safe_tile: '금고',

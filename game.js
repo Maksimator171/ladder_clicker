@@ -6754,6 +6754,55 @@ function openBatchCases(caseId, count = 10) {
     }
 }
 
+function getCaseOddsHtml(caseId) {
+    const c = CASES_DB[caseId];
+    if (!c || !c.loot) return '';
+
+    const groups = {};
+    let totalWeight = 0;
+
+    c.loot.forEach(item => {
+        let key = 'nuts';
+        let label = t('cases.odds_nuts');
+        let color = '#54a0ff';
+        let order = 1;
+
+        if (item.type === 'skin') {
+            const rarity = LADDER_SKINS[item.id]?.rarity || 'common';
+            key = rarity;
+            label = t(`rarity.${rarity}`);
+            color = RARITY_COLORS[rarity] || '#bdc3c7';
+            order = { common: 2, rare: 3, epic: 4, legendary: 5 }[rarity] || 6;
+        }
+
+        if (!groups[key]) groups[key] = { label, color, weight: 0, order };
+        groups[key].weight += item.weight;
+        totalWeight += item.weight;
+    });
+
+    return Object.values(groups)
+        .sort((a, b) => a.order - b.order)
+        .map(g => {
+            const pct = Math.round((g.weight / totalWeight) * 100);
+            return `
+                <div class="case-odds-row">
+                    <span class="case-odds-label">
+                        <span class="case-odds-dot" style="background:${g.color};"></span>
+                        ${g.label}
+                    </span>
+                    <span class="case-odds-val">${pct}%</span>
+                </div>
+            `;
+        })
+        .join('');
+}
+
+// Закрытие плашки при клике в любое место экрана
+document.addEventListener('click', () => {
+    document.querySelectorAll('.case-odds-popover:not(.hidden)').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.case-odds-btn.active').forEach(btn => btn.classList.remove('active'));
+});
+
 // Рендер магазина кейсов
 function renderCasesShop() {
     const cContainer = document.getElementById('cases-container') || (typeof casesContainer !== 'undefined' ? casesContainer : null);
@@ -6828,6 +6877,8 @@ function renderCasesShop() {
         }
 
         card.innerHTML = `
+            <button type="button" class="case-odds-btn" aria-label="?">?</button>
+            <div class="case-odds-popover hidden">${getCaseOddsHtml(caseId)}</div>
             <div class="case-a-art-wrap">
                 <div class="case-a-glow ${glowClass}"></div>
                 <img src="${caseIcon}" class="case-a-img" alt="${c.name}" onerror="if(this.src.includes('golden_box')) this.src='assets/gold_box.webp'">
@@ -6838,6 +6889,22 @@ function renderCasesShop() {
                 ${actionButtonsHtml}
             </div>
         `;
+
+        // Переключение лёгкой плашки шансов
+        const oddsBtn = card.querySelector('.case-odds-btn');
+        const oddsPopover = card.querySelector('.case-odds-popover');
+        if (oddsBtn && oddsPopover) {
+            oddsBtn.onclick = (e) => {
+                e.stopPropagation();
+                const isHidden = oddsPopover.classList.contains('hidden');
+                document.querySelectorAll('.case-odds-popover').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.case-odds-btn').forEach(b => b.classList.remove('active'));
+                if (isHidden) {
+                    oddsPopover.classList.remove('hidden');
+                    oddsBtn.classList.add('active');
+                }
+            };
+        }
 
         // 1. Одиночное открытие
         const openBtn = card.querySelector('.btn-action-open');
